@@ -31,6 +31,6 @@ public interface ValidatorProvider {
   Optional<VoteProvider> getVoteProviderAtHead();
 
   default Optional<VoteProvider> getVoteProviderAfterBlock(final BlockHeader header) {
-      return getVoteProviderAtHead();
+    return getVoteProviderAtHead();
   }
 }

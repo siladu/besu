@@ -43,7 +43,8 @@ public class IbftProposeValidatorVote implements JsonRpcMethod {
 
   @Override
   public JsonRpcResponse response(final JsonRpcRequestContext requestContext) {
-    checkState(validatorProvider.getVoteProviderAtHead().isPresent(), "Ibft requires a vote provider");
+    checkState(
+        validatorProvider.getVoteProviderAtHead().isPresent(), "Ibft requires a vote provider");
     final Address validatorAddress = requestContext.getRequiredParameter(0, Address.class);
     final Boolean add = requestContext.getRequiredParameter(1, Boolean.class);
     LOG.trace(

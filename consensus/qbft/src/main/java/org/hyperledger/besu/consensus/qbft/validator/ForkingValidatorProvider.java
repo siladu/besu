@@ -66,7 +66,8 @@ public class ForkingValidatorProvider implements ValidatorProvider {
 
   @Override
   public Optional<VoteProvider> getVoteProviderAtHead() {
-    return resolveValidatorProvider(blockchain.getChainHeadHeader().getNumber()).getVoteProviderAtHead();
+    return resolveValidatorProvider(blockchain.getChainHeadHeader().getNumber())
+        .getVoteProviderAtHead();
   }
 
   @Override

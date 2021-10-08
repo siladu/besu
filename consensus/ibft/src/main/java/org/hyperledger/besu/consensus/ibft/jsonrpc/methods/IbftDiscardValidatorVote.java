@@ -42,7 +42,8 @@ public class IbftDiscardValidatorVote implements JsonRpcMethod {
 
   @Override
   public JsonRpcResponse response(final JsonRpcRequestContext requestContext) {
-    checkState(validatorProvider.getVoteProviderAtHead().isPresent(), "Ibft requires a vote provider");
+    checkState(
+        validatorProvider.getVoteProviderAtHead().isPresent(), "Ibft requires a vote provider");
     final Address validatorAddress = requestContext.getRequiredParameter(0, Address.class);
     LOG.trace("Received RPC rpcName={} address={}", getName(), validatorAddress);
     validatorProvider.getVoteProviderAtHead().get().discardVote(validatorAddress);

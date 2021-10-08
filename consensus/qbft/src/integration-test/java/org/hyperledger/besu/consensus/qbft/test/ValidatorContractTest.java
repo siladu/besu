@@ -123,19 +123,20 @@ public class ValidatorContractTest {
     final QbftExtraDataCodec extraDataCodec = new QbftExtraDataCodec();
     final List<QbftFork> qbftForks = List.of(createBlockHeaderFork(1));
     final TestContext context =
-            new TestContextBuilder()
-                    .indexOfFirstLocallyProposedBlock(0)
-                    .nodeParams(
-                            List.of(new NodeParams(NODE_ADDRESS, NodeKeyUtils.createFrom(NODE_PRIVATE_KEY))))
-                    .clock(fixedClock)
-                    .genesisFile(
-                            Resources.getResource("genesis_migrating_validator_blockheader.json").getFile())
-                    .useValidatorContract(true)
-                    .qbftForks(qbftForks)
-                    .buildAndStart();
+        new TestContextBuilder()
+            .indexOfFirstLocallyProposedBlock(0)
+            .nodeParams(
+                List.of(new NodeParams(NODE_ADDRESS, NodeKeyUtils.createFrom(NODE_PRIVATE_KEY))))
+            .clock(fixedClock)
+            .genesisFile(
+                Resources.getResource("genesis_migrating_validator_blockheader.json").getFile())
+            .useValidatorContract(true)
+            .qbftForks(qbftForks)
+            .buildAndStart();
 
     // block 0 uses validator contract with 1 validator
-    // block 1 onwards uses block header voting (which reuses previous block's validators upon switching)
+    // block 1 onwards uses block header voting (which reuses previous block's validators upon
+    // switching)
     final List<Address> block0Addresses = Stream.of(NODE_ADDRESS).collect(Collectors.toList());
 
     createNewBlock(context, 1);
@@ -150,40 +151,53 @@ public class ValidatorContractTest {
     assertThat(extraDataCodec.decode(genesisBlock).getVote()).isEmpty();
 
     // uses previous block's validators
-    // TODO SLD is there a better way to test this? This assert would be the same if there was no transition
+    // TODO SLD is there a better way to test this? This assert would be the same if there was no
+    // transition
     assertThat(validatorProvider.getValidatorsForBlock(block1)).isEqualTo(block0Addresses);
-    assertThat(extraDataCodec.decode(block1).getValidators()).containsExactly(NODE_ADDRESS);;
+    assertThat(extraDataCodec.decode(block1).getValidators()).containsExactly(NODE_ADDRESS);
+    ;
   }
 
   @Test
-  public void transitionsFromBlockHeaderModeToValidatorContractModeThenBackToBlockHeaderModeThenMinesAnotherBlock() {
+  public void
+      transitionsFromBlockHeaderModeToValidatorContractModeThenBackToBlockHeaderModeThenMinesAnotherBlock() {
     final QbftExtraDataCodec extraDataCodec = new QbftExtraDataCodec();
     final List<QbftFork> qbftForks =
-            List.of(createContractFork(1, TestContextBuilder.VALIDATOR_CONTRACT_ADDRESS),
-                    createBlockHeaderFork(2));
+        List.of(
+            createContractFork(1, TestContextBuilder.VALIDATOR_CONTRACT_ADDRESS),
+            createBlockHeaderFork(2));
 
     final TestContext context =
-            new TestContextBuilder()
-                    .indexOfFirstLocallyProposedBlock(0) // TODO SLD change to 1 to get different localNode?
-                    .nodeParams(
-                            List.of(new NodeParams(NODE_ADDRESS, NodeKeyUtils.createFrom(NODE_PRIVATE_KEY))))
-                    .clock(tickingClock())
-                    .genesisFile(
-                            Resources.getResource("genesis_migrating_validator_contract_with_one_validator.json").getFile())
-                    .useValidatorContract(false)
-                    .qbftForks(qbftForks)
-                    .buildAndStart();
+        new TestContextBuilder()
+            .indexOfFirstLocallyProposedBlock(0) // TODO SLD change to 1 to get different localNode?
+            .nodeParams(
+                List.of(new NodeParams(NODE_ADDRESS, NodeKeyUtils.createFrom(NODE_PRIVATE_KEY))))
+            .clock(tickingClock())
+            .genesisFile(
+                Resources.getResource(
+                        "genesis_migrating_validator_contract_with_one_validator.json")
+                    .getFile())
+            .useValidatorContract(false)
+            .qbftForks(qbftForks)
+            .buildAndStart();
 
     // block 0 uses block header voting with 1 validator
     // block 1 uses validator contract with 1 validator
-    //   - in order for mining to work, it needs to be one validator (for quorum = 1) and _same_ validator (for finalState.isLocalNodeValidator() to be true)
+    //   - in order for mining to work, it needs to be one validator (for quorum = 1) and _same_
+    // validator (for finalState.isLocalNodeValidator() to be true)
     // block 2 uses block header voting with block 1's validators
     // block 3 uses block header voting with block 2's validators
     final List<Address> block0Addresses = List.of(NODE_ADDRESS);
 
     createNewBlock(context, 1L);
-    createNewBlock(context, 2L); // tickingClock moves forward to avoid the block failing TimestampMoreRecentThanParent validation rule
-    createNewBlock(context, 3L); // tickingClock moves forward to avoid the block failing TimestampMoreRecentThanParent validation rule
+    createNewBlock(
+        context,
+        2L); // tickingClock moves forward to avoid the block failing TimestampMoreRecentThanParent
+    // validation rule
+    createNewBlock(
+        context,
+        3L); // tickingClock moves forward to avoid the block failing TimestampMoreRecentThanParent
+    // validation rule
 
     final ValidatorProvider validatorProvider = context.getValidatorProvider();
     final BlockHeader genesisBlock = context.getBlockchain().getBlockHeader(0).get();
@@ -203,9 +217,13 @@ public class ValidatorContractTest {
   }
 
   private void createNewBlock(final TestContext context, final long blockNumber) {
-    context.getController().handleBlockTimerExpiry(new BlockTimerExpiry(new ConsensusRoundIdentifier(blockNumber, 0)));
+    context
+        .getController()
+        .handleBlockTimerExpiry(new BlockTimerExpiry(new ConsensusRoundIdentifier(blockNumber, 0)));
     assertThat(context.getBlockchain().getChainHeadBlockNumber()).isEqualTo(blockNumber);
-    context.getController().handleNewBlockEvent(new NewChainHead(context.getBlockchain().getChainHeadHeader()));
+    context
+        .getController()
+        .handleNewBlockEvent(new NewChainHead(context.getBlockchain().getChainHeadHeader()));
   }
 
   private QbftFork createContractFork(final long block, final Address contractAddress) {
@@ -222,21 +240,22 @@ public class ValidatorContractTest {
 
   private QbftFork createBlockHeaderFork(final long block) {
     return new QbftFork(
-            JsonUtil.objectNodeFromMap(
-                    Map.of(
-                            BftFork.FORK_BLOCK_KEY,
-                            block,
-                            QbftFork.VALIDATOR_SELECTION_MODE_KEY,
-                            VALIDATOR_SELECTION_MODE.BLOCKHEADER)));
+        JsonUtil.objectNodeFromMap(
+            Map.of(
+                BftFork.FORK_BLOCK_KEY,
+                block,
+                QbftFork.VALIDATOR_SELECTION_MODE_KEY,
+                VALIDATOR_SELECTION_MODE.BLOCKHEADER)));
   }
 
   private Clock tickingClock() {
     Clock tickingClock = mock(Clock.class);
     Instant blockInstant = Instant.ofEpochSecond(blockTimeStamp);
     when(tickingClock.millis())
-            .thenReturn(blockInstant.toEpochMilli())
-            .thenReturn(blockInstant.plusSeconds(1).toEpochMilli())
-            .thenReturn(blockInstant.plusSeconds(2).toEpochMilli()); // supports creation of up to three blocks
+        .thenReturn(blockInstant.toEpochMilli())
+        .thenReturn(blockInstant.plusSeconds(1).toEpochMilli())
+        .thenReturn(
+            blockInstant.plusSeconds(2).toEpochMilli()); // supports creation of up to three blocks
     return tickingClock;
   }
 }

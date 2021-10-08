@@ -38,7 +38,8 @@ public class Discard implements JsonRpcMethod {
 
   @Override
   public JsonRpcResponse response(final JsonRpcRequestContext requestContext) {
-    checkState(validatorProvider.getVoteProviderAtHead().isPresent(), "Clique requires a vote provider");
+    checkState(
+        validatorProvider.getVoteProviderAtHead().isPresent(), "Clique requires a vote provider");
     final Address address = requestContext.getRequiredParameter(0, Address.class);
     validatorProvider.getVoteProviderAtHead().get().discardVote(address);
     return new JsonRpcSuccessResponse(requestContext.getRequest().getId(), true);
