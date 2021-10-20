@@ -104,7 +104,7 @@ public class ValidatorPeers implements ValidatorMulticaster, PeerConnectionTrack
             });
   }
 
-  private Collection<Address> getLatestValidators() {
+  private Collection<Address> getLatestValidators() { // TODO SLD depends on whether the block is imported or not?
     return validatorProvider.getValidatorsAtHead();
   }
 }

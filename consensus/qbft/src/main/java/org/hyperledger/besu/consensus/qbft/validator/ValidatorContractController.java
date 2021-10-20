@@ -59,7 +59,11 @@ public class ValidatorContractController {
   }
 
   public Collection<Address> getValidators(final long blockNumber) {
-    return callFunction(blockNumber, getValidatorsFunction)
+    return getValidators(blockNumber, blockNumber);
+  }
+
+  public Collection<Address> getValidators(final long blockNumber, final long forkScheduleBlockNumber) {
+    return callFunction(blockNumber, forkScheduleBlockNumber, getValidatorsFunction)
         .map(this::parseGetValidatorsResult)
         .orElseThrow(() -> new IllegalStateException(CONTRACT_ERROR_MSG));
   }
@@ -75,17 +79,17 @@ public class ValidatorContractController {
   }
 
   private Optional<TransactionSimulatorResult> callFunction(
-      final long blockNumber, final Function function) {
+      final long blockNumber, final long forkScheduleBlockNumber, final Function function) {
     final Bytes payload = Bytes.fromHexString(FunctionEncoder.encode(function));
-    final Address contractAddress = resolveContractAddress(blockNumber);
+    final Address contractAddress = resolveContractAddress(forkScheduleBlockNumber);
     final CallParameter callParams =
         new CallParameter(null, contractAddress, -1, null, null, payload);
     return transactionSimulator.process(callParams, blockNumber);
   }
 
-  private Address resolveContractAddress(final long blockNumber) {
+  private Address resolveContractAddress(final long forkScheduleBlockNumber) { // TODO SLD
     return forksSchedule
-        .getFork(blockNumber)
+        .getFork(forkScheduleBlockNumber) // TODO SLD
         .getConfigOptions()
         .getValidatorContractAddress()
         .map(Address::fromHexString)

@@ -54,8 +54,14 @@ public class ForkingValidatorProvider implements ValidatorProvider {
   }
 
   @Override
+  public Collection<Address> getValidatorsForNextBlock() { // TODO SLD getValidatorsForNextHeight?? c.f. getValidatorsForHeight
+    final BlockHeader header = blockchain.getChainHeadHeader();
+    return getValidators(header.getNumber() + 1, ValidatorProvider::getValidatorsForNextBlock);
+  }
+
+  @Override
   public Collection<Address> getValidatorsAfterBlock(final BlockHeader header) {
-    return getValidators(header.getNumber(), p -> p.getValidatorsAfterBlock(header));
+    return getValidators(header.getNumber() + 1, p -> p.getValidatorsAfterBlock(header)); // TODO SLD
   }
 
   @Override

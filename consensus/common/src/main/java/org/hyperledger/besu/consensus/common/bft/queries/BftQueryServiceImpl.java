@@ -63,7 +63,7 @@ public class BftQueryServiceImpl extends PoaQueryServiceImpl implements BftQuery
   }
 
   @Override
-  public Collection<Address> getValidatorsForLatestBlock() {
+  public Collection<Address> getValidatorsForLatestBlock() { // TODO SLD Used in a test only?!
     return Collections.unmodifiableCollection(validatorProvider.getValidatorsAtHead());
   }
 

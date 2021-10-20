@@ -65,8 +65,9 @@ public class BftFinalState {
     return BftHelpers.calculateRequiredValidatorQuorum(getValidators().size());
   }
 
-  public Collection<Address> getValidators() {
-    return validatorProvider.getValidatorsAtHead();
+  public Collection<Address> getValidators() { // TODO SLD should be +1?
+//    return validatorProvider.getValidatorsAtHead();
+    return validatorProvider.getValidatorsForNextBlock();
   }
 
   public NodeKey getNodeKey() {

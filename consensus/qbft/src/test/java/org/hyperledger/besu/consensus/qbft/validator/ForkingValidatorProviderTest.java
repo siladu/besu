@@ -17,19 +17,19 @@ package org.hyperledger.besu.consensus.qbft.validator;
 
 import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hyperledger.besu.consensus.qbft.validator.ValidatorTestUtils.createBlockFork;
+import static org.hyperledger.besu.consensus.qbft.validator.ValidatorTestUtils.createContractFork;
 import static org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider.createInMemoryBlockchain;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import org.hyperledger.besu.config.JsonQbftConfigOptions;
 import org.hyperledger.besu.config.QbftConfigOptions;
 import org.hyperledger.besu.consensus.common.bft.BftForkSpec;
 import org.hyperledger.besu.consensus.common.bft.BftForksSchedule;
 import org.hyperledger.besu.consensus.common.validator.VoteProvider;
 import org.hyperledger.besu.consensus.common.validator.blockbased.BlockValidatorProvider;
-import org.hyperledger.besu.consensus.qbft.MutableQbftConfigOptions;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.ethereum.chain.MutableBlockchain;
@@ -117,20 +117,27 @@ public class ForkingValidatorProviderTest {
   public void migratesFromBlockToContractValidatorProvider() {
     final BftForksSchedule<QbftConfigOptions> forksSchedule =
         new BftForksSchedule<>(
-            createBlockFork(0), List.of(createContractFork(1L, CONTRACT_ADDRESS_1)));
+                createBlockFork(0), List.of(createContractFork(1L, CONTRACT_ADDRESS_1)));
     final ForkingValidatorProvider validatorProvider =
         new ForkingValidatorProvider(
             blockChain, forksSchedule, blockValidatorProvider, contractValidatorProvider);
 
-    assertThat(validatorProvider.getValidatorsForBlock(genesisHeader)).isEqualTo(BLOCK_ADDRESSES);
-    assertThat(validatorProvider.getValidatorsForBlock(header1)).isEqualTo(CONTRACT_ADDRESSES_1);
+    when(blockValidatorProvider.getValidatorsAfterBlock(any())).thenReturn(CONTRACT_ADDRESSES_1);
+    when(contractValidatorProvider.getValidatorsAfterBlock(header1)).thenReturn(CONTRACT_ADDRESSES_1);
+
+//    SoftAssertions.assertSoftly(softly -> {
+      assertThat(validatorProvider.getValidatorsForBlock(genesisHeader)).isEqualTo(BLOCK_ADDRESSES);
+      assertThat(validatorProvider.getValidatorsForBlock(header1)).isEqualTo(CONTRACT_ADDRESSES_1);
+      assertThat(validatorProvider.getValidatorsAfterBlock(genesisHeader)).isEqualTo(CONTRACT_ADDRESSES_1);
+      assertThat(validatorProvider.getValidatorsAfterBlock(header1)).isEqualTo(CONTRACT_ADDRESSES_1);
+//    });
   }
 
   @Test
   public void migratesFromContractToBlockValidatorProvider() {
     final BftForksSchedule<QbftConfigOptions> forksSchedule =
         new BftForksSchedule<>(
-            createContractFork(0, CONTRACT_ADDRESS_1), List.of(createBlockFork(1)));
+                createContractFork(0, CONTRACT_ADDRESS_1), List.of(createBlockFork(1)));
     final ForkingValidatorProvider validatorProvider =
         new ForkingValidatorProvider(
             blockChain, forksSchedule, blockValidatorProvider, contractValidatorProvider);
@@ -148,10 +155,10 @@ public class ForkingValidatorProviderTest {
   public void migratesFromContractToContractValidatorProvider() {
     final BftForksSchedule<QbftConfigOptions> forksSchedule =
         new BftForksSchedule<>(
-            createBlockFork(0),
+                createBlockFork(0),
             List.of(
-                createContractFork(1L, CONTRACT_ADDRESS_1),
-                createContractFork(2L, CONTRACT_ADDRESS_2)));
+                    createContractFork(1L, CONTRACT_ADDRESS_1),
+                    createContractFork(2L, CONTRACT_ADDRESS_2)));
 
     final ForkingValidatorProvider validatorProvider =
         new ForkingValidatorProvider(
@@ -166,7 +173,7 @@ public class ForkingValidatorProviderTest {
   public void voteProviderIsDelegatesToHeadFork_whenHeadIsContractFork() {
     final BftForksSchedule<QbftConfigOptions> forksSchedule =
         new BftForksSchedule<>(
-            createBlockFork(0),
+                createBlockFork(0),
             List.of(createBlockFork(1), createContractFork(2, CONTRACT_ADDRESS_1)));
 
     final ForkingValidatorProvider validatorProvider =
@@ -198,7 +205,7 @@ public class ForkingValidatorProviderTest {
   public void getVoteProviderAfterBlock_correctVoteProviderIsResolved() {
     final BftForksSchedule<QbftConfigOptions> forksSchedule =
         new BftForksSchedule<>(
-            createBlockFork(0),
+                createBlockFork(0),
             List.of(createBlockFork(1), createContractFork(2, CONTRACT_ADDRESS_1)));
     final ForkingValidatorProvider validatorProvider =
         new ForkingValidatorProvider(
@@ -217,18 +224,5 @@ public class ForkingValidatorProviderTest {
           softly.assertThat(validatorProvider.getVoteProviderAfterBlock(header1)).isEmpty();
           softly.assertThat(validatorProvider.getVoteProviderAfterBlock(header2)).isEmpty();
         });
-  }
-
-  private BftForkSpec<QbftConfigOptions> createContractFork(
-      final long block, final Address contractAddress) {
-    final MutableQbftConfigOptions qbftConfigOptions =
-        new MutableQbftConfigOptions(JsonQbftConfigOptions.DEFAULT);
-    qbftConfigOptions.setValidatorContractAddress(Optional.of(contractAddress.toHexString()));
-    return new BftForkSpec<>(block, qbftConfigOptions);
-  }
-
-  private BftForkSpec<QbftConfigOptions> createBlockFork(final long block) {
-    final QbftConfigOptions qbftConfigOptions = JsonQbftConfigOptions.DEFAULT;
-    return new BftForkSpec<>(block, qbftConfigOptions);
   }
 }

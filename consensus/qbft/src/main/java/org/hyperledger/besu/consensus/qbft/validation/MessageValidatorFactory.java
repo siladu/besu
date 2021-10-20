@@ -57,7 +57,7 @@ public class MessageValidatorFactory {
   public RoundChangeMessageValidator createRoundChangeMessageValidator(
       final long chainHeight, final BlockHeader parentHeader) {
 
-    final Collection<Address> validatorsForHeight = getValidatorsAfterBlock(parentHeader);
+    final Collection<Address> validatorsForHeight = getValidatorsAfterBlock(parentHeader); // TODO SLD +1? chainHeight was +1'd
 
     final RoundChangePayloadValidator roundChangePayloadValidator =
         new RoundChangePayloadValidator(validatorsForHeight, chainHeight);

@@ -24,6 +24,10 @@ public interface ValidatorProvider {
 
   Collection<Address> getValidatorsAtHead();
 
+  default Collection<Address> getValidatorsForNextBlock() { // TODO SLD
+    return getValidatorsAtHead();
+  }
+
   Collection<Address> getValidatorsAfterBlock(BlockHeader header);
 
   Collection<Address> getValidatorsForBlock(BlockHeader header);

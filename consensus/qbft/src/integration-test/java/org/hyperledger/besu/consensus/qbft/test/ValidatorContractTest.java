@@ -38,6 +38,7 @@ import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.testutil.TestClock;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -91,6 +92,27 @@ public class ValidatorContractTest {
   }
 
   @Test
+  public void shouldNotProgressWhenNextBlockValidatorsMissingLocalNode() {
+    final List<QbftFork> qbftForks =
+            List.of(createContractFork(1, TestContextBuilder.VALIDATOR_CONTRACT_ADDRESS));
+    final TestContext context =
+            new TestContextBuilder()
+                    .indexOfFirstLocallyProposedBlock(0)
+                    .nodeParams(List.of(new NodeParams(NODE_2_ADDRESS, NodeKeyUtils.createFrom(NODE_2_PRIVATE_KEY))))
+                    .clock(TestClock.fixed())
+                    .genesisFile(
+                            Resources.getResource("genesis_migrating_validator_contract.json").getFile())
+                    .useValidatorContract(false)
+                    .qbftForks(qbftForks)
+                    .buildAndStart();
+
+    ConsensusRoundIdentifier roundId = new ConsensusRoundIdentifier(1, 0);
+    context.getController().handleBlockTimerExpiry(new BlockTimerExpiry(roundId));
+
+    assertThat(context.getBlockchain().getChainHeadBlockNumber()).isEqualTo(0);
+  }
+
+  @Test
   public void transitionsFromBlockHeaderModeToValidatorContractMode() {
     final List<QbftFork> qbftForks =
         List.of(createContractFork(1, TestContextBuilder.VALIDATOR_CONTRACT_ADDRESS));
@@ -98,10 +120,10 @@ public class ValidatorContractTest {
         new TestContextBuilder()
             .indexOfFirstLocallyProposedBlock(0)
             .nodeParams(
-                List.of(new NodeParams(NODE_ADDRESS, NodeKeyUtils.createFrom(NODE_PRIVATE_KEY))))
+                List.of(new NodeParams(NODE_2_ADDRESS, NodeKeyUtils.createFrom(NODE_2_PRIVATE_KEY))))
             .clock(TestClock.fixed())
             .genesisFile(
-                Resources.getResource("genesis_migrating_validator_contract.json").getFile())
+                Resources.getResource("genesis_migrating_validator_contract_one_validator.json").getFile())
             .useValidatorContract(false)
             .qbftForks(qbftForks)
             .buildAndStart();
@@ -109,8 +131,7 @@ public class ValidatorContractTest {
     // block 0 uses block header voting with 1 validator
     // block 1 onwards uses validator contract with 2 validators
     final List<Address> block0Addresses = List.of(NODE_ADDRESS);
-    final List<Address> block1Addresses =
-        Stream.of(NODE_ADDRESS, NODE_2_ADDRESS).sorted().collect(Collectors.toList());
+    final List<Address> block1Addresses = List.of(NODE_2_ADDRESS);
 
     createNewBlockAsProposer(context, 1);
 

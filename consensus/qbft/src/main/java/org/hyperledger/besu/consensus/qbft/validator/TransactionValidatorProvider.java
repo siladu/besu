@@ -47,17 +47,34 @@ public class TransactionValidatorProvider implements ValidatorProvider {
   }
 
   @Override
+  public Collection<Address> getValidatorsForNextBlock() {
+    return getValidatorsAfterBlock(blockchain.getChainHeadHeader());
+  }
+
+  @Override
   public Collection<Address> getValidatorsAfterBlock(final BlockHeader header) {
     // For the validator contract we determine the vote from the previous block
-    return getValidatorsForBlock(header);
+//    return getValidatorsForBlock(header);
+    final long blockNumber = header.getNumber(); // TODO SLD has to match existing block for contract call to work (just VCC.resolveContractAddress should be +1)
+    final long forkScheduleBlockNumber = blockNumber + 1;
+    try { // TODO SLD untangle cache - getValidatorsAfterBlock (0, 1's validators) has different meaning for getValidatorsForBlock (0, 0's validators)
+      return validatorCache.get( // TODO SLD with VCC.resolveCA +1 you end up with cache(0, [v1, v2])
+              forkScheduleBlockNumber, // TODO SLD
+              () ->
+                  validatorContractController.getValidators(blockNumber, forkScheduleBlockNumber).stream()
+                          .sorted()
+                          .collect(Collectors.toList()));
+    } catch (final ExecutionException e) {
+      throw new RuntimeException("Unable to determine a validators for the requested block.");
+    }
   }
 
   @Override
   public Collection<Address> getValidatorsForBlock(final BlockHeader header) {
-    final long blockNumber = header.getNumber();
-    try {
-      return validatorCache.get(
-          blockNumber,
+    final long blockNumber = header.getNumber(); // TODO SLD has to match existing block for contract call to work (just VCC.resolveContractAddress should be +1)
+    try { // TODO SLD untangle cache - getValidatorsAfterBlock (0, 1's validators) has different meaning for getValidatorsForBlock (0, 0's validators)
+      return validatorCache.get( // TODO SLD with VCC.resolveCA +1 you end up with cache(0, [v1, v2])
+          blockNumber, // TODO SLD
           () ->
               validatorContractController.getValidators(blockNumber).stream()
                   .sorted()

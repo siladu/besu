@@ -14,8 +14,11 @@
  */
 package org.hyperledger.besu.consensus.qbft.validator;
 
+import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hyperledger.besu.consensus.qbft.validator.ValidatorContractController.GET_VALIDATORS;
+import static org.hyperledger.besu.consensus.qbft.validator.ValidatorTestUtils.createBlockFork;
+import static org.hyperledger.besu.consensus.qbft.validator.ValidatorTestUtils.createContractFork;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 
@@ -53,6 +56,12 @@ public class ValidatorContractControllerTest {
   private static final Address VALIDATOR_ADDRESS =
       Address.fromHexString("0xeac51e3fe1afc9894f0dfeab8ceb471899b932df");
   private static final Address CONTRACT_ADDRESS = Address.fromHexString("1");
+
+//  private static final String GET_VALIDATORS_FUNCTION_RESULT_2 =
+//      "00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000001000000000000000000000000e98d92560fac3069ccff53ef348ded26a51d4b68";
+//  private static final Address VALIDATOR_ADDRESS_2 =
+//      Address.fromHexString("0xe98d92560fac3069ccff53ef348ded26a51d4b68");
+//  private static final Address CONTRACT_ADDRESS_2 = Address.fromHexString("2");
 
   private final TransactionSimulator transactionSimulator =
       Mockito.mock(TransactionSimulator.class);
@@ -95,6 +104,30 @@ public class ValidatorContractControllerTest {
     final ValidatorContractController validatorContractController =
         new ValidatorContractController(transactionSimulator, qbftForksSchedule);
     final Collection<Address> validators = validatorContractController.getValidators(1);
+    assertThat(validators).containsExactly(VALIDATOR_ADDRESS);
+  }
+
+  @Test
+  public void forkSchedule() {
+    final TransactionSimulatorResult result =
+            new TransactionSimulatorResult(
+                    transaction,
+                    TransactionProcessingResult.successful(
+                            List.of(),
+                            0,
+                            0,
+                            Bytes.fromHexString(GET_VALIDATORS_FUNCTION_RESULT),
+                            ValidationResult.valid()));
+
+    when(transactionSimulator.process(callParameter, 2)).thenReturn(Optional.of(result));
+
+    final BftForksSchedule<QbftConfigOptions> forksSchedule =
+            new BftForksSchedule<>(createContractFork(0, Address.fromHexString("0")),
+              List.of(createContractFork(1, Address.fromHexString("999")), createContractFork(2, CONTRACT_ADDRESS)));
+
+    final ValidatorContractController validatorContractController =
+            new ValidatorContractController(transactionSimulator, forksSchedule);
+    final Collection<Address> validators = validatorContractController.getValidators(2);
     assertThat(validators).containsExactly(VALIDATOR_ADDRESS);
   }
 

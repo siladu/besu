@@ -45,7 +45,7 @@ public class QbftBlockHeightManagerFactory {
   public BaseQbftBlockHeightManager create(final BlockHeader parentHeader) {
     validatorModeTransitionLogger.logTransitionChange(parentHeader);
 
-    if (finalState.isLocalNodeValidator()) {
+    if (finalState.isLocalNodeValidator()) { // TODO SLD + 1 out?
       return createFullBlockHeightManager(parentHeader);
     } else {
       return createNoOpBlockHeightManager(parentHeader);
