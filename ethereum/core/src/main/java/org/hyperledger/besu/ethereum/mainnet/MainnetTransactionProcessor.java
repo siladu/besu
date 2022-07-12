@@ -436,6 +436,8 @@ public class MainnetTransactionProcessor {
           }
         }
         final CoinbaseFeePriceCalculator coinbaseCalculator =
+            // TODO SLD implications of using frontier calculator here? Would throw if not,
+            // otherwise returns 0 in both cases leading to no reward
             blockHeader.getBaseFee().isPresent()
                 ? coinbaseFeePriceCalculator
                 : CoinbaseFeePriceCalculator.frontier();

@@ -28,7 +28,9 @@ public interface CoinbaseFeePriceCalculator {
 
   static CoinbaseFeePriceCalculator eip1559() {
     return (coinbaseFee, transactionGasPrice, baseFee) -> {
-      return transactionGasPrice.subtract(baseFee.orElseThrow()).multiply(coinbaseFee);
+      return transactionGasPrice
+          .subtract(baseFee.orElseThrow()) // TODO SLD the baseFee substraction is "the burn"?
+          .multiply(coinbaseFee);
     };
   }
 }

@@ -303,13 +303,14 @@ public class IbftBesuControllerBuilder extends BftBesuControllerBuilder {
     return block ->
         LOG.info(
             String.format(
-                "%s #%,d / %d tx / %d pending / %,d (%01.1f%%) gas / (%s)",
+                "%s #%,d / %d tx / %d pending / %,d (%01.1f%%) gas / (%s) / (%s) baseFee",
                 block.getHeader().getCoinbase().equals(localAddress) ? "Produced" : "Imported",
                 block.getHeader().getNumber(),
                 block.getBody().getTransactions().size(),
                 transactionPool.getPendingTransactions().size(),
                 block.getHeader().getGasUsed(),
                 (block.getHeader().getGasUsed() * 100.0) / block.getHeader().getGasLimit(),
-                block.getHash().toHexString()));
+                block.getHash().toHexString(),
+                block.getHeader().getBaseFee()));
   }
 }

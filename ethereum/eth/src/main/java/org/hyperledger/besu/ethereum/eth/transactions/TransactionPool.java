@@ -123,6 +123,8 @@ public class TransactionPool implements BlockAddedObserver {
       }
       final Collection<Transaction> txs = singletonList(transaction);
       transactionBroadcaster.onTransactionsAdded(txs);
+    } else {
+      LOG.error("Invalid transaction: {}", validationResult.getErrorMessage());
     }
 
     return validationResult;
@@ -161,7 +163,7 @@ public class TransactionPool implements BlockAddedObserver {
       } else {
         LOG.trace(
             "Validation failed ({}) for transaction {}. Discarding.",
-            validationResult.getInvalidReason(),
+            validationResult.getErrorMessage(),
             transaction);
       }
     }

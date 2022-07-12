@@ -29,13 +29,14 @@ public interface TransactionPriceCalculator {
 
   static TransactionPriceCalculator eip1559() {
     return (transaction, maybeBaseFee) -> {
-      final Wei baseFee = maybeBaseFee.orElseThrow();
+      // TODO ask Gary(?) why were we throwing when empty baseFee?
+      //      final Wei baseFee = maybeBaseFee.orElseThrow();
       if (!transaction.getType().supports1559FeeMarket()) {
         return transaction.getGasPrice().orElse(Wei.ZERO);
       }
       final Wei maxPriorityFeePerGas = transaction.getMaxPriorityFeePerGas().orElseThrow();
       final Wei maxFeePerGas = transaction.getMaxFeePerGas().orElseThrow();
-      Wei price = maxPriorityFeePerGas.add(baseFee);
+      Wei price = maxPriorityFeePerGas.add(maybeBaseFee.orElse(Wei.ZERO));
       if (price.compareTo(maxFeePerGas) > 0) {
         price = maxFeePerGas;
       }

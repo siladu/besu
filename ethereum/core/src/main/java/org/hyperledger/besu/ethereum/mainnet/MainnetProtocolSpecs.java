@@ -509,6 +509,7 @@ public abstract class MainnetProtocolSpecs {
         genesisConfigOptions.getLondonBlockNumber().orElse(Long.MAX_VALUE);
     final BaseFeeMarket londonFeeMarket =
         FeeMarket.london(londonForkBlockNumber, genesisConfigOptions.getBaseFeePerGas());
+    final FeeMarket freeGasMarket = FeeMarket.freeGas();
     return berlinDefinition(
             chainId,
             configContractSizeLimit,
@@ -523,7 +524,7 @@ public abstract class MainnetProtocolSpecs {
             gasCalculator ->
                 new MainnetTransactionValidator(
                     gasCalculator,
-                    londonFeeMarket,
+                    freeGasMarket,
                     true,
                     chainId,
                     Set.of(
@@ -558,7 +559,7 @@ public abstract class MainnetProtocolSpecs {
             (gasCalculator, jdCacheConfig) ->
                 MainnetEVMs.london(
                     gasCalculator, chainId.orElse(BigInteger.ZERO), evmConfiguration))
-        .feeMarket(londonFeeMarket)
+        .feeMarket(freeGasMarket)
         .difficultyCalculator(MainnetDifficultyCalculators.LONDON)
         .blockHeaderValidatorBuilder(
             feeMarket -> MainnetBlockHeaderValidator.createBaseFeeMarketValidator(londonFeeMarket))

@@ -46,4 +46,8 @@ public interface FeeMarket {
   static FeeMarket legacy() {
     return new LegacyFeeMarket();
   }
+
+  static FeeMarket freeGas() {
+    return new LegacyFeeMarket();
+  }
 }
