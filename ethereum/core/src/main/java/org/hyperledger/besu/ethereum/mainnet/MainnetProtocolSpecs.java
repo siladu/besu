@@ -519,6 +519,7 @@ public abstract class MainnetProtocolSpecs {
             evmConfiguration)
         .gasCalculator(LondonGasCalculator::new)
         .gasLimitCalculator(
+            // TODO SLD leave this as London with londonFeeMarket for now
             new LondonTargetingGasLimitCalculator(londonForkBlockNumber, londonFeeMarket))
         .transactionValidatorBuilder(
             gasCalculator ->
@@ -544,7 +545,7 @@ public abstract class MainnetProtocolSpecs {
                     messageCallProcessor,
                     true,
                     stackSizeLimit,
-                    londonFeeMarket,
+                    freeGasMarket,
                     CoinbaseFeePriceCalculator.eip1559()))
         .contractCreationProcessorBuilder(
             (gasCalculator, evm) ->
@@ -561,6 +562,8 @@ public abstract class MainnetProtocolSpecs {
                     gasCalculator, chainId.orElse(BigInteger.ZERO), evmConfiguration))
         .feeMarket(freeGasMarket)
         .difficultyCalculator(MainnetDifficultyCalculators.LONDON)
+        // TODO SLD should these validators be omitted if we're using a free gas network?
+        // TODO SLD need to pass in londonFeeMarket as it's an instance of BaseFeeMarket
         .blockHeaderValidatorBuilder(
             feeMarket -> MainnetBlockHeaderValidator.createBaseFeeMarketValidator(londonFeeMarket))
         .ommerHeaderValidatorBuilder(
