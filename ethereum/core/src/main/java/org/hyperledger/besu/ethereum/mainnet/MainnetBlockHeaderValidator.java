@@ -125,6 +125,8 @@ public final class MainnetBlockHeaderValidator {
     return new BlockHeaderValidator.Builder()
         .addRule(CalculatedDifficultyValidationRule::new)
         .addRule(new AncestryValidationRule())
+        // TODO SLD why are GasUsage... and GasLimitRange... the other way around compared to
+        // createPgaBlockHeaderValidator
         .addRule(new GasUsageValidationRule())
         .addRule(
             new GasLimitRangeAndDeltaValidationRule(

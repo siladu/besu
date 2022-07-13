@@ -31,6 +31,7 @@ import org.hyperledger.besu.ethereum.mainnet.ProtocolSpecBuilder.BlockProcessorB
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpecBuilder.BlockValidatorBuilder;
 import org.hyperledger.besu.ethereum.mainnet.feemarket.BaseFeeMarket;
 import org.hyperledger.besu.ethereum.mainnet.feemarket.FeeMarket;
+import org.hyperledger.besu.ethereum.mainnet.feemarket.LondonFeeMarket;
 import org.hyperledger.besu.ethereum.privacy.PrivateTransactionProcessor;
 import org.hyperledger.besu.ethereum.privacy.PrivateTransactionValidator;
 import org.hyperledger.besu.ethereum.privacy.storage.PrivateMetadataUpdater;
@@ -509,68 +510,85 @@ public abstract class MainnetProtocolSpecs {
         genesisConfigOptions.getLondonBlockNumber().orElse(Long.MAX_VALUE);
     final BaseFeeMarket londonFeeMarket =
         FeeMarket.london(londonForkBlockNumber, genesisConfigOptions.getBaseFeePerGas());
-    final FeeMarket freeGasMarket = FeeMarket.freeGas();
-    return berlinDefinition(
-            chainId,
-            configContractSizeLimit,
-            configStackSizeLimit,
-            enableRevertReason,
-            quorumCompatibilityMode,
-            evmConfiguration)
-        .gasCalculator(LondonGasCalculator::new)
-        .gasLimitCalculator(
-            // TODO SLD leave this as London with londonFeeMarket for now
-            new LondonTargetingGasLimitCalculator(londonForkBlockNumber, londonFeeMarket))
-        .transactionValidatorBuilder(
-            gasCalculator ->
-                new MainnetTransactionValidator(
-                    gasCalculator,
-                    freeGasMarket,
-                    true,
-                    chainId,
-                    Set.of(
-                        TransactionType.FRONTIER,
-                        TransactionType.ACCESS_LIST,
-                        TransactionType.EIP1559),
-                    quorumCompatibilityMode))
-        .transactionProcessorBuilder(
-            (gasCalculator,
-                transactionValidator,
-                contractCreationProcessor,
-                messageCallProcessor) ->
-                new MainnetTransactionProcessor(
-                    gasCalculator,
+    boolean enableFreeGasMarket = true;
+    final FeeMarket feeMarket = enableFreeGasMarket ? FeeMarket.freeGas() : londonFeeMarket;
+    final ProtocolSpecBuilder londonSpecBuilder =
+        berlinDefinition(
+                chainId,
+                configContractSizeLimit,
+                configStackSizeLimit,
+                enableRevertReason,
+                quorumCompatibilityMode,
+                evmConfiguration)
+            .gasCalculator(LondonGasCalculator::new)
+            .gasLimitCalculator(
+                // TODO SLD leave this as London with londonFeeMarket for now
+                new LondonTargetingGasLimitCalculator(londonForkBlockNumber, londonFeeMarket))
+            .transactionValidatorBuilder(
+                gasCalculator ->
+                    new MainnetTransactionValidator(
+                        gasCalculator,
+                        feeMarket,
+                        true,
+                        chainId,
+                        Set.of(
+                            TransactionType.FRONTIER,
+                            TransactionType.ACCESS_LIST,
+                            TransactionType.EIP1559),
+                        quorumCompatibilityMode))
+            .transactionProcessorBuilder(
+                (gasCalculator,
                     transactionValidator,
                     contractCreationProcessor,
-                    messageCallProcessor,
-                    true,
-                    stackSizeLimit,
-                    freeGasMarket,
-                    CoinbaseFeePriceCalculator.eip1559()))
-        .contractCreationProcessorBuilder(
-            (gasCalculator, evm) ->
-                new ContractCreationProcessor(
-                    gasCalculator,
-                    evm,
-                    true,
-                    List.of(MaxCodeSizeRule.of(contractSizeLimit), PrefixCodeRule.of()),
-                    1,
-                    SPURIOUS_DRAGON_FORCE_DELETE_WHEN_EMPTY_ADDRESSES))
-        .evmBuilder(
-            (gasCalculator, jdCacheConfig) ->
-                MainnetEVMs.london(
-                    gasCalculator, chainId.orElse(BigInteger.ZERO), evmConfiguration))
-        .feeMarket(freeGasMarket)
-        .difficultyCalculator(MainnetDifficultyCalculators.LONDON)
-        // TODO SLD should these validators be omitted if we're using a free gas network?
-        // TODO SLD need to pass in londonFeeMarket as it's an instance of BaseFeeMarket
-        .blockHeaderValidatorBuilder(
-            feeMarket -> MainnetBlockHeaderValidator.createBaseFeeMarketValidator(londonFeeMarket))
-        .ommerHeaderValidatorBuilder(
-            feeMarket ->
-                MainnetBlockHeaderValidator.createBaseFeeMarketOmmerValidator(londonFeeMarket))
-        .blockBodyValidatorBuilder(BaseFeeBlockBodyValidator::new)
-        .name(LONDON_FORK_NAME);
+                    messageCallProcessor) ->
+                    new MainnetTransactionProcessor(
+                        gasCalculator,
+                        transactionValidator,
+                        contractCreationProcessor,
+                        messageCallProcessor,
+                        true,
+                        stackSizeLimit,
+                        feeMarket,
+                        CoinbaseFeePriceCalculator.eip1559()))
+            .contractCreationProcessorBuilder(
+                (gasCalculator, evm) ->
+                    new ContractCreationProcessor(
+                        gasCalculator,
+                        evm,
+                        true,
+                        List.of(MaxCodeSizeRule.of(contractSizeLimit), PrefixCodeRule.of()),
+                        1,
+                        SPURIOUS_DRAGON_FORCE_DELETE_WHEN_EMPTY_ADDRESSES))
+            .evmBuilder(
+                (gasCalculator, jdCacheConfig) ->
+                    MainnetEVMs.london(
+                        gasCalculator, chainId.orElse(BigInteger.ZERO), evmConfiguration))
+            .feeMarket(feeMarket)
+            .difficultyCalculator(MainnetDifficultyCalculators.LONDON)
+            // TODO SLD should these validators be omitted if we're using a free gas network? yes if
+            // baseFee is empty, but it has implications for gasLimit
+            // TODO SLD need to pass in londonFeeMarket as it's an instance of BaseFeeMarket. Or
+            // could make it accept FeeMarket
+            //        .blockHeaderValidatorBuilder(
+            //            feeMarket ->
+            // MainnetBlockHeaderValidator.createBaseFeeMarketValidator(londonFeeMarket))
+            //        .ommerHeaderValidatorBuilder(
+            //            feeMarket ->
+            //
+            // MainnetBlockHeaderValidator.createBaseFeeMarketOmmerValidator(londonFeeMarket))
+            //        .blockBodyValidatorBuilder(BaseFeeBlockBodyValidator::new)
+            .name(LONDON_FORK_NAME);
+
+    if (feeMarket instanceof LondonFeeMarket) { // free gas market opts out of base fee validation
+      londonSpecBuilder
+          .blockHeaderValidatorBuilder(
+              __ -> MainnetBlockHeaderValidator.createBaseFeeMarketValidator(londonFeeMarket))
+          .ommerHeaderValidatorBuilder(
+              __ -> MainnetBlockHeaderValidator.createBaseFeeMarketOmmerValidator(londonFeeMarket))
+          .blockBodyValidatorBuilder(BaseFeeBlockBodyValidator::new);
+    }
+
+    return londonSpecBuilder;
   }
 
   static ProtocolSpecBuilder arrowGlacierDefinition(
