@@ -26,8 +26,7 @@ public class FreeGasFeeMarket implements FeeMarket {
   private final TransactionPriceCalculator txPriceCalculator;
 
   public FreeGasFeeMarket() {
-    // TODO SLD change to eip1559?
-    this.txPriceCalculator = TransactionPriceCalculator.frontier();
+    this.txPriceCalculator = TransactionPriceCalculator.eip1559();
   }
 
   @Override
