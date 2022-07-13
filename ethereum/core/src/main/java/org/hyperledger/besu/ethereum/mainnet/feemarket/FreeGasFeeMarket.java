@@ -21,33 +21,28 @@ import org.hyperledger.besu.ethereum.core.feemarket.TransactionPriceCalculator;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-public interface FeeMarket {
+public class FreeGasFeeMarket implements FeeMarket {
 
-  default boolean implementsBaseFee() {
-    return false;
+  private final TransactionPriceCalculator txPriceCalculator;
+
+  public FreeGasFeeMarket() {
+    // TODO SLD change to eip1559?
+    this.txPriceCalculator = TransactionPriceCalculator.frontier();
   }
 
-  TransactionPriceCalculator getTransactionPriceCalculator();
-
-  Wei minTransactionPriceInNextBlock(
-      Transaction transaction, Supplier<Optional<Wei>> baseFeeSupplier);
-
-  boolean satisfiesFloorTxCost(Transaction txn);
-
-  static BaseFeeMarket london(final long londonForkBlockNumber) {
-    return london(londonForkBlockNumber, Optional.empty());
+  @Override
+  public TransactionPriceCalculator getTransactionPriceCalculator() {
+    return txPriceCalculator;
   }
 
-  static BaseFeeMarket london(
-      final long londonForkBlockNumber, final Optional<Wei> baseFeePerGasOverride) {
-    return new LondonFeeMarket(londonForkBlockNumber, baseFeePerGasOverride);
+  @Override
+  public Wei minTransactionPriceInNextBlock(
+      final Transaction transaction, final Supplier<Optional<Wei>> baseFeeSupplier) {
+    return txPriceCalculator.price(transaction, Optional.empty());
   }
 
-  static FeeMarket legacy() {
-    return new LegacyFeeMarket();
-  }
-
-  static FeeMarket freeGas() {
-    return new FreeGasFeeMarket();
+  @Override
+  public boolean satisfiesFloorTxCost(final Transaction txn) {
+    return true;
   }
 }
