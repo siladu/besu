@@ -147,12 +147,13 @@ public class BlockMiner<M extends AbstractBlockCreator> implements Runnable {
       final double taskTimeInSec = stopwatch.elapsed(TimeUnit.MILLISECONDS) / 1000.0;
       LOG.info(
           String.format(
-              "Produced #%,d / %d tx / %d om / %,d (%01.1f%%) gas / (%s) in %01.3fs",
+              "Produced #%,d / %d tx / %d om / %,d (%01.1f%%) gas / %s base fee (%s) in %01.3fs",
               block.getHeader().getNumber(),
               block.getBody().getTransactions().size(),
               block.getBody().getOmmers().size(),
               block.getHeader().getGasUsed(),
               (block.getHeader().getGasUsed() * 100.0) / block.getHeader().getGasLimit(),
+              block.getHeader().getBaseFee(),
               block.getHash(),
               taskTimeInSec));
     } else {

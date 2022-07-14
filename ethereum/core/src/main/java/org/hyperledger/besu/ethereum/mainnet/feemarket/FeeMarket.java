@@ -46,4 +46,8 @@ public interface FeeMarket {
   static FeeMarket legacy() {
     return new LegacyFeeMarket();
   }
+
+  static BaseFeeMarket freeGas(final long londonForkBlockNumber) {
+    return new ZeroBaseFeeMarket(londonForkBlockNumber, Optional.of(Wei.ZERO));
+  }
 }

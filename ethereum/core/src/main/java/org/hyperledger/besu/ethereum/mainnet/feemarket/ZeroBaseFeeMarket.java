@@ -14,7 +14,6 @@
  */
 package org.hyperledger.besu.ethereum.mainnet.feemarket;
 
-import org.hyperledger.besu.config.GenesisConfigFile;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.feemarket.BaseFee;
@@ -23,41 +22,19 @@ import org.hyperledger.besu.ethereum.core.feemarket.TransactionPriceCalculator;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import org.apache.tuweni.units.bigints.UInt256s;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class LondonFeeMarket implements BaseFeeMarket {
-  static final Wei DEFAULT_BASEFEE_INITIAL_VALUE =
-      GenesisConfigFile.BASEFEE_AT_GENESIS_DEFAULT_VALUE;
-  static final long DEFAULT_BASEFEE_MAX_CHANGE_DENOMINATOR = 8L;
-  static final long DEFAULT_SLACK_COEFFICIENT = 2L;
-  // required for integer arithmetic to work when baseFee > 0
-  private static final Wei DEFAULT_BASEFEE_FLOOR = Wei.of(7L);
-  private static final Logger LOG = LoggerFactory.getLogger(LondonFeeMarket.class);
+public class ZeroBaseFeeMarket extends LondonFeeMarket {
+  private static final Logger LOG = LoggerFactory.getLogger(ZeroBaseFeeMarket.class);
 
-  protected final Wei baseFeeInitialValue;
-  protected final long londonForkBlockNumber;
-  protected final TransactionPriceCalculator txPriceCalculator;
-  protected Wei baseFeeFloor = DEFAULT_BASEFEE_FLOOR;
-
-  public LondonFeeMarket(final long londonForkBlockNumber) {
+  public ZeroBaseFeeMarket(final long londonForkBlockNumber) {
     this(londonForkBlockNumber, Optional.empty());
   }
 
-  public LondonFeeMarket(
+  public ZeroBaseFeeMarket(
       final long londonForkBlockNumber, final Optional<Wei> baseFeePerGasOverride) {
-    this.txPriceCalculator = TransactionPriceCalculator.eip1559();
-    this.londonForkBlockNumber = londonForkBlockNumber;
-    this.baseFeeInitialValue = baseFeePerGasOverride.orElse(DEFAULT_BASEFEE_INITIAL_VALUE);
-    if (baseFeeInitialValue.isZero()) {
-      baseFeeFloor = Wei.ZERO;
-    } else if (baseFeeInitialValue.lessThan(DEFAULT_BASEFEE_FLOOR)) {
-      throw new IllegalStateException(
-          String.format(
-              "baseFee must be either 0 or > %s wei to avoid integer arithmetic issues",
-              DEFAULT_BASEFEE_FLOOR));
-    }
+    super(londonForkBlockNumber, baseFeePerGasOverride);
   }
 
   @Override
@@ -106,27 +83,31 @@ public class LondonFeeMarket implements BaseFeeMarket {
       final Wei parentBaseFee,
       final long parentBlockGasUsed,
       final long targetGasUsed) {
-    if (londonForkBlockNumber == blockNumber) {
-      return getInitialBasefee();
-    }
 
-    long gasDelta;
-    Wei feeDelta, baseFee;
-    if (parentBlockGasUsed == targetGasUsed) {
-      return parentBaseFee;
-    } else if (parentBlockGasUsed > targetGasUsed) {
-      gasDelta = parentBlockGasUsed - targetGasUsed;
-      final long denominator = getBasefeeMaxChangeDenominator();
-      feeDelta =
-          UInt256s.max(
-              parentBaseFee.multiply(gasDelta).divide(targetGasUsed).divide(denominator), Wei.ONE);
-      baseFee = parentBaseFee.add(feeDelta);
-    } else {
-      gasDelta = targetGasUsed - parentBlockGasUsed;
-      final long denominator = getBasefeeMaxChangeDenominator();
-      feeDelta = parentBaseFee.multiply(gasDelta).divide(targetGasUsed).divide(denominator);
-      baseFee = parentBaseFee.subtract(feeDelta);
-    }
+    final Wei baseFee = Wei.ZERO;
+
+    //    if (londonForkBlockNumber == blockNumber) {
+    //      return getInitialBasefee();
+    //    }
+    //
+    //    long gasDelta;
+    //    Wei feeDelta, baseFee;
+    //    if (parentBlockGasUsed == targetGasUsed) {
+    //      return parentBaseFee;
+    //    } else if (parentBlockGasUsed > targetGasUsed) {
+    //      gasDelta = parentBlockGasUsed - targetGasUsed;
+    //      final long denominator = getBasefeeMaxChangeDenominator();
+    //      feeDelta =
+    //          UInt256s.max(
+    //              parentBaseFee.multiply(gasDelta).divide(targetGasUsed).divide(denominator),
+    // Wei.ONE);
+    //      baseFee = parentBaseFee.add(feeDelta);
+    //    } else {
+    //      gasDelta = targetGasUsed - parentBlockGasUsed;
+    //      final long denominator = getBasefeeMaxChangeDenominator();
+    //      feeDelta = parentBaseFee.multiply(gasDelta).divide(targetGasUsed).divide(denominator);
+    //      baseFee = parentBaseFee.subtract(feeDelta);
+    //    }
     LOG.trace(
         "block #{} parentBaseFee: {} parentGasUsed: {} parentGasTarget: {} baseFee: {}",
         blockNumber,

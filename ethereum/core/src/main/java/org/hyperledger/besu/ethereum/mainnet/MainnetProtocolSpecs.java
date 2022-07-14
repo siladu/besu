@@ -71,9 +71,13 @@ import java.util.stream.IntStream;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Resources;
 import io.vertx.core.json.JsonArray;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Provides the various {@link ProtocolSpec}s on mainnet hard forks. */
 public abstract class MainnetProtocolSpecs {
+
+  private static final Logger LOG = LoggerFactory.getLogger(MainnetProtocolSpecs.class);
 
   public static final int FRONTIER_CONTRACT_SIZE_LIMIT = Integer.MAX_VALUE;
 
@@ -507,8 +511,16 @@ public abstract class MainnetProtocolSpecs {
     final int stackSizeLimit = configStackSizeLimit.orElse(MessageFrame.DEFAULT_MAX_STACK_SIZE);
     final long londonForkBlockNumber =
         genesisConfigOptions.getLondonBlockNumber().orElse(Long.MAX_VALUE);
-    final BaseFeeMarket londonFeeMarket =
-        FeeMarket.london(londonForkBlockNumber, genesisConfigOptions.getBaseFeePerGas());
+    // TODO SLD in lieu of a --free-gas cli option
+    boolean enableFreeGasMarket = true;
+    final BaseFeeMarket feeMarket =
+        enableFreeGasMarket
+            ? FeeMarket.freeGas(londonForkBlockNumber)
+            : FeeMarket.london(londonForkBlockNumber, genesisConfigOptions.getBaseFeePerGas());
+    ;
+    if (enableFreeGasMarket) {
+      LOG.info("Using Free Gas network, no base fee will be set on blocks");
+    }
     return berlinDefinition(
             chainId,
             configContractSizeLimit,
@@ -517,13 +529,12 @@ public abstract class MainnetProtocolSpecs {
             quorumCompatibilityMode,
             evmConfiguration)
         .gasCalculator(LondonGasCalculator::new)
-        .gasLimitCalculator(
-            new LondonTargetingGasLimitCalculator(londonForkBlockNumber, londonFeeMarket))
+        .gasLimitCalculator(new LondonTargetingGasLimitCalculator(londonForkBlockNumber, feeMarket))
         .transactionValidatorBuilder(
             gasCalculator ->
                 new MainnetTransactionValidator(
                     gasCalculator,
-                    londonFeeMarket,
+                    feeMarket,
                     true,
                     chainId,
                     Set.of(
@@ -543,7 +554,7 @@ public abstract class MainnetProtocolSpecs {
                     messageCallProcessor,
                     true,
                     stackSizeLimit,
-                    londonFeeMarket,
+                    feeMarket,
                     CoinbaseFeePriceCalculator.eip1559()))
         .contractCreationProcessorBuilder(
             (gasCalculator, evm) ->
@@ -558,13 +569,12 @@ public abstract class MainnetProtocolSpecs {
             (gasCalculator, jdCacheConfig) ->
                 MainnetEVMs.london(
                     gasCalculator, chainId.orElse(BigInteger.ZERO), evmConfiguration))
-        .feeMarket(londonFeeMarket)
+        .feeMarket(feeMarket)
         .difficultyCalculator(MainnetDifficultyCalculators.LONDON)
         .blockHeaderValidatorBuilder(
-            feeMarket -> MainnetBlockHeaderValidator.createBaseFeeMarketValidator(londonFeeMarket))
+            __ -> MainnetBlockHeaderValidator.createBaseFeeMarketValidator(feeMarket))
         .ommerHeaderValidatorBuilder(
-            feeMarket ->
-                MainnetBlockHeaderValidator.createBaseFeeMarketOmmerValidator(londonFeeMarket))
+            __ -> MainnetBlockHeaderValidator.createBaseFeeMarketOmmerValidator(feeMarket))
         .blockBodyValidatorBuilder(BaseFeeBlockBodyValidator::new)
         .name(LONDON_FORK_NAME);
   }
