@@ -72,9 +72,12 @@ import java.util.stream.IntStream;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Resources;
 import io.vertx.core.json.JsonArray;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Provides the various {@link ProtocolSpec}s on mainnet hard forks. */
 public abstract class MainnetProtocolSpecs {
+  private static final Logger LOG = LoggerFactory.getLogger(MainnetProtocolSpecs.class);
 
   public static final int FRONTIER_CONTRACT_SIZE_LIMIT = Integer.MAX_VALUE;
 
@@ -510,8 +513,12 @@ public abstract class MainnetProtocolSpecs {
         genesisConfigOptions.getLondonBlockNumber().orElse(Long.MAX_VALUE);
     final BaseFeeMarket londonFeeMarket =
         FeeMarket.london(londonForkBlockNumber, genesisConfigOptions.getBaseFeePerGas());
+    // TODO SLD in lieu of a --free-gas cli option
     boolean enableFreeGasMarket = true;
     final FeeMarket feeMarket = enableFreeGasMarket ? FeeMarket.freeGas() : londonFeeMarket;
+    if (enableFreeGasMarket) {
+      LOG.info("Using Free Gas network, no base fee will be set on blocks");
+    }
     final ProtocolSpecBuilder londonSpecBuilder =
         berlinDefinition(
                 chainId,

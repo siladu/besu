@@ -65,9 +65,10 @@ public final class ProofOfWorkValidationRule implements DetachedBlockHeaderValid
         LOG.info("Invalid block header: missing mandatory base fee.");
         return false;
       }
-    } else if (header.getBaseFee().isPresent()) {
-      LOG.info("Invalid block header: presence of basefee in a non-eip1559 block");
-      return false;
+      // TODO SLD do we need this? Or can specifically check for FreeGasFeeMarket
+      //    } else if (header.getBaseFee().isPresent()) {
+      //      LOG.info("Invalid block header: presence of basefee in a non-eip1559 block");
+      //      return false;
     }
 
     // TODO: remove this rule bypass, use post-merge headervalidation rules

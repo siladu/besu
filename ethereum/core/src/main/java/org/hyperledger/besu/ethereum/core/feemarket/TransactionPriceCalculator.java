@@ -29,7 +29,7 @@ public interface TransactionPriceCalculator {
 
   static TransactionPriceCalculator eip1559() {
     return (transaction, maybeBaseFee) -> {
-      // TODO SLD ask Gary(?) why were we throwing when empty baseFee?
+      // TODO SLD why are we throwing when empty baseFee?
       //      final Wei baseFee = maybeBaseFee.orElseThrow();
       if (!transaction.getType().supports1559FeeMarket()) {
         return transaction.getGasPrice().orElse(Wei.ZERO);

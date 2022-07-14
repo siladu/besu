@@ -60,11 +60,13 @@ public class GasLimitRangeAndDeltaValidationRule extends AbstractGasLimitSpecifi
       return false;
     }
 
-    if (baseFeeMarket.isEmpty() && header.getBaseFee().isPresent()) {
-      LOG.info(
-          "Invalid block header: basefee should not be present in a block without a base fee market");
-      return false;
-    }
+    // TODO SLD can we remove this?
+    //    if (baseFeeMarket.isEmpty() && header.getBaseFee().isPresent()) {
+    //      LOG.info(
+    //          "Invalid block header: basefee should not be present in a block without a base fee
+    // market");
+    //      return false;
+    //    }
 
     long parentGasLimit =
         baseFeeMarket
