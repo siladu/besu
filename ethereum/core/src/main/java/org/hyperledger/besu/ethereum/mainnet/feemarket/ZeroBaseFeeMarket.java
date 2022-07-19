@@ -49,6 +49,7 @@ public class ZeroBaseFeeMarket extends LondonFeeMarket {
 
   @Override
   public long getSlackCoefficient() {
+    // TODO SLD setting this to 0 resulting in division by 0 error
     return DEFAULT_SLACK_COEFFICIENT;
   }
 
@@ -120,6 +121,9 @@ public class ZeroBaseFeeMarket extends LondonFeeMarket {
 
   @Override
   public boolean isForkBlock(final long blockNumber) {
+    // TODO SLD cheat, ensure 0 is always compared with 0 in BaseFeeMarketBlockHeaderGasPriceValidationRule
+    // TODO SLD this cheat doesn't work when synching a block with a non-zero base fee (if this is how your network started)
+//    return true;
     return londonForkBlockNumber == blockNumber;
   }
 

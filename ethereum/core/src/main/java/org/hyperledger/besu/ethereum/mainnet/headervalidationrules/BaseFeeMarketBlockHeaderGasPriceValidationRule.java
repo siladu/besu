@@ -22,6 +22,7 @@ import org.hyperledger.besu.ethereum.core.feemarket.FeeMarketException;
 import org.hyperledger.besu.ethereum.mainnet.DetachedBlockHeaderValidationRule;
 import org.hyperledger.besu.ethereum.mainnet.feemarket.BaseFeeMarket;
 
+import org.hyperledger.besu.ethereum.mainnet.feemarket.ZeroBaseFeeMarket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +47,12 @@ public class BaseFeeMarketBlockHeaderGasPriceValidationRule
             .equals(header.getBaseFee().orElseThrow(() -> MissingBaseFeeFromBlockHeader()));
       }
 
+      if (baseFeeMarket instanceof ZeroBaseFeeMarket) {
+        // TODO SLD opt-out of validation to deal with the case where
+        // we start with a non-zero baseFee market and change to 0 baseFee
+        return true;
+      }
+
       final Wei parentBaseFee =
           parent.getBaseFee().orElseThrow(() -> MissingBaseFeeFromBlockHeader());
       final Wei currentBaseFee =
@@ -54,6 +61,7 @@ public class BaseFeeMarketBlockHeaderGasPriceValidationRule
       final Wei expectedBaseFee =
           baseFeeMarket.computeBaseFee(
               header.getNumber(), parentBaseFee, parent.getGasUsed(), targetGasUsed);
+      // TODO SLD special case for zero base fee
       if (!expectedBaseFee.equals(currentBaseFee)) {
         LOG.info(
             "Invalid block header: basefee {} does not equal expected basefee {}",
