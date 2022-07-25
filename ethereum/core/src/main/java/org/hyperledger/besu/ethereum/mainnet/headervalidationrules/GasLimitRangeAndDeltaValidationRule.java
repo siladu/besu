@@ -73,6 +73,8 @@ public class GasLimitRangeAndDeltaValidationRule extends AbstractGasLimitSpecifi
             .orElse(parent.getGasLimit());
 
     final long difference = Math.abs(parentGasLimit - gasLimit);
+    // TODO SLD override GAS_LIMIT_BOUND_DIVISOR with 0?
+    // TODO SLD really comes down to what we should do with the gas limit in zero fee networks
     final long bounds = deltaBound(parentGasLimit);
     // this is an exclusive bound, so the difference should be strictly less:
     if (Long.compareUnsigned(difference, bounds) >= 0) {

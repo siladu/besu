@@ -126,6 +126,7 @@ public final class MainnetBlockHeaderValidator {
         .addRule(CalculatedDifficultyValidationRule::new)
         .addRule(new AncestryValidationRule())
         .addRule(new GasUsageValidationRule())
+        // TODO SLD temporarily remove for test
         .addRule(
             new GasLimitRangeAndDeltaValidationRule(
                 MIN_GAS_LIMIT, Long.MAX_VALUE, Optional.of(baseFeeMarket)))
