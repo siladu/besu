@@ -29,6 +29,7 @@ import static org.hyperledger.besu.cli.config.NetworkName.ROPSTEN;
 import static org.hyperledger.besu.cli.util.CommandLineUtils.DEPENDENCY_WARNING_MSG;
 import static org.hyperledger.besu.cli.util.CommandLineUtils.DEPRECATED_AND_USELESS_WARNING_MSG;
 import static org.hyperledger.besu.cli.util.CommandLineUtils.DEPRECATION_WARNING_MSG;
+import static org.hyperledger.besu.config.JsonUtil.normalizeKeys;
 import static org.hyperledger.besu.ethereum.api.jsonrpc.RpcApis.ENGINE;
 import static org.hyperledger.besu.ethereum.api.jsonrpc.RpcApis.ETH;
 import static org.hyperledger.besu.ethereum.api.jsonrpc.RpcApis.NET;
@@ -109,9 +110,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
-import io.vertx.core.json.JsonObject;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.Level;
@@ -133,6 +135,7 @@ import picocli.CommandLine;
 @RunWith(MockitoJUnitRunner.class)
 public class BesuCommandTest extends CommandTestAbstract {
 
+  private static final JsonMapper JSON_MAPPER = JsonMapper.builder().build();
   private static final String ENCLAVE_URI = "http://1.2.3.4:5555";
   private static final String ENCLAVE_PUBLIC_KEY = "A1aVtMxLCUHmBVHXoZzzBgPbW/wj5axDpW9X8l91SGo=";
   private static final String VALID_NODE_ID =
@@ -143,22 +146,34 @@ public class BesuCommandTest extends CommandTestAbstract {
   private static final WebSocketConfiguration DEFAULT_WEB_SOCKET_CONFIGURATION;
   private static final MetricsConfiguration DEFAULT_METRICS_CONFIGURATION;
   private static final int GENESIS_CONFIG_TEST_CHAINID = 3141592;
-  private static final JsonObject GENESIS_VALID_JSON =
-      (new JsonObject())
-          .put("config", (new JsonObject()).put("chainId", GENESIS_CONFIG_TEST_CHAINID));
-  private static final JsonObject GENESIS_INVALID_DATA =
-      (new JsonObject()).put("config", new JsonObject());
-  private static final JsonObject VALID_GENESIS_QUORUM_INTEROP_ENABLED_WITH_CHAINID =
-      (new JsonObject())
-          .put(
+  private static final ObjectNode GENESIS_VALID_JSON =
+      JSON_MAPPER
+          .createObjectNode()
+          .set(
+              "config", JSON_MAPPER.createObjectNode().put("chainId", GENESIS_CONFIG_TEST_CHAINID));
+  private static final ObjectNode GENESIS_INVALID_DATA =
+      JSON_MAPPER.createObjectNode().set("config", JSON_MAPPER.createObjectNode());
+  private static final ObjectNode VALID_GENESIS_QUORUM_INTEROP_ENABLED_WITH_CHAINID =
+      JSON_MAPPER
+          .createObjectNode()
+          .set(
               "config",
-              new JsonObject().put("isQuorum", true).put("chainId", GENESIS_CONFIG_TEST_CHAINID));
-  private static final JsonObject INVALID_GENESIS_QUORUM_INTEROP_ENABLED_MAINNET =
-      (new JsonObject()).put("config", new JsonObject().put("isQuorum", true));
-  private static final JsonObject INVALID_GENESIS_EC_CURVE =
-      (new JsonObject()).put("config", new JsonObject().put("ecCurve", "abcd"));
-  private static final JsonObject VALID_GENESIS_EC_CURVE =
-      (new JsonObject()).put("config", new JsonObject().put("ecCurve", "secp256k1"));
+              JSON_MAPPER
+                  .createObjectNode()
+                  .put("isQuorum", true)
+                  .put("chainId", GENESIS_CONFIG_TEST_CHAINID));
+  private static final ObjectNode INVALID_GENESIS_QUORUM_INTEROP_ENABLED_MAINNET =
+      JSON_MAPPER
+          .createObjectNode()
+          .set("config", JSON_MAPPER.createObjectNode().put("isQuorum", true));
+  private static final ObjectNode INVALID_GENESIS_EC_CURVE =
+      JSON_MAPPER
+          .createObjectNode()
+          .set("config", JSON_MAPPER.createObjectNode().put("ecCurve", "abcd"));
+  private static final ObjectNode VALID_GENESIS_EC_CURVE =
+      JSON_MAPPER
+          .createObjectNode()
+          .set("config", JSON_MAPPER.createObjectNode().put("ecCurve", "secp256k1"));
   private static final String ENCLAVE_PUBLIC_KEY_PATH =
       BesuCommand.class.getResource("/orion_publickey.pub").getPath();
 
@@ -169,16 +184,24 @@ public class BesuCommandTest extends CommandTestAbstract {
   };
   private static final String DNS_DISCOVERY_URL =
       "enrtree://AM5FCQLWIZX2QFPNJAP7VUERCCRNGRHWZG3YYHIUV7BVDQ5FDPRT2@nodes.example.org";
-  private static final JsonObject VALID_GENESIS_WITH_DISCOVERY_OPTIONS =
-      new JsonObject()
-          .put(
+  private static final ObjectNode DISCOVERY =
+      JSON_MAPPER
+          .createObjectNode()
+          .set(
+              "bootnodes",
+              JSON_MAPPER
+                  .createArrayNode()
+                  .add(VALID_ENODE_STRINGS[0])
+                  .add(VALID_ENODE_STRINGS[1])
+                  .add(VALID_ENODE_STRINGS[2]));
+  private static final ObjectNode VALID_GENESIS_WITH_DISCOVERY_OPTIONS =
+      JSON_MAPPER
+          .createObjectNode()
+          .set(
               "config",
-              new JsonObject()
-                  .put(
-                      "discovery",
-                      new JsonObject()
-                          .put("bootnodes", List.of(VALID_ENODE_STRINGS))
-                          .put("dns", DNS_DISCOVERY_URL)));
+              JSON_MAPPER
+                  .createObjectNode()
+                  .set("discovery", DISCOVERY.put("dns", DNS_DISCOVERY_URL)));
 
   static {
     DEFAULT_JSON_RPC_CONFIGURATION = JsonRpcConfiguration.createDefault();
@@ -232,7 +255,7 @@ public class BesuCommandTest extends CommandTestAbstract {
     verify(mockRunnerBuilder)
         .ethNetworkConfig(
             new EthNetworkConfig(
-                EthNetworkConfig.jsonConfig(MAINNET),
+                GenesisConfigFile.fromConfig(EthNetworkConfig.jsonConfig(MAINNET)),
                 MAINNET.getNetworkId(),
                 MAINNET_BOOTSTRAP_NODES,
                 MAINNET_DISCOVERY_URL));
@@ -405,7 +428,7 @@ public class BesuCommandTest extends CommandTestAbstract {
     final EthNetworkConfig networkConfig =
         new EthNetworkConfig.Builder(EthNetworkConfig.getNetworkConfig(MAINNET))
             .setNetworkId(BigInteger.valueOf(42))
-            .setGenesisConfig(encodeJsonGenesis(GENESIS_VALID_JSON))
+            .setGenesisConfig(GenesisConfigFile.fromConfig(encodeJsonGenesis(GENESIS_VALID_JSON)))
             .setBootNodes(nodes)
             .setDnsDiscoveryUrl(null)
             .build();
@@ -855,7 +878,7 @@ public class BesuCommandTest extends CommandTestAbstract {
     verify(mockRunnerBuilder)
         .ethNetworkConfig(
             new EthNetworkConfig(
-                EthNetworkConfig.jsonConfig(MAINNET),
+                GenesisConfigFile.fromConfig(EthNetworkConfig.jsonConfig(MAINNET)),
                 MAINNET.getNetworkId(),
                 MAINNET_BOOTSTRAP_NODES,
                 MAINNET_DISCOVERY_URL));
@@ -958,7 +981,7 @@ public class BesuCommandTest extends CommandTestAbstract {
     verify(mockControllerBuilder).build();
 
     assertThat(networkArg.getValue().getGenesisConfig())
-        .isEqualTo(encodeJsonGenesis(GENESIS_VALID_JSON));
+        .isEqualTo(GenesisConfigFile.fromConfig(GENESIS_VALID_JSON));
 
     assertThat(commandOutput.toString(UTF_8)).isEmpty();
     assertThat(commandErrorOutput.toString(UTF_8)).isEmpty();
@@ -1106,7 +1129,7 @@ public class BesuCommandTest extends CommandTestAbstract {
     verify(mockControllerBuilder).build();
 
     assertThat(networkArg.getValue().getGenesisConfig())
-        .isEqualTo(encodeJsonGenesis(GENESIS_VALID_JSON));
+        .isEqualTo(GenesisConfigFile.fromConfig(GENESIS_VALID_JSON));
     assertThat(networkArg.getValue().getBootNodes()).isEmpty();
     assertThat(networkArg.getValue().getNetworkId()).isEqualTo(GENESIS_CONFIG_TEST_CHAINID);
 
@@ -1127,7 +1150,7 @@ public class BesuCommandTest extends CommandTestAbstract {
     verify(mockControllerBuilder).build();
 
     assertThat(networkArg.getValue().getGenesisConfig())
-        .isEqualTo(encodeJsonGenesis(GENESIS_INVALID_DATA));
+        .isEqualTo(GenesisConfigFile.fromConfig(GENESIS_INVALID_DATA));
 
     //    assertThat(networkArg.getValue().getNetworkId())
     //        .isEqualTo(EthNetworkConfig.getNetworkConfig(MAINNET).getNetworkId());
@@ -1144,7 +1167,7 @@ public class BesuCommandTest extends CommandTestAbstract {
     // in this network genesis file.
 
     final GenesisConfigFile genesisConfigFile =
-        GenesisConfigFile.fromConfig(EthNetworkConfig.getNetworkConfig(MAINNET).getGenesisConfig());
+        EthNetworkConfig.getNetworkConfig(MAINNET).getGenesisConfig();
     assertThat(genesisConfigFile.getConfigOptions().getChainId().isPresent()).isTrue();
     assertThat(genesisConfigFile.getConfigOptions().getChainId().get())
         .isEqualTo(EthNetworkConfig.getNetworkConfig(MAINNET).getNetworkId());
@@ -4281,7 +4304,7 @@ public class BesuCommandTest extends CommandTestAbstract {
             "No Payload Provider has been provided. You must register one when enabling privacy plugin!");
   }
 
-  private Path createFakeGenesisFile(final JsonObject jsonGenesis) throws IOException {
+  private Path createFakeGenesisFile(final ObjectNode jsonGenesis) throws IOException {
     final Path genesisFile = Files.createTempFile("genesisFile", "");
     Files.write(genesisFile, encodeJsonGenesis(jsonGenesis).getBytes(UTF_8));
     genesisFile.toFile().deleteOnExit();
@@ -4302,8 +4325,8 @@ public class BesuCommandTest extends CommandTestAbstract {
     return file;
   }
 
-  private String encodeJsonGenesis(final JsonObject jsonGenesis) {
-    return jsonGenesis.encodePrettily();
+  private String encodeJsonGenesis(final ObjectNode jsonGenesis) {
+    return normalizeKeys(jsonGenesis).toPrettyString();
   }
 
   private static String escapeTomlString(final String s) {

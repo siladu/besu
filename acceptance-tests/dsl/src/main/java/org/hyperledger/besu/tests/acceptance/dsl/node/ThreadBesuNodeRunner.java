@@ -143,7 +143,10 @@ public class ThreadBesuNodeRunner implements BesuNodeRunner {
     final EthNetworkConfig.Builder networkConfigBuilder =
         new EthNetworkConfig.Builder(EthNetworkConfig.getNetworkConfig(network))
             .setBootNodes(bootnodes);
-    node.getConfiguration().getGenesisConfig().ifPresent(networkConfigBuilder::setGenesisConfig);
+    node.getConfiguration()
+        .getGenesisConfig()
+        .map(GenesisConfigFile::fromConfig)
+        .ifPresent(networkConfigBuilder::setGenesisConfig);
     final EthNetworkConfig ethNetworkConfig = networkConfigBuilder.build();
     final BesuControllerBuilder builder =
         new BesuController.Builder().fromEthNetworkConfig(ethNetworkConfig);

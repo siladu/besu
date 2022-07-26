@@ -280,7 +280,7 @@ public final class RunnerTest {
       final EnodeURL enode = runnerAhead.getLocalEnode().get();
       final EthNetworkConfig behindEthNetworkConfiguration =
           new EthNetworkConfig(
-              EthNetworkConfig.jsonConfig(DEV),
+              GenesisConfigFile.fromConfig(EthNetworkConfig.jsonConfig(DEV)),
               DEV.getNetworkId(),
               Collections.singletonList(enode),
               null);

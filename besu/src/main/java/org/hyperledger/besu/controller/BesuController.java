@@ -177,9 +177,7 @@ public class BesuController implements java.io.Closeable {
 
     public BesuControllerBuilder fromEthNetworkConfig(
         final EthNetworkConfig ethNetworkConfig, final Map<String, String> genesisConfigOverrides) {
-      return fromGenesisConfig(
-              GenesisConfigFile.fromConfig(ethNetworkConfig.getGenesisConfig()),
-              genesisConfigOverrides)
+      return fromGenesisConfig(ethNetworkConfig.getGenesisConfig(), genesisConfigOverrides)
           .networkId(ethNetworkConfig.getNetworkId());
     }
 

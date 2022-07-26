@@ -165,6 +165,18 @@ public class GenesisConfigFileTest {
   }
 
   @Test
+  public void shouldGetOverriddenBaseFeeAtGenesis() {
+    final Map<String, String> overrides = Map.of("baseFeePerGas", Wei.of(8).toString());
+    GenesisConfigFile withBaseFeeAtGenesis =
+        GenesisConfigFile.fromConfig("{\"config\":{\"londonBlock\":0}}");
+    withBaseFeeAtGenesis.setGenesisConfigOverrides(overrides);
+    // no specified baseFeePerGas:
+    assertThat(withBaseFeeAtGenesis.getBaseFeePerGas()).isNotPresent();
+    // supply an overridden genesis baseFeePerGas when london-at-genesis:
+    assertThat(withBaseFeeAtGenesis.getGenesisBaseFeePerGas().get()).isEqualTo(Wei.of(8));
+  }
+
+  @Test
   public void shouldNotGetBaseFeeAtGenesis() {
     GenesisConfigFile withBaseFeeNotAtGenesis =
         GenesisConfigFile.fromConfig("{\"config\":{\"londonBlock\":10},\"baseFeePerGas\":\"0xa\"}");

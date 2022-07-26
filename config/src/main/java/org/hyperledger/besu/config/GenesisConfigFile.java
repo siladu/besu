@@ -24,24 +24,32 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Streams;
 import com.google.common.io.Resources;
 
 public class GenesisConfigFile {
 
+  @VisibleForTesting
   public static final GenesisConfigFile DEFAULT =
       new GenesisConfigFile(JsonUtil.createEmptyObjectNode());
 
-  public static final Wei BASEFEE_AT_GENESIS_DEFAULT_VALUE = Wei.of(1000000000L);
+  public static final Wei BASEFEE_AT_GENESIS_DEFAULT_VALUE = Wei.of(1_000_000_000L);
   private final ObjectNode configRoot;
+  private Map<String, String> genesisConfigOverrides = Collections.emptyMap();
 
   private GenesisConfigFile(final ObjectNode config) {
     this.configRoot = config;
+  }
+
+  public void setGenesisConfigOverrides(final Map<String, String> genesisConfigOverrides) {
+    this.genesisConfigOverrides = genesisConfigOverrides;
   }
 
   public static GenesisConfigFile mainnet() {
@@ -93,7 +101,7 @@ public class GenesisConfigFile {
 
     Map<String, String> overridesRef = overrides;
 
-    // if baseFeePerGas has been explicitly configured, pass it as an override:
+    // if baseFeePerGas has been explicitly configured in the genesis file, pass it as an override:
     final var optBaseFee = getBaseFeePerGas();
     if (optBaseFee.isPresent()) {
       overridesRef =
@@ -133,7 +141,8 @@ public class GenesisConfigFile {
     return parseLong("gasLimit", getFirstRequiredString("gaslimit", "gastarget"));
   }
 
-  public Optional<Wei> getBaseFeePerGas() {
+  @VisibleForTesting
+  Optional<Wei> getBaseFeePerGas() {
     return JsonUtil.getString(configRoot, "basefeepergas")
         .map(baseFeeStr -> Wei.of(parseLong("baseFeePerGas", baseFeeStr)));
   }
@@ -142,8 +151,12 @@ public class GenesisConfigFile {
     // if we have a base fee market at genesis, get either the configured baseFeePerGas, or the
     // default
     return getBaseFeePerGas()
-        .map(Optional::of)
-        .orElseGet(() -> Optional.of(BASEFEE_AT_GENESIS_DEFAULT_VALUE))
+        .or(
+            () ->
+                Optional.of(
+                    getConfigOptions(genesisConfigOverrides)
+                        .getBaseFeePerGas()
+                        .orElse(BASEFEE_AT_GENESIS_DEFAULT_VALUE)))
         .filter(z -> 0L == getConfigOptions().getLondonBlockNumber().orElse(-1L));
   }
 
@@ -196,5 +209,19 @@ public class GenesisConfigFile {
 
   public List<Long> getForks() {
     return getConfigOptions().getForks();
+  }
+
+  @Override
+  public boolean equals(final Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    final GenesisConfigFile that = (GenesisConfigFile) o;
+    return Objects.equals(configRoot, that.configRoot)
+        && Objects.equals(genesisConfigOverrides, that.genesisConfigOverrides);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(configRoot, genesisConfigOverrides);
   }
 }

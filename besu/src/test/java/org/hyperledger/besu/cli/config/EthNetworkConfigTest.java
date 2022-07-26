@@ -23,6 +23,8 @@ import static org.hyperledger.besu.ethereum.p2p.config.DefaultDiscoveryConfigura
 import static org.hyperledger.besu.ethereum.p2p.config.DefaultDiscoveryConfiguration.RINKEBY_BOOTSTRAP_NODES;
 import static org.hyperledger.besu.ethereum.p2p.config.DefaultDiscoveryConfiguration.RINKEBY_DISCOVERY_URL;
 
+import org.hyperledger.besu.config.GenesisConfigFile;
+
 import java.math.BigInteger;
 
 import org.junit.Test;
@@ -66,12 +68,14 @@ public class EthNetworkConfigTest {
 
   @Test
   public void testBuilderWithNetworkId() {
+    final GenesisConfigFile genesisConfigFile =
+        GenesisConfigFile.fromConfig("{\"config\":{\"chainId\":\"1234567\"}}");
     EthNetworkConfig config =
         new EthNetworkConfig.Builder(EthNetworkConfig.getNetworkConfig(MAINNET))
             .setNetworkId(BigInteger.valueOf(42))
-            .setGenesisConfig("{\"config\":{\"chainId\":\"1234567\"}")
+            .setGenesisConfig(genesisConfigFile)
             .build();
-    assertThat(config.getGenesisConfig()).isEqualTo("{\"config\":{\"chainId\":\"1234567\"}");
+    assertThat(config.getGenesisConfig()).isEqualTo(genesisConfigFile);
     assertThat(config.getDnsDiscoveryUrl()).isNotNull();
     assertThat(config.getBootNodes()).isNotEmpty();
     assertThat(config.getNetworkId()).isEqualTo(BigInteger.valueOf(42));

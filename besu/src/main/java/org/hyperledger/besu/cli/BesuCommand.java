@@ -1833,6 +1833,7 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
 
     try {
       final GenesisConfigFile genesisConfigFile = GenesisConfigFile.fromConfig(genesisConfig());
+      genesisConfigFile.setGenesisConfigOverrides(genesisConfigOverrides);
       genesisConfigOptions = genesisConfigFile.getConfigOptions(genesisConfigOverrides);
     } catch (final Exception e) {
       throw new ParameterException(
@@ -2884,7 +2885,9 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
                 + "refer to CLI reference for more details about this constraint.");
       }
 
-      builder.setGenesisConfig(genesisConfig());
+      final GenesisConfigFile genesisConfigFile = GenesisConfigFile.fromConfig(genesisConfig());
+      genesisConfigFile.setGenesisConfigOverrides(genesisConfigOverrides);
+      builder.setGenesisConfig(genesisConfigFile);
 
       if (networkId == null) {
         // If no chain id is found in the genesis, use mainnet network id

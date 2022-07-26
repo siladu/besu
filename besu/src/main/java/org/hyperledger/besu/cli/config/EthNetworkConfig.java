@@ -32,13 +32,13 @@ import java.util.stream.Collectors;
 
 public class EthNetworkConfig {
 
-  private final String genesisConfig;
+  private final GenesisConfigFile genesisConfig;
   private final BigInteger networkId;
   private final List<EnodeURL> bootNodes;
   private final String dnsDiscoveryUrl;
 
   public EthNetworkConfig(
-      final String genesisConfig,
+      final GenesisConfigFile genesisConfig,
       final BigInteger networkId,
       final List<EnodeURL> bootNodes,
       final String dnsDiscoveryUrl) {
@@ -50,7 +50,7 @@ public class EthNetworkConfig {
     this.dnsDiscoveryUrl = dnsDiscoveryUrl;
   }
 
-  public String getGenesisConfig() {
+  public GenesisConfigFile getGenesisConfig() {
     return genesisConfig;
   }
 
@@ -102,8 +102,8 @@ public class EthNetworkConfig {
 
   public static EthNetworkConfig getNetworkConfig(final NetworkName networkName) {
     final String genesisContent = jsonConfig(networkName.getGenesisFile());
-    final GenesisConfigOptions genesisConfigOptions =
-        GenesisConfigFile.fromConfig(genesisContent).getConfigOptions();
+    final GenesisConfigFile genesisConfigFile = GenesisConfigFile.fromConfig(genesisContent);
+    final GenesisConfigOptions genesisConfigOptions = genesisConfigFile.getConfigOptions();
     final Optional<List<String>> rawBootNodes =
         genesisConfigOptions.getDiscoveryOptions().getBootNodes();
     final List<EnodeURL> bootNodes =
@@ -113,7 +113,7 @@ public class EthNetworkConfig {
                     strings.stream().map(EnodeURLImpl::fromString).collect(Collectors.toList()))
             .orElse(Collections.emptyList());
     return new EthNetworkConfig(
-        genesisContent,
+        genesisConfigFile,
         networkName.getNetworkId(),
         bootNodes,
         genesisConfigOptions.getDiscoveryOptions().getDiscoveryDnsUrl().orElse(null));
@@ -135,7 +135,7 @@ public class EthNetworkConfig {
   public static class Builder {
 
     private String dnsDiscoveryUrl;
-    private String genesisConfig;
+    private GenesisConfigFile genesisConfig;
     private BigInteger networkId;
     private List<EnodeURL> bootNodes;
 
@@ -146,7 +146,7 @@ public class EthNetworkConfig {
       this.dnsDiscoveryUrl = ethNetworkConfig.dnsDiscoveryUrl;
     }
 
-    public Builder setGenesisConfig(final String genesisConfig) {
+    public Builder setGenesisConfig(final GenesisConfigFile genesisConfig) {
       this.genesisConfig = genesisConfig;
       return this;
     }
