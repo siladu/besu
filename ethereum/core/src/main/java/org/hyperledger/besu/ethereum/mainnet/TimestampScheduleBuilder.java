@@ -20,8 +20,6 @@ import org.hyperledger.besu.evm.internal.EvmConfiguration;
 
 import java.math.BigInteger;
 import java.util.Optional;
-import java.util.TreeMap;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class TimestampScheduleBuilder extends AbstractProtocolScheduleBuilder {
@@ -68,23 +66,15 @@ public class TimestampScheduleBuilder extends AbstractProtocolScheduleBuilder {
   }
 
   @Override
-  protected TreeMap<Long, BuilderMapEntry> buildMilestoneMap(
+  protected Stream<Optional<BuilderMapEntry>> createMilestones(
       final MainnetProtocolSpecFactory specFactory) {
     return Stream.of(
-            // generally this TimestampSchedule will not have an entry for 0 instead it is relying
-            // on defaulting to a MergeProtocolSchedule in
-            // TransitionProtocolSchedule.getByBlockHeader if the given timestamp is before the
-            // first entry in TimestampSchedule
-            create(config.getShanghaiTimestamp(), specFactory.shanghaiDefinition(config)),
-            create(config.getCancunTimestamp(), specFactory.cancunDefinition(config)))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .collect(
-            Collectors.toMap(
-                BuilderMapEntry::getBlockIdentifier,
-                b -> b,
-                (existing, replacement) -> replacement,
-                TreeMap::new));
+        // generally this TimestampSchedule will not have an entry for 0 instead it is relying
+        // on defaulting to a MergeProtocolSchedule in
+        // TransitionProtocolSchedule.getByBlockHeader if the given timestamp is before the
+        // first entry in TimestampSchedule
+        create(config.getShanghaiTimestamp(), specFactory.shanghaiDefinition(config)),
+        create(config.getCancunTimestamp(), specFactory.cancunDefinition(config)));
   }
 
   @Override

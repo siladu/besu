@@ -25,6 +25,8 @@ import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.TreeMap;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -122,7 +124,19 @@ public abstract class AbstractProtocolScheduleBuilder {
 
   abstract String getBlockIdentifierName();
 
-  abstract TreeMap<Long, BuilderMapEntry> buildMilestoneMap(
+  private TreeMap<Long, BuilderMapEntry> buildMilestoneMap(
+      final MainnetProtocolSpecFactory specFactory) {
+    return createMilestones(specFactory)
+        .flatMap(Optional::stream)
+        .collect(
+            Collectors.toMap(
+                BuilderMapEntry::getBlockIdentifier,
+                b -> b,
+                (existing, replacement) -> replacement,
+                TreeMap::new));
+  }
+
+  abstract Stream<Optional<BuilderMapEntry>> createMilestones(
       final MainnetProtocolSpecFactory specFactory);
 
   protected Optional<BuilderMapEntry> create(

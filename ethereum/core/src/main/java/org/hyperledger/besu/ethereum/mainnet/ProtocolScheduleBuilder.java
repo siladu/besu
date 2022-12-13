@@ -21,9 +21,7 @@ import org.hyperledger.besu.evm.internal.EvmConfiguration;
 import java.math.BigInteger;
 import java.util.Optional;
 import java.util.OptionalLong;
-import java.util.TreeMap;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class ProtocolScheduleBuilder extends AbstractProtocolScheduleBuilder {
@@ -153,47 +151,38 @@ public class ProtocolScheduleBuilder extends AbstractProtocolScheduleBuilder {
   }
 
   @Override
-  protected TreeMap<Long, BuilderMapEntry> buildMilestoneMap(
+  protected Stream<Optional<BuilderMapEntry>> createMilestones(
       final MainnetProtocolSpecFactory specFactory) {
     return Stream.of(
-            create(OptionalLong.of(0), specFactory.frontierDefinition()),
-            create(config.getHomesteadBlockNumber(), specFactory.homesteadDefinition()),
-            create(
-                config.getTangerineWhistleBlockNumber(), specFactory.tangerineWhistleDefinition()),
-            create(config.getSpuriousDragonBlockNumber(), specFactory.spuriousDragonDefinition()),
-            create(config.getByzantiumBlockNumber(), specFactory.byzantiumDefinition()),
-            create(config.getConstantinopleBlockNumber(), specFactory.constantinopleDefinition()),
-            create(config.getPetersburgBlockNumber(), specFactory.petersburgDefinition()),
-            create(config.getIstanbulBlockNumber(), specFactory.istanbulDefinition()),
-            create(config.getMuirGlacierBlockNumber(), specFactory.muirGlacierDefinition()),
-            create(config.getBerlinBlockNumber(), specFactory.berlinDefinition()),
-            create(config.getLondonBlockNumber(), specFactory.londonDefinition(config)),
-            create(config.getArrowGlacierBlockNumber(), specFactory.arrowGlacierDefinition(config)),
-            create(config.getGrayGlacierBlockNumber(), specFactory.grayGlacierDefinition(config)),
-            create(config.getMergeNetSplitBlockNumber(), specFactory.parisDefinition(config)),
-            create(config.getShandongBlockNumber(), specFactory.shandongDefinition(config)),
-            // Classic Milestones
-            create(config.getEcip1015BlockNumber(), specFactory.tangerineWhistleDefinition()),
-            create(config.getDieHardBlockNumber(), specFactory.dieHardDefinition()),
-            create(config.getGothamBlockNumber(), specFactory.gothamDefinition()),
-            create(
-                config.getDefuseDifficultyBombBlockNumber(),
-                specFactory.defuseDifficultyBombDefinition()),
-            create(config.getAtlantisBlockNumber(), specFactory.atlantisDefinition()),
-            create(config.getAghartaBlockNumber(), specFactory.aghartaDefinition()),
-            create(config.getPhoenixBlockNumber(), specFactory.phoenixDefinition()),
-            create(config.getThanosBlockNumber(), specFactory.thanosDefinition()),
-            create(config.getMagnetoBlockNumber(), specFactory.magnetoDefinition()),
-            create(config.getMystiqueBlockNumber(), specFactory.mystiqueDefinition()),
-            create(config.getEcip1049BlockNumber(), specFactory.ecip1049Definition()))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .collect(
-            Collectors.toMap(
-                BuilderMapEntry::getBlockIdentifier,
-                b -> b,
-                (existing, replacement) -> replacement,
-                TreeMap::new));
+        create(OptionalLong.of(0), specFactory.frontierDefinition()),
+        create(config.getHomesteadBlockNumber(), specFactory.homesteadDefinition()),
+        create(config.getTangerineWhistleBlockNumber(), specFactory.tangerineWhistleDefinition()),
+        create(config.getSpuriousDragonBlockNumber(), specFactory.spuriousDragonDefinition()),
+        create(config.getByzantiumBlockNumber(), specFactory.byzantiumDefinition()),
+        create(config.getConstantinopleBlockNumber(), specFactory.constantinopleDefinition()),
+        create(config.getPetersburgBlockNumber(), specFactory.petersburgDefinition()),
+        create(config.getIstanbulBlockNumber(), specFactory.istanbulDefinition()),
+        create(config.getMuirGlacierBlockNumber(), specFactory.muirGlacierDefinition()),
+        create(config.getBerlinBlockNumber(), specFactory.berlinDefinition()),
+        create(config.getLondonBlockNumber(), specFactory.londonDefinition(config)),
+        create(config.getArrowGlacierBlockNumber(), specFactory.arrowGlacierDefinition(config)),
+        create(config.getGrayGlacierBlockNumber(), specFactory.grayGlacierDefinition(config)),
+        create(config.getMergeNetSplitBlockNumber(), specFactory.parisDefinition(config)),
+        create(config.getShandongBlockNumber(), specFactory.shandongDefinition(config)),
+        // Classic Milestones
+        create(config.getEcip1015BlockNumber(), specFactory.tangerineWhistleDefinition()),
+        create(config.getDieHardBlockNumber(), specFactory.dieHardDefinition()),
+        create(config.getGothamBlockNumber(), specFactory.gothamDefinition()),
+        create(
+            config.getDefuseDifficultyBombBlockNumber(),
+            specFactory.defuseDifficultyBombDefinition()),
+        create(config.getAtlantisBlockNumber(), specFactory.atlantisDefinition()),
+        create(config.getAghartaBlockNumber(), specFactory.aghartaDefinition()),
+        create(config.getPhoenixBlockNumber(), specFactory.phoenixDefinition()),
+        create(config.getThanosBlockNumber(), specFactory.thanosDefinition()),
+        create(config.getMagnetoBlockNumber(), specFactory.magnetoDefinition()),
+        create(config.getMystiqueBlockNumber(), specFactory.mystiqueDefinition()),
+        create(config.getEcip1049BlockNumber(), specFactory.ecip1049Definition()));
   }
 
   @Override
