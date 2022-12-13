@@ -40,7 +40,6 @@ public class TimestampScheduleBuilderTest {
   private TimestampScheduleBuilder builder;
   private StubGenesisConfigOptions config;
 
-  //  @Mock private Function<ProtocolSpecBuilder, ProtocolSpecBuilder> modifier;
   private final Function<ProtocolSpecBuilder, ProtocolSpecBuilder> modifier = Function.identity();
 
   private final long FIRST_TIMESTAMP_FORK = 1L;
