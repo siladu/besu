@@ -128,7 +128,7 @@ public class GetBodiesFromPeerTask extends AbstractPeerRequestTask<List<Block>> 
     return Optional.of(blocks);
   }
 
-  private static class BodyIdentifier {
+  static class BodyIdentifier {
     private final Bytes32 transactionsRoot;
     private final Bytes32 ommersHash;
     private final Bytes32 withdrawalsRoot;
@@ -151,7 +151,7 @@ public class GetBodiesFromPeerTask extends AbstractPeerRequestTask<List<Block>> 
       this(
           BodyValidation.transactionsRoot(transactions),
           BodyValidation.ommersHash(ommers),
-          withdrawals != null ? BodyValidation.withdrawalsRoot(withdrawals) : Hash.EMPTY);
+          withdrawals == null ? Hash.EMPTY : BodyValidation.withdrawalsRoot(withdrawals));
     }
 
     public BodyIdentifier(final BlockHeader header) {
