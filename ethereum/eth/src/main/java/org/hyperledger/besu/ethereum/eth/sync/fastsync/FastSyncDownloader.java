@@ -164,7 +164,7 @@ public class FastSyncDownloader<REQUEST> {
   }
 
   protected FastSyncState storeState(final FastSyncState state) {
-    fastSyncStateStorage.storeState(state);
+    fastSyncStateStorage.storeState(state); //TODO SLD store checkpoint?
     return state;
   }
 

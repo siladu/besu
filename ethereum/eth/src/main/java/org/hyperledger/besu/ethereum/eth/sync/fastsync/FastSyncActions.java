@@ -19,11 +19,14 @@ import static org.hyperledger.besu.util.Slf4jLambdaHelper.debugLambda;
 
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.ethereum.ProtocolContext;
+import org.hyperledger.besu.ethereum.core.BlockHeader;
+import org.hyperledger.besu.ethereum.core.Difficulty;
 import org.hyperledger.besu.ethereum.eth.manager.EthContext;
 import org.hyperledger.besu.ethereum.eth.manager.task.WaitForPeersTask;
 import org.hyperledger.besu.ethereum.eth.sync.ChainDownloader;
 import org.hyperledger.besu.ethereum.eth.sync.PivotBlockSelector;
 import org.hyperledger.besu.ethereum.eth.sync.SynchronizerConfiguration;
+import org.hyperledger.besu.ethereum.eth.sync.fastsync.checkpoint.ImmutableCheckpoint;
 import org.hyperledger.besu.ethereum.eth.sync.state.SyncState;
 import org.hyperledger.besu.ethereum.eth.sync.tasks.RetryingGetHeaderFromPeerByHashTask;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
@@ -120,7 +123,21 @@ public class FastSyncActions {
 
   public CompletableFuture<FastSyncState> downloadPivotBlockHeader(
       final FastSyncState currentState) {
-    return internalDownloadPivotBlockHeader(currentState).thenApply(this::updateStats);
+    return internalDownloadPivotBlockHeader(currentState)
+            .thenApply(this::updateCheckpoint)
+            .thenApply(this::updateStats); // TODO SLD update checkpoint?
+  }
+
+  private FastSyncState updateCheckpoint(FastSyncState fastSyncState) {
+    // TODO SLD use pivot block header as the checkpoint
+    BlockHeader pivotBlockHeader = fastSyncState.getPivotBlockHeader().get();
+    ImmutableCheckpoint checkpoint = ImmutableCheckpoint.builder()
+            .blockHash(pivotBlockHeader.getBlockHash())
+            .blockNumber(pivotBlockHeader.getNumber())
+            .totalDifficulty(pivotBlockHeader.getDifficulty())
+            .build();
+    syncState.setCheckpoint(checkpoint);
+    return fastSyncState;
   }
 
   private CompletableFuture<FastSyncState> internalDownloadPivotBlockHeader(

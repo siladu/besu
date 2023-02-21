@@ -56,7 +56,7 @@ public class SyncState {
   private Optional<WorldStateDownloadStatus> worldStateDownloadStatus = Optional.empty();
   private Optional<Long> newPeerListenerId;
   private Optional<Boolean> reachedTerminalDifficulty = Optional.empty();
-  private final Optional<Checkpoint> checkpoint;
+  private Optional<Checkpoint> checkpoint;
   private volatile boolean isInitialSyncPhaseDone;
 
   private volatile boolean isResyncNeeded;
@@ -314,6 +314,10 @@ public class SyncState {
 
   public Optional<Checkpoint> getCheckpoint() {
     return checkpoint;
+  }
+
+  public void setCheckpoint(Checkpoint checkpoint) {
+    this.checkpoint = Optional.of(checkpoint);
   }
 
   public boolean isInitialSyncPhaseDone() {
