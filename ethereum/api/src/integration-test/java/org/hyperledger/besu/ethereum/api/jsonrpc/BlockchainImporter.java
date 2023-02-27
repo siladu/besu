@@ -15,10 +15,10 @@
 package org.hyperledger.besu.ethereum.api.jsonrpc;
 
 import org.hyperledger.besu.config.GenesisConfigFile;
+import org.hyperledger.besu.consensus.merge.TransitionProtocolSchedule;
 import org.hyperledger.besu.ethereum.chain.GenesisState;
 import org.hyperledger.besu.ethereum.core.Block;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
-import org.hyperledger.besu.ethereum.mainnet.MainnetProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ScheduleBasedBlockHeaderFunctions;
 import org.hyperledger.besu.ethereum.util.RawBlockIterator;
@@ -40,8 +40,11 @@ public class BlockchainImporter {
   private final Block genesisBlock;
 
   public BlockchainImporter(final URL blocksUrl, final String genesisJson) throws Exception {
+    //    protocolSchedule =
+    //        MainnetProtocolSchedule.fromConfig(
+    //            GenesisConfigFile.fromConfig(genesisJson).getConfigOptions());
     protocolSchedule =
-        MainnetProtocolSchedule.fromConfig(
+        TransitionProtocolSchedule.fromConfig(
             GenesisConfigFile.fromConfig(genesisJson).getConfigOptions());
 
     blocks = new ArrayList<>();

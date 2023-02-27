@@ -36,6 +36,8 @@ public final class BlockTestUtil {
       Suppliers.memoize(BlockTestUtil::supplyTestChainResources);
   private static final Supplier<ChainResources> testChainLondonSupplier =
       Suppliers.memoize(BlockTestUtil::supplyTestChainLondonResources);
+  private static final Supplier<ChainResources> testChainShanghaiSupplier =
+      Suppliers.memoize(BlockTestUtil::supplyTestChainShanghaiResources);
   private static final Supplier<ChainResources> mainnetChainSupplier =
       Suppliers.memoize(BlockTestUtil::supplyMainnetChainResources);
   private static final Supplier<ChainResources> badPowChainSupplier =
@@ -66,6 +68,15 @@ public final class BlockTestUtil {
   }
 
   /**
+   * Gets test shanghai blockchain url.
+   *
+   * @return the test shanghai blockchain url
+   */
+  public static URL getTestShanghaiBlockchainUrl() {
+    return getTestChainShanghaiResources().getBlocksURL();
+  }
+
+  /**
    * Gets test genesis url.
    *
    * @return the test genesis url
@@ -84,6 +95,15 @@ public final class BlockTestUtil {
   }
 
   /**
+   * Gets test shanghai genesis url.
+   *
+   * @return the test shanghai genesis url
+   */
+  public static URL getTestShanghaiGenesisUrl() {
+    return getTestChainShanghaiResources().getGenesisURL();
+  }
+
+  /**
    * Gets test chain resources.
    *
    * @return the test chain resources
@@ -99,6 +119,15 @@ public final class BlockTestUtil {
    */
   public static ChainResources getTestChainLondonResources() {
     return testChainLondonSupplier.get();
+  }
+
+  /**
+   * Gets test chain shanghai resources.
+   *
+   * @return the test chain shanghai resources
+   */
+  public static ChainResources getTestChainShanghaiResources() {
+    return testChainShanghaiSupplier.get();
   }
 
   /**
@@ -159,6 +188,20 @@ public final class BlockTestUtil {
             BlockTestUtil.class
                 .getClassLoader()
                 .getResource("fork-london-data/testLondonBlockchain.blocks"));
+    return new ChainResources(genesisURL, blocksURL);
+  }
+
+  private static ChainResources supplyTestChainShanghaiResources() {
+    final URL genesisURL =
+        ensureFileUrl(
+            BlockTestUtil.class
+                .getClassLoader()
+                .getResource("fork-shanghai-data/testShanghaiGenesis.json"));
+    final URL blocksURL =
+        ensureFileUrl(
+            BlockTestUtil.class
+                .getClassLoader()
+                .getResource("fork-shanghai-data/testShanghaiBlockchain.blocks"));
     return new ChainResources(genesisURL, blocksURL);
   }
 

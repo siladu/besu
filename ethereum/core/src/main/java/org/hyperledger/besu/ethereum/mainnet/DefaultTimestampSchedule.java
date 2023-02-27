@@ -37,6 +37,17 @@ public class DefaultTimestampSchedule implements TimestampSchedule {
     this.chainId = chainId;
   }
 
+  //  public static TimestampSchedule fromConfig(final GenesisConfigOptions config) {
+  //    return new TimestampScheduleBuilder(config,
+  //        DEFAULT_CHAIN_ID,
+  //        ProtocolSpecAdapters.create(0, Function.identity()),
+  //        PrivacyParameters.DEFAULT,
+  //        false,
+  //        false,
+  //        EvmConfiguration.DEFAULT)
+  //        .createTimestampSchedule();
+  //  }
+
   @Override
   public Optional<ProtocolSpec> getByTimestamp(final long timestamp) {
     for (final TimedProtocolSpec protocolSpec : protocolSpecs) {
