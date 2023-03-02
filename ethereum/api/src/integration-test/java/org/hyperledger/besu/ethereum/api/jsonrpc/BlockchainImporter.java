@@ -15,6 +15,7 @@
 package org.hyperledger.besu.ethereum.api.jsonrpc;
 
 import org.hyperledger.besu.config.GenesisConfigFile;
+import org.hyperledger.besu.config.GenesisConfigOptions;
 import org.hyperledger.besu.consensus.merge.TransitionProtocolSchedule;
 import org.hyperledger.besu.ethereum.chain.GenesisState;
 import org.hyperledger.besu.ethereum.core.Block;
@@ -39,13 +40,15 @@ public class BlockchainImporter {
 
   private final Block genesisBlock;
 
+  private final GenesisConfigOptions genesisConfigOptions;
+
   public BlockchainImporter(final URL blocksUrl, final String genesisJson) throws Exception {
     //    protocolSchedule =
     //        MainnetProtocolSchedule.fromConfig(
     //            GenesisConfigFile.fromConfig(genesisJson).getConfigOptions());
+    genesisConfigOptions = GenesisConfigFile.fromConfig(genesisJson).getConfigOptions();
     protocolSchedule =
-        TransitionProtocolSchedule.fromConfig(
-            GenesisConfigFile.fromConfig(genesisJson).getConfigOptions());
+        TransitionProtocolSchedule.fromConfig(genesisConfigOptions);
 
     blocks = new ArrayList<>();
     try (final RawBlockIterator iterator =
@@ -60,6 +63,11 @@ public class BlockchainImporter {
     }
 
     genesisBlock = blocks.get(0);
+    // TODO SLD Hack in the BlockExportor to change the genesis block difficultly from 1 to 0
+//    blocks.get(0).getHeader().setZeroDifficulty();
+//    final BlockExporter blockExporter = new RlpBlockExporter(blocks);
+//    blockExporter.exportBlocks(new File(Paths.get("todo-sld.blocks").toUri()), Optional.empty(), Optional.empty());
+
     genesisState = GenesisState.fromJson(genesisJson, protocolSchedule);
   }
 
@@ -77,5 +85,9 @@ public class BlockchainImporter {
 
   public Block getGenesisBlock() {
     return genesisBlock;
+  }
+
+  public GenesisConfigOptions getGenesisConfigOptions() {
+    return genesisConfigOptions;
   }
 }

@@ -21,7 +21,11 @@ public interface ProtocolSchedule
 
   ProtocolSpec getByBlockNumber(long number);
 
-  @Override
+  default ProtocolSpec getByBlockHeader2(final ProcessableBlockHeader blockHeader) {
+    return getByBlockNumber(blockHeader.getNumber());
+  }
+
+    @Override
   default ProtocolSpec getByBlockHeader(final ProcessableBlockHeader blockHeader) {
     return getByBlockNumber(blockHeader.getNumber());
   }

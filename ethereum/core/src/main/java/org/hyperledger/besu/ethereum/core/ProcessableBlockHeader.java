@@ -32,7 +32,7 @@ public class ProcessableBlockHeader implements BlockValues {
 
   protected final Address coinbase;
 
-  protected final Difficulty difficulty;
+  protected Difficulty difficulty;
 
   protected final long number;
 
@@ -92,6 +92,11 @@ public class ProcessableBlockHeader implements BlockValues {
    */
   public Difficulty getDifficulty() {
     return difficulty;
+  }
+
+  // TODO SLD
+  public void setZeroDifficulty() {
+    this.difficulty = Difficulty.ZERO;
   }
 
   /**

@@ -18,7 +18,11 @@ import static org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider
 import static org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider.createInMemoryWorldStateArchive;
 import static org.mockito.Mockito.mock;
 
+import org.hyperledger.besu.config.GenesisConfigOptions;
 import org.hyperledger.besu.config.StubGenesisConfigOptions;
+import org.hyperledger.besu.consensus.merge.MergeContext;
+import org.hyperledger.besu.consensus.merge.PostMergeContext;
+import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.filter.FilterManager;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.filter.FilterManagerBuilder;
@@ -27,12 +31,16 @@ import org.hyperledger.besu.ethereum.api.jsonrpc.methods.JsonRpcMethodsFactory;
 import org.hyperledger.besu.ethereum.api.jsonrpc.websocket.WebSocketConfiguration;
 import org.hyperledger.besu.ethereum.api.query.BlockchainQueries;
 import org.hyperledger.besu.ethereum.blockcreation.PoWMiningCoordinator;
+import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.chain.MutableBlockchain;
 import org.hyperledger.besu.ethereum.core.Block;
+import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.BlockImporter;
+import org.hyperledger.besu.ethereum.core.Difficulty;
 import org.hyperledger.besu.ethereum.core.PrivacyParameters;
 import org.hyperledger.besu.ethereum.core.Synchronizer;
 import org.hyperledger.besu.ethereum.eth.manager.EthPeers;
+import org.hyperledger.besu.ethereum.eth.sync.state.SyncState;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
 import org.hyperledger.besu.ethereum.mainnet.HeaderValidationMode;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
@@ -54,6 +62,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalLong;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
@@ -76,17 +85,62 @@ public class JsonRpcTestMethodsFactory {
     this.blockchain = createInMemoryBlockchain(importer.getGenesisBlock());
     this.stateArchive = createInMemoryWorldStateArchive();
     this.importer.getGenesisState().writeStateTo(stateArchive.getMutable());
-    this.context = new ProtocolContext(blockchain, stateArchive, null);
-
     final ProtocolSchedule protocolSchedule = importer.getProtocolSchedule();
+    final MergeContext consensusContext = createConsensusContext(blockchain, importer.getGenesisConfigOptions());
+    this.context = new ProtocolContext(blockchain, stateArchive, consensusContext);
+
     this.synchronizer = mock(Synchronizer.class);
 
+
     for (final Block block : importer.getBlocks()) {
-      final ProtocolSpec protocolSpec = protocolSchedule.getByBlockHeader(block.getHeader());
+      final ProtocolSpec protocolSpec = protocolSchedule.getByBlockHeader2(block.getHeader());
       final BlockImporter blockImporter = protocolSpec.getBlockImporter();
       blockImporter.importBlock(context, block, HeaderValidationMode.FULL);
     }
     this.blockchainQueries = new BlockchainQueries(blockchain, stateArchive);
+  }
+
+  protected MergeContext createConsensusContext(
+      final Blockchain blockchain,
+      final GenesisConfigOptions genesisConfigOptions) {
+    final OptionalLong terminalBlockNumber = genesisConfigOptions.getTerminalBlockNumber();
+    final Optional<Hash> terminalBlockHash = genesisConfigOptions.getTerminalBlockHash();
+    final boolean isPostMergeAtGenesis =
+        genesisConfigOptions.getTerminalTotalDifficulty().isPresent()
+            && genesisConfigOptions.getTerminalTotalDifficulty().get().isZero()
+            && blockchain.getGenesisBlockHeader().getDifficulty().isZero();
+
+    final MergeContext mergeContext =
+        PostMergeContext.get()
+//            .setSyncState(new SyncState(blockchain, null))
+            .setTerminalTotalDifficulty(
+                genesisConfigOptions
+                    .getTerminalTotalDifficulty()
+                    .map(Difficulty::of)
+                    .orElse(Difficulty.ZERO))
+            .setPostMergeAtGenesis(isPostMergeAtGenesis);
+
+    blockchain
+        .getFinalized()
+        .flatMap(blockchain::getBlockHeader)
+        .ifPresent(mergeContext::setFinalized);
+
+    blockchain
+        .getSafeBlock()
+        .flatMap(blockchain::getBlockHeader)
+        .ifPresent(mergeContext::setSafeBlock);
+
+    if (terminalBlockNumber.isPresent() && terminalBlockHash.isPresent()) {
+      Optional<BlockHeader> termBlock = blockchain.getBlockHeader(terminalBlockNumber.getAsLong());
+      mergeContext.setTerminalPoWBlock(termBlock);
+    }
+    blockchain.observeBlockAdded(
+        blockAddedEvent ->
+            blockchain
+                .getTotalDifficultyByHash(blockAddedEvent.getBlock().getHeader().getHash())
+                .ifPresent(mergeContext::setIsPostMerge));
+
+    return mergeContext;
   }
 
   public JsonRpcTestMethodsFactory(
