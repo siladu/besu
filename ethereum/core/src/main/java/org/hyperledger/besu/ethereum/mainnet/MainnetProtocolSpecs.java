@@ -646,6 +646,7 @@ public abstract class MainnetProtocolSpecs {
         .difficultyCalculator(MainnetDifficultyCalculators.PROOF_OF_STAKE_DIFFICULTY)
         .blockHeaderValidatorBuilder(MainnetBlockHeaderValidator::mergeBlockHeaderValidator)
         .blockReward(Wei.ZERO)
+        .skipZeroBlockRewards(true)
         .name("ParisFork")
         .isPoS(true);
   }
