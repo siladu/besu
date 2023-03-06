@@ -4,6 +4,7 @@
     "londonBlock": 0,
     "phillyBlock": 5,
     "parisBlock": 10,
+    "mergeNetSplitBlock": 10,
     "contractSizeLimit": 2147483647,
     "ethash": {
       "fixeddifficulty": 100
