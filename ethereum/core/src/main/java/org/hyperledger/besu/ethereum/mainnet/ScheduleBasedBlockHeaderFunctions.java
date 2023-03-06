@@ -46,6 +46,11 @@ public class ScheduleBasedBlockHeaderFunctions implements BlockHeaderFunctions {
     return getBlockHeaderFunctions(header).parseExtraData(header);
   }
 
+  @Override
+  public int getCheckPointWindowSize(final BlockHeader blockHeader) {
+    return getBlockHeaderFunctions(blockHeader).getCheckPointWindowSize(blockHeader);
+  }
+
   private BlockHeaderFunctions getBlockHeaderFunctions(final SealableBlockHeader header) {
     if (protocolSchedule instanceof ProtocolSchedule) {
       return ((ProtocolSchedule) protocolSchedule)

@@ -26,6 +26,7 @@ import org.hyperledger.besu.ethereum.eth.sync.fastsync.checkpoint.Checkpoint;
 import org.hyperledger.besu.ethereum.eth.sync.state.SyncState;
 import org.hyperledger.besu.ethereum.eth.sync.state.SyncTarget;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
+import org.hyperledger.besu.ethereum.mainnet.ScheduleBasedBlockHeaderFunctions;
 import org.hyperledger.besu.metrics.BesuMetricCategory;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.services.pipeline.Pipeline;
@@ -63,9 +64,7 @@ public class CheckpointSyncDownloadPipelineFactory extends FastSyncDownloadPipel
 
     final CheckpointSource checkPointSource =
         new CheckpointSource(
-            syncState,
-            target.peer(),
-            protocolSchedule.getByBlockNumber(checkpoint.blockNumber()).getBlockHeaderFunctions());
+            syncState, target.peer(), ScheduleBasedBlockHeaderFunctions.create(protocolSchedule));
 
     final CheckpointBlockImportStep checkPointBlockImportStep =
         new CheckpointBlockImportStep(
