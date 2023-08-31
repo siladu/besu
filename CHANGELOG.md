@@ -1,5 +1,19 @@
 # Changelog
 
+## 23.7.3
+### Additions and Improvements
+
+### Breaking Changes
+- Removed support for Kotti network (ETC) [#5816](https://github.com/hyperledger/besu/pull/5816)
+
+### Additions and Improvements
+
+### Bug Fixes
+- do not create ignorable storage on revert storage-variables subcommand [#5830](https://github.com/hyperledger/besu/pull/5830) 
+
+### Download Links
+
+
 ## 23.7.2
 
 ### Additions and Improvements
