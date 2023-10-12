@@ -47,6 +47,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
@@ -203,6 +204,10 @@ public class BonsaiWorldStateKeyValueStorage implements WorldStateStorage, AutoC
     return trieLogStorage.get(blockHash.toArrayUnsafe());
   }
 
+  public Stream<byte[]> streamTrieLogs() {
+    return trieLogStorage.streamKeys();
+  }
+
   public Optional<Bytes> getStateTrieNode(final Bytes location) {
     return composedWorldStateStorage
         .get(TRIE_BRANCH_STORAGE, location.toArrayUnsafe())
@@ -337,6 +342,10 @@ public class BonsaiWorldStateKeyValueStorage implements WorldStateStorage, AutoC
 
   public boolean deleteTrieLog(final Hash blockHash) {
     return trieLogStorage.tryDelete(blockHash.toArrayUnsafe());
+  }
+
+  public boolean pruneTrieLog(final byte[] blockHashBytes) {
+    return trieLogStorage.tryDelete(blockHashBytes);
   }
 
   @Override

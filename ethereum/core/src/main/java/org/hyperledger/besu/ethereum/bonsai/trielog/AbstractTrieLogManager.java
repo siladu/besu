@@ -49,6 +49,7 @@ public abstract class AbstractTrieLogManager implements TrieLogManager {
   protected final Subscribers<TrieLogObserver> trieLogObservers = Subscribers.create();
 
   protected final TrieLogFactory trieLogFactory;
+  private final TrieLogPruner trieLogPruner;
 
   protected AbstractTrieLogManager(
       final Blockchain blockchain,
@@ -61,6 +62,7 @@ public abstract class AbstractTrieLogManager implements TrieLogManager {
     this.cachedWorldStatesByHash = cachedWorldStatesByHash;
     this.maxLayersToLoad = maxLayersToLoad;
     this.trieLogFactory = setupTrieLogFactory(pluginContext);
+    this.trieLogPruner = new TrieLogPruner(worldStateStorage, blockchain);
   }
 
   protected abstract TrieLogFactory setupTrieLogFactory(final BesuContext pluginContext);
@@ -88,6 +90,9 @@ public abstract class AbstractTrieLogManager implements TrieLogManager {
       } finally {
         if (success) {
           stateUpdater.commit();
+          trieLogPruner.rememberTrieLogKeyForPruning(
+              forBlockHeader.getNumber(), forBlockHeader.getBlockHash().toArrayUnsafe());
+          trieLogPruner.prune();
         } else {
           stateUpdater.rollback();
         }
