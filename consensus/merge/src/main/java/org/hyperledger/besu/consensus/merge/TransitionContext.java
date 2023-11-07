@@ -17,6 +17,7 @@ package org.hyperledger.besu.consensus.merge;
 import org.hyperledger.besu.consensus.merge.blockcreation.PayloadIdentifier;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.ethereum.ConsensusContext;
+import org.hyperledger.besu.ethereum.chain.FinalizedHeaderSupplier;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.BlockWithReceipts;
 import org.hyperledger.besu.ethereum.core.Difficulty;
@@ -102,6 +103,12 @@ public class TransitionContext implements MergeContext {
   @Override
   public Difficulty getTerminalTotalDifficulty() {
     return postMergeContext.getTerminalTotalDifficulty();
+  }
+
+  @Override
+  public long registerFinalizedHeaderListener(
+      final FinalizedHeaderSupplier finalizedHeaderSupplier) {
+    return postMergeContext.registerFinalizedHeaderListener(finalizedHeaderSupplier);
   }
 
   @Override

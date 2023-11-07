@@ -41,6 +41,7 @@ import org.hyperledger.besu.ethereum.chain.ChainDataPruner;
 import org.hyperledger.besu.ethereum.chain.ChainDataPrunerStorage;
 import org.hyperledger.besu.ethereum.chain.ChainPrunerConfiguration;
 import org.hyperledger.besu.ethereum.chain.DefaultBlockchain;
+import org.hyperledger.besu.ethereum.chain.FinalizedHeaderSupplier;
 import org.hyperledger.besu.ethereum.chain.GenesisState;
 import org.hyperledger.besu.ethereum.chain.MutableBlockchain;
 import org.hyperledger.besu.ethereum.chain.VariablesStorage;
@@ -614,8 +615,10 @@ public abstract class BesuControllerBuilder implements MiningParameterOverrides 
             .map(BesuComponent::getCachedMerkleTrieLoader)
             .orElseGet(() -> new CachedMerkleTrieLoader(metricsSystem));
 
+    final FinalizedHeaderSupplier finalizedHeaderSupplier = new FinalizedHeaderSupplier();
     final WorldStateArchive worldStateArchive =
-        createWorldStateArchive(worldStateStorage, blockchain, cachedMerkleTrieLoader);
+        createWorldStateArchive(
+            worldStateStorage, blockchain, cachedMerkleTrieLoader, finalizedHeaderSupplier);
 
     if (blockchain.getChainHeadBlockNumber() < 1) {
       genesisState.writeStateTo(worldStateArchive.getMutable());
@@ -629,6 +632,19 @@ public abstract class BesuControllerBuilder implements MiningParameterOverrides 
             this::createConsensusContext,
             transactionSelectorFactory);
     validateContext(protocolContext);
+
+    final GenesisConfigOptions genesisConfigOptions = configOptionsSupplier.get();
+    if (genesisConfigOptions.getTerminalTotalDifficulty().isPresent()) {
+      LOG.debug("TTD difficulty is present, registering finalized header listener for PoS");
+      //      final PostMergeContext postMergeContext = PostMergeContext.get();
+      //      postMergeContext.registerFinalizedHeaderListener(finalizedHeaderSupplier);
+      protocolContext
+          .safeConsensusContext(MergeContext.class)
+          .ifPresent(
+              (mergeContext) -> {
+                mergeContext.registerFinalizedHeaderListener(finalizedHeaderSupplier);
+              });
+    }
 
     if (chainPrunerConfiguration.getChainPruningEnabled()) {
       protocolContext
@@ -1063,7 +1079,8 @@ public abstract class BesuControllerBuilder implements MiningParameterOverrides 
   WorldStateArchive createWorldStateArchive(
       final WorldStateStorage worldStateStorage,
       final Blockchain blockchain,
-      final CachedMerkleTrieLoader cachedMerkleTrieLoader) {
+      final CachedMerkleTrieLoader cachedMerkleTrieLoader,
+      final FinalizedHeaderSupplier finalizedHeaderSupplier) {
     return switch (dataStorageConfiguration.getDataStorageFormat()) {
       case BONSAI -> {
         final TrieLogPruner trieLogPruner =
@@ -1072,7 +1089,8 @@ public abstract class BesuControllerBuilder implements MiningParameterOverrides 
                     (BonsaiWorldStateKeyValueStorage) worldStateStorage,
                     blockchain,
                     dataStorageConfiguration.getUnstable().getBonsaiTrieLogRetentionThreshold(),
-                    dataStorageConfiguration.getUnstable().getBonsaiTrieLogPruningLimit())
+                    dataStorageConfiguration.getUnstable().getBonsaiTrieLogPruningLimit(),
+                    finalizedHeaderSupplier)
                 : TrieLogPruner.noOpTrieLogPruner();
         trieLogPruner.initialize();
         yield new BonsaiWorldStateProvider(

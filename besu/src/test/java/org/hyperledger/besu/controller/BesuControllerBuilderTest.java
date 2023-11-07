@@ -34,6 +34,7 @@ import org.hyperledger.besu.ethereum.bonsai.cache.CachedMerkleTrieLoader;
 import org.hyperledger.besu.ethereum.bonsai.storage.BonsaiWorldStateKeyValueStorage;
 import org.hyperledger.besu.ethereum.bonsai.worldview.BonsaiWorldState;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
+import org.hyperledger.besu.ethereum.chain.FinalizedHeaderSupplier;
 import org.hyperledger.besu.ethereum.core.MiningParameters;
 import org.hyperledger.besu.ethereum.core.PrivacyParameters;
 import org.hyperledger.besu.ethereum.eth.EthProtocolConfiguration;
@@ -165,7 +166,10 @@ public class BesuControllerBuilderTest {
     doReturn(worldStateArchive)
         .when(besuControllerBuilder)
         .createWorldStateArchive(
-            any(WorldStateStorage.class), any(Blockchain.class), any(CachedMerkleTrieLoader.class));
+            any(WorldStateStorage.class),
+            any(Blockchain.class),
+            any(CachedMerkleTrieLoader.class),
+            any(FinalizedHeaderSupplier.class));
     doReturn(mockWorldState).when(worldStateArchive).getMutable();
 
     when(storageProvider.createWorldStateStorage(DataStorageFormat.BONSAI))

@@ -18,6 +18,7 @@ import org.hyperledger.besu.consensus.merge.blockcreation.PayloadIdentifier;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.ConsensusContext;
+import org.hyperledger.besu.ethereum.chain.FinalizedHeaderSupplier;
 import org.hyperledger.besu.ethereum.core.Block;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.BlockValueCalculator;
@@ -60,6 +61,9 @@ public class PostMergeContext implements MergeContext {
       Subscribers.create();
   private final Subscribers<UnverifiedForkchoiceListener>
       newUnverifiedForkchoiceCallbackSubscribers = Subscribers.create();
+
+  private final Subscribers<FinalizedHeaderSupplier> finalizedHeaderSubscribers =
+      Subscribers.create();
 
   private final EvictingQueue<PayloadWrapper> blocksInProgress =
       EvictingQueue.create(MAX_BLOCKS_IN_PROGRESS);
@@ -195,8 +199,15 @@ public class PostMergeContext implements MergeContext {
   }
 
   @Override
+  public long registerFinalizedHeaderListener(
+      final FinalizedHeaderSupplier finalizedHeaderSupplier) {
+    return finalizedHeaderSubscribers.subscribe(finalizedHeaderSupplier);
+  }
+
+  @Override
   public void setFinalized(final BlockHeader blockHeader) {
     lastFinalized.set(blockHeader);
+    finalizedHeaderSubscribers.forEach(cb -> cb.onNewFinalizedHeader(blockHeader));
   }
 
   @Override

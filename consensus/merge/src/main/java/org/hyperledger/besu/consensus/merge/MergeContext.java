@@ -17,6 +17,7 @@ package org.hyperledger.besu.consensus.merge;
 import org.hyperledger.besu.consensus.merge.blockcreation.PayloadIdentifier;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.ethereum.ConsensusContext;
+import org.hyperledger.besu.ethereum.chain.FinalizedHeaderSupplier;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.BlockWithReceipts;
 import org.hyperledger.besu.ethereum.core.Difficulty;
@@ -103,6 +104,14 @@ public interface MergeContext extends ConsensusContext {
    * @return the terminal total difficulty
    */
   Difficulty getTerminalTotalDifficulty();
+
+  /**
+   * Gets the finalized header listener.
+   *
+   * @param finalizedHeaderSupplier the finalized header supplier
+   * @return the subscriber id
+   */
+  long registerFinalizedHeaderListener(FinalizedHeaderSupplier finalizedHeaderSupplier);
 
   /**
    * Sets finalized.

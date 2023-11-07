@@ -18,6 +18,7 @@ package org.hyperledger.besu.ethereum.bonsai.trielog;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.ethereum.bonsai.storage.BonsaiWorldStateKeyValueStorage;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
+import org.hyperledger.besu.ethereum.chain.FinalizedHeaderSupplier;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.ProcessableBlockHeader;
 
@@ -48,6 +49,7 @@ public class TrieLogPruner {
   private final BonsaiWorldStateKeyValueStorage rootWorldStateStorage;
   private final Blockchain blockchain;
   private final long numBlocksToRetain;
+  private final FinalizedHeaderSupplier finalizedHeaderSupplier;
 
   private static final Multimap<Long, Hash> trieLogBlocksAndForksByDescendingBlockNumber =
       TreeMultimap.create(Comparator.reverseOrder(), Comparator.naturalOrder());
@@ -56,12 +58,14 @@ public class TrieLogPruner {
       final BonsaiWorldStateKeyValueStorage rootWorldStateStorage,
       final Blockchain blockchain,
       final long numBlocksToRetain,
-      final int pruningLimit) {
+      final int pruningLimit,
+      final FinalizedHeaderSupplier finalizedHeaderSupplier) {
     this.rootWorldStateStorage = rootWorldStateStorage;
     this.blockchain = blockchain;
     this.numBlocksToRetain = numBlocksToRetain;
     this.pruningLimit = pruningLimit;
     this.loadingLimit = pruningLimit; // same as pruningLimit for now
+    this.finalizedHeaderSupplier = finalizedHeaderSupplier;
   }
 
   public void initialize() {
@@ -104,9 +108,8 @@ public class TrieLogPruner {
 
     final long retainAboveThisBlock = blockchain.getChainHeadBlockNumber() - numBlocksToRetain;
     final long retainAboveThisBlockOrFinalized =
-        blockchain
-            .getFinalized()
-            .flatMap(blockchain::getBlockHeader)
+        finalizedHeaderSupplier
+            .get()
             .map(ProcessableBlockHeader::getNumber)
             .map(finalizedBlock -> Math.min(finalizedBlock, retainAboveThisBlock))
             .orElse(retainAboveThisBlock);
@@ -118,12 +121,7 @@ public class TrieLogPruner {
         .addArgument(numBlocksToRetain)
         .addArgument(retainAboveThisBlock)
         .addArgument(
-            () ->
-                blockchain
-                    .getFinalized()
-                    .flatMap(blockchain::getBlockHeader)
-                    .map(ProcessableBlockHeader::getNumber)
-                    .orElse(null))
+            () -> finalizedHeaderSupplier.get().map(ProcessableBlockHeader::getNumber).orElse(null))
         .addArgument(retainAboveThisBlockOrFinalized)
         .log();
 
@@ -158,16 +156,12 @@ public class TrieLogPruner {
   }
 
   public static TrieLogPruner noOpTrieLogPruner() {
-    return new NoOpTrieLogPruner(null, null, 0, 0);
+    return new NoOpTrieLogPruner();
   }
 
   public static class NoOpTrieLogPruner extends TrieLogPruner {
-    private NoOpTrieLogPruner(
-        final BonsaiWorldStateKeyValueStorage rootWorldStateStorage,
-        final Blockchain blockchain,
-        final long numBlocksToRetain,
-        final int pruningLimit) {
-      super(rootWorldStateStorage, blockchain, numBlocksToRetain, pruningLimit);
+    private NoOpTrieLogPruner() {
+      super(null, null, 0, 0, new FinalizedHeaderSupplier());
     }
 
     @Override
