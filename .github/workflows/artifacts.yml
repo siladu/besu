@@ -35,6 +35,8 @@ jobs:
         id: hashes
         run: |
           cd build/distributions
+          echo "zipSha=$(shasum -a 256 besu*.zip)"
+          echo "tarSha=$(shasum -a 256 besu*.tar.gz)"
           echo "zipSha=$(shasum -a 256 besu*.zip)" >> $GITHUB_OUTPUT
           echo "tarSha=$(shasum -a 256 besu*.tar.gz)" >> $GITHUB_OUTPUT
       - name: upload tarball
@@ -76,7 +78,7 @@ jobs:
           besu\bin\besu.bat --version
   publish:
     runs-on: ubuntu-22.04
-    needs: testWindows
+    needs: [artifacts, testWindows]
     permissions:
       contents: write
     steps:
