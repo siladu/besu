@@ -1,7 +1,7 @@
 name: release besu
 on:
   workflow_run:
-    workflows: ["docker"]
+    workflows: ["docker test"]
     types:
       - completed
   release:
