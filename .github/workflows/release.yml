@@ -1,15 +1,19 @@
 name: release besu
 on:
   workflow_run:
-    workflows: ["docker test"]
-    types:
-      - completed
+    workflows: [docker]
+    types: [completed]
 env:
   registry: docker.io
 jobs:
   dockerPromoteX64:
     # "released" === draft: false && prerelease: false
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.release.draft == false && github.event.release.prerelease == false }}
+    if: >-
+      ${{
+        github.event.workflow_run.conclusion == 'success'
+        && github.event.release.draft == false
+        && github.event.release.prerelease == false
+      }}
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
