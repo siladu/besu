@@ -13,6 +13,9 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: write
+    outputs:
+      tarSha: ${{steps.hashes.outputs.tarSha}}
+      zipSha: ${{steps.hashes.outputs.zipSha}}
     steps:
       - name: checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
@@ -91,5 +94,5 @@ jobs:
             build/distributions/besu*.tar.gz
             build/distributions/besu*.zip
           body: |
-            ${{steps.hashes.outputs.tarSha}}
-            ${{steps.hashes.outputs.zipSha}}
+            ${{needs.artifacts.outputs.tarSha}}
+            ${{needs.artifacts.outputs.zipSha}}
