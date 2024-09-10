@@ -94,6 +94,19 @@ public class StorageRangeDataRequest extends SnapDataRequest {
       final SnapSyncProcessState snapSyncState,
       final SnapSyncConfiguration snapSyncConfiguration) {
 
+    LoggerFactory.getLogger(StorageRangeDataRequest.class)
+        .info(
+            "DEBUG-SYNC do Persist for storage range request "
+                + accountHash
+                + " "
+                + startKeyHash
+                + " "
+                + endKeyHash
+                + " "
+                + storageRoot
+                + " "
+                + getRootHash());
+
     // search incomplete nodes in the range
     final AtomicInteger nbNodesSaved = new AtomicInteger();
     final NodeUpdater nodeUpdater =
@@ -131,11 +144,43 @@ public class StorageRangeDataRequest extends SnapDataRequest {
       final WorldStateProofProvider worldStateProofProvider,
       final NavigableMap<Bytes32, Bytes> slots,
       final ArrayDeque<Bytes> proofs) {
+    LoggerFactory.getLogger(StorageRangeDataRequest.class)
+        .info(
+            "DEBUG-SYNC add response for storage "
+                + accountHash
+                + " "
+                + storageRoot
+                + " "
+                + startKeyHash
+                + " "
+                + endKeyHash
+                + " "
+                + getRootHash()
+                + " "
+                + slots.isEmpty()
+                + " "
+                + proofs.isEmpty());
     if (!slots.isEmpty() || !proofs.isEmpty()) {
       if (!worldStateProofProvider.isValidRangeProof(
           startKeyHash, endKeyHash, storageRoot, proofs, slots)) {
         // If the proof is invalid, it means that the storage will be a mix of several blocks.
         // Therefore, it will be necessary to heal the account's storage subsequently
+        LoggerFactory.getLogger(StorageRangeDataRequest.class)
+            .info(
+                "DEBUG-SYNC invalid storage range proof for "
+                    + accountHash
+                    + " "
+                    + storageRoot
+                    + " "
+                    + startKeyHash
+                    + " "
+                    + endKeyHash
+                    + " "
+                    + getRootHash()
+                    + " "
+                    + slots.isEmpty()
+                    + " "
+                    + proofs.isEmpty());
         LOG.atDebug()
             .setMessage("invalid storage range proof received for account hash {} range {} {}")
             .addArgument(() -> accountHash)
@@ -151,6 +196,22 @@ public class StorageRangeDataRequest extends SnapDataRequest {
                 getRootHash(), Hash.wrap(accountHash), startKeyHash, endKeyHash));
         isProofValid = Optional.of(false);
       } else {
+        LoggerFactory.getLogger(StorageRangeDataRequest.class)
+            .info(
+                "DEBUG-SYNC valid storage range proof for "
+                    + accountHash
+                    + " "
+                    + storageRoot
+                    + " "
+                    + startKeyHash
+                    + " "
+                    + endKeyHash
+                    + " "
+                    + getRootHash()
+                    + " "
+                    + slots.isEmpty()
+                    + " "
+                    + proofs.isEmpty());
         stackTrie.addElement(startKeyHash, proofs, slots);
         isProofValid = Optional.of(true);
       }
@@ -173,6 +234,18 @@ public class StorageRangeDataRequest extends SnapDataRequest {
       final WorldStateStorageCoordinator worldStateStorageCoordinator,
       final SnapSyncProcessState snapSyncState) {
     final List<SnapDataRequest> childRequests = new ArrayList<>();
+    LoggerFactory.getLogger(StorageRangeDataRequest.class)
+        .info(
+            "DEBUG-SYNC storage get child request for "
+                + accountHash
+                + " "
+                + storageRoot
+                + " "
+                + startKeyHash
+                + " "
+                + endKeyHash
+                + " "
+                + getRootHash());
 
     if (!isProofValid.orElse(false)) {
       return Stream.empty();
@@ -192,6 +265,21 @@ public class StorageRangeDataRequest extends SnapDataRequest {
                                 getRootHash(), accountHash, storageRoot, key, value);
                         childRequests.add(storageRangeDataRequest);
                       });
+              LoggerFactory.getLogger(StorageRangeDataRequest.class)
+                  .info(
+                      "DEBUG-SYNC storage missing right element"
+                          + accountHash
+                          + " "
+                          + storageRoot
+                          + " "
+                          + startKeyHash
+                          + " "
+                          + endKeyHash
+                          + " "
+                          + missingRightElement
+                          + " "
+                          + getRootHash());
+
               if (startKeyHash.equals(MIN_RANGE) && endKeyHash.equals(MAX_RANGE)) {
                 // need to heal this account storage
                 downloadState.addAccountToHealingList(CompactEncoding.bytesToPath(accountHash));
