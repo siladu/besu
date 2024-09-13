@@ -110,12 +110,10 @@ public class PersistDataStep {
         // We reset the task by setting it to null. This way, it is considered as failed by the
         // pipeline, and it will attempt to execute it again later. not display all the retryable
         // issues
-        if (errorCountAtThreshold()) {
-          LOG.info(
-              "Encountered {} retryable RocksDB errors, latest error message {}",
-              getRetryableErrorCounter(),
-              storageException.getMessage());
-        }
+        LOG.error(
+            "Encountered {} retryable RocksDB errors, latest error message {}",
+            getRetryableErrorCounter(),
+            storageException.getMessage());
         tasks.forEach(task -> task.getData().clear());
       } else {
         throw storageException;
