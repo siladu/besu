@@ -115,7 +115,6 @@ public class PersistDataStep {
               "Encountered {} retryable RocksDB errors, latest error message {}",
               getRetryableErrorCounter(),
               storageException.getMessage());
-          tasks.forEach(task -> task.getData());
         }
         tasks.forEach(task -> task.getData().clear());
       } else {
