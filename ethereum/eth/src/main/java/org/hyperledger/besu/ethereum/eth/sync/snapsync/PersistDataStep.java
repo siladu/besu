@@ -18,7 +18,10 @@ import static org.hyperledger.besu.ethereum.eth.sync.StorageExceptionManager.can
 import static org.hyperledger.besu.ethereum.eth.sync.StorageExceptionManager.errorCountAtThreshold;
 import static org.hyperledger.besu.ethereum.eth.sync.StorageExceptionManager.getRetryableErrorCounter;
 
+import org.hyperledger.besu.ethereum.eth.sync.snapsync.request.AccountRangeDataRequest;
 import org.hyperledger.besu.ethereum.eth.sync.snapsync.request.SnapDataRequest;
+import org.hyperledger.besu.ethereum.eth.sync.snapsync.request.StorageRangeDataRequest;
+import org.hyperledger.besu.ethereum.eth.sync.snapsync.request.heal.StorageTrieNodeHealingRequest;
 import org.hyperledger.besu.ethereum.eth.sync.snapsync.request.heal.TrieNodeHealingRequest;
 import org.hyperledger.besu.ethereum.trie.diffbased.bonsai.storage.BonsaiWorldStateKeyValueStorage;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateKeyValueStorage;
@@ -27,6 +30,7 @@ import org.hyperledger.besu.plugin.services.exception.StorageException;
 import org.hyperledger.besu.services.tasks.Task;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
@@ -53,9 +57,11 @@ public class PersistDataStep {
   }
 
   public List<Task<SnapDataRequest>> persist(final List<Task<SnapDataRequest>> tasks) {
+    Optional<Task<SnapDataRequest>> currentTask = Optional.empty();
     try {
       final WorldStateKeyValueStorage.Updater updater = worldStateStorageCoordinator.updater();
       for (Task<SnapDataRequest> task : tasks) {
+        currentTask = Optional.of(task);
         if (task.getData().isResponseReceived()) {
           // enqueue child requests
           final Stream<SnapDataRequest> childRequests =
@@ -88,10 +94,19 @@ public class PersistDataStep {
             }
           }
         }
+        currentTask = Optional.empty();
       }
-      updater.commit();
+      try {
+        updater.commit();
+      } catch (StorageException e) {
+        LOG.error("exception during final updater.commit(), logging all tasks...", e);
+        tasks.forEach(this::logTaskData);
+        throw e;
+      }
     } catch (StorageException storageException) {
       if (canRetryOnError(storageException)) {
+        storageException.printStackTrace();
+        currentTask.ifPresent(this::logTaskData);
         // We reset the task by setting it to null. This way, it is considered as failed by the
         // pipeline, and it will attempt to execute it again later. not display all the retryable
         // issues
@@ -100,6 +115,7 @@ public class PersistDataStep {
               "Encountered {} retryable RocksDB errors, latest error message {}",
               getRetryableErrorCounter(),
               storageException.getMessage());
+          tasks.forEach(task -> task.getData());
         }
         tasks.forEach(task -> task.getData().clear());
       } else {
@@ -107,6 +123,56 @@ public class PersistDataStep {
       }
     }
     return tasks;
+  }
+
+  private void logTaskData(final Task<SnapDataRequest> currentTask) {
+    try {
+      LOG.error("currentTask instanceof " + currentTask.getClass());
+      SnapDataRequest data = currentTask.getData();
+      LOG.error("currentTask data requestType {}", data.getRequestType());
+      LOG.error("currentTask data rootHash {}", data.getRootHash());
+      String dataToPrint =
+          switch (data) {
+            case StorageTrieNodeHealingRequest r ->
+                r.getRequestType()
+                    + " getAccountHash="
+                    + r.getAccountHash()
+                    + " getNodeHash="
+                    + r.getNodeHash()
+                    + " getLocation="
+                    + r.getLocation()
+                    + " getPathId="
+                    + r.getPathId();
+            case TrieNodeHealingRequest r ->
+                r.getRequestType()
+                    + " getNodeHash="
+                    + r.getNodeHash()
+                    + " getLocation="
+                    + r.getLocation()
+                    + " getPathId="
+                    + r.getPathId();
+            case AccountRangeDataRequest r ->
+                r.getRequestType()
+                    + " getStartKeyHash="
+                    + r.getStartKeyHash()
+                    + " getEndKeyHash="
+                    + r.getEndKeyHash();
+            case StorageRangeDataRequest r ->
+                r.getRequestType()
+                    + " getAccountHash="
+                    + r.getAccountHash()
+                    + " getStorageRoot="
+                    + r.getStorageRoot()
+                    + " getStartKeyHash="
+                    + r.getStartKeyHash()
+                    + " getEndKeyHash="
+                    + r.getEndKeyHash();
+            default -> "default..." + data.getRequestType() + " getRootHash=" + data.getRootHash();
+          };
+      LOG.error("request data: {}", dataToPrint);
+    } catch (Exception e) {
+      LOG.error("failed to log debug data for exception", e);
+    }
   }
 
   /**
