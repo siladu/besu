@@ -30,7 +30,6 @@ import org.hyperledger.besu.ethereum.eth.sync.snapsync.request.StorageRangeDataR
 import org.hyperledger.besu.ethereum.eth.sync.snapsync.request.heal.AccountFlatDatabaseHealingRangeRequest;
 import org.hyperledger.besu.ethereum.eth.sync.snapsync.request.heal.StorageFlatDatabaseHealingRangeRequest;
 import org.hyperledger.besu.ethereum.eth.sync.worldstate.WorldDownloadState;
-import org.hyperledger.besu.ethereum.trie.CompactEncoding;
 import org.hyperledger.besu.ethereum.trie.RangeManager;
 import org.hyperledger.besu.ethereum.trie.diffbased.bonsai.storage.BonsaiWorldStateKeyValueStorage;
 import org.hyperledger.besu.ethereum.worldstate.FlatDbMode;
@@ -311,11 +310,6 @@ public class SnapWorldDownloadState extends WorldDownloadState<SnapDataRequest> 
   }
 
   public synchronized void setAccountsHealingList(final Set<Bytes> addAccountToHealingList) {
-    addAccountToHealingList.forEach(
-        bytes -> {
-          LoggerFactory.getLogger(SnapWorldDownloadState.class)
-              .info("DEBUG-SYNC setAccountsHealingList " + CompactEncoding.pathToBytes(bytes));
-        });
     this.accountsHealingList = addAccountToHealingList;
   }
 
@@ -327,10 +321,7 @@ public class SnapWorldDownloadState extends WorldDownloadState<SnapDataRequest> 
    * @param account The account to be added for repair.
    */
   public synchronized void addAccountToHealingList(final Bytes account) {
-
     if (!accountsHealingList.contains(account)) {
-      LoggerFactory.getLogger(SnapWorldDownloadState.class)
-          .info("DEBUG-SYNC add account to healing list " + CompactEncoding.pathToBytes(account));
       snapContext.addAccountToHealingList(account);
       accountsHealingList.add(account);
     }

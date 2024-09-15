@@ -115,14 +115,6 @@ public class AccountRangeDataRequest extends SnapDataRequest {
     if (startStorageRange.isPresent() && endStorageRange.isPresent()) {
       // not store the new account if we just want to complete the account thanks to another
       // rootHash
-      LoggerFactory.getLogger(AccountRangeDataRequest.class)
-          .info(
-              "DEBUG-SYNC doPersist cancelled"
-                  + startStorageRange
-                  + " "
-                  + endStorageRange
-                  + " "
-                  + getRootHash());
       return 0;
     }
 
@@ -155,9 +147,6 @@ public class AccountRangeDataRequest extends SnapDataRequest {
         });
 
     stackTrie.commit(flatDatabaseUpdater.get(), nodeUpdater);
-    LoggerFactory.getLogger(AccountRangeDataRequest.class)
-        .info(
-            "DEBUG-SYNC doPersist ended " + startKeyHash + " " + endKeyHash + " " + getRootHash());
 
     downloadState.getMetricsManager().notifyAccountsDownloaded(stackTrie.getElementsCount().get());
 
@@ -168,33 +157,9 @@ public class AccountRangeDataRequest extends SnapDataRequest {
       final WorldStateProofProvider worldStateProofProvider,
       final NavigableMap<Bytes32, Bytes> accounts,
       final ArrayDeque<Bytes> proofs) {
-    LoggerFactory.getLogger(AccountRangeDataRequest.class)
-        .info(
-            "DEBUG-SYNC add response "
-                + startKeyHash
-                + " "
-                + endKeyHash
-                + " "
-                + getRootHash()
-                + " "
-                + accounts.isEmpty()
-                + " "
-                + proofs.isEmpty());
     if (!accounts.isEmpty() || !proofs.isEmpty()) {
       if (!worldStateProofProvider.isValidRangeProof(
           startKeyHash, endKeyHash, getRootHash(), proofs, accounts)) {
-        LoggerFactory.getLogger(AccountRangeDataRequest.class)
-            .info(
-                "DEBUG-SYNC invalid range proof for "
-                    + startKeyHash
-                    + " "
-                    + endKeyHash
-                    + " "
-                    + getRootHash()
-                    + " "
-                    + accounts.isEmpty()
-                    + " "
-                    + proofs.isEmpty());
         // this happens on repivot and on bad proofs
         LOG.atTrace()
             .setMessage("invalid range proof received for account range {} {}")
@@ -203,18 +168,6 @@ public class AccountRangeDataRequest extends SnapDataRequest {
             .log();
         isProofValid = Optional.of(false);
       } else {
-        LoggerFactory.getLogger(AccountRangeDataRequest.class)
-            .info(
-                "DEBUG-SYNC valid range proof for "
-                    + startKeyHash
-                    + " "
-                    + endKeyHash
-                    + " "
-                    + getRootHash()
-                    + " "
-                    + accounts.isEmpty()
-                    + " "
-                    + proofs.isEmpty());
         stackTrie.addElement(startKeyHash, proofs, accounts);
         isProofValid = Optional.of(true);
         LOG.atDebug()
@@ -240,15 +193,6 @@ public class AccountRangeDataRequest extends SnapDataRequest {
     final List<SnapDataRequest> childRequests = new ArrayList<>();
 
     final StackTrie.TaskElement taskElement = stackTrie.getElement(startKeyHash);
-    LoggerFactory.getLogger(AccountRangeDataRequest.class)
-        .info(
-            "DEBUG-SYNC get child request for "
-                + startKeyHash
-                + " "
-                + endKeyHash
-                + " "
-                + getRootHash());
-
     // new request is added if the response does not match all the requested range
     findNewBeginElementInRange(getRootHash(), taskElement.proofs(), taskElement.keys(), endKeyHash)
         .ifPresentOrElse(
@@ -268,15 +212,6 @@ public class AccountRangeDataRequest extends SnapDataRequest {
     for (Map.Entry<Bytes32, Bytes> account : taskElement.keys().entrySet()) {
       final StateTrieAccountValue accountValue =
           StateTrieAccountValue.readFrom(RLP.input(account.getValue()));
-      LoggerFactory.getLogger(AccountRangeDataRequest.class)
-          .info(
-              "DEBUG-SYNC check storage request "
-                  + account.getKey()
-                  + " "
-                  + accountValue.getStorageRoot()
-                  + " "
-                  + getRootHash());
-
       if (!accountValue.getStorageRoot().equals(Hash.EMPTY_TRIE_HASH)) {
         childRequests.add(
             createStorageRangeDataRequest(

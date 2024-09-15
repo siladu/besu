@@ -40,7 +40,6 @@ import java.util.stream.Stream;
 
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
-import org.slf4j.LoggerFactory;
 
 /** Represents a healing request for an account trie node. */
 public class AccountTrieNodeHealingRequest extends TrieNodeHealingRequest {
@@ -94,12 +93,6 @@ public class AccountTrieNodeHealingRequest extends TrieNodeHealingRequest {
   private Set<Bytes> getSubLocation(final Bytes location) {
     final HashSet<Bytes> foundAccountsToHeal = new HashSet<>();
     for (Bytes account : inconsistentAccounts) {
-      LoggerFactory.getLogger(AccountTrieNodeHealingRequest.class)
-          .info(
-              "DEBUG-SYNC getSubLocation ifPresent"
-                  + CompactEncoding.pathToBytes(account)
-                  + " "
-                  + location);
       if (account.commonPrefixLength(location) == location.size()) {
         foundAccountsToHeal.add(account);
       }
@@ -120,8 +113,6 @@ public class AccountTrieNodeHealingRequest extends TrieNodeHealingRequest {
             Function.identity());
     for (Bytes account : inconsistentAccounts) {
       final Bytes32 accountHash = Bytes32.wrap(CompactEncoding.pathToBytes(account));
-      LoggerFactory.getLogger(AccountTrieNodeHealingRequest.class)
-          .info("DEBUG-SYNC getRootStorageRequests " + accountHash);
       accountTrie
           .getPath(
               Bytes.wrap(
@@ -132,35 +123,16 @@ public class AccountTrieNodeHealingRequest extends TrieNodeHealingRequest {
           .map(StateTrieAccountValue::readFrom)
           .filter(
               stateTrieAccountValue ->
-              // We need to ensure that the accounts to be healed do not have empty storage.
-              // Therefore, it is unnecessary to create trie heal requests for storage in this
-              // case.
-              // If we were to do so, we would be attempting to request storage that does not
-              // exist from our peers,
-              // which would cause sync issues.
-              {
-                LoggerFactory.getLogger(AccountTrieNodeHealingRequest.class)
-                    .info(
-                        "DEBUG-SYNC getRootStorageRequests filter"
-                            + accountHash
-                            + " "
-                            + stateTrieAccountValue.getStorageRoot());
-                return !stateTrieAccountValue
-                    .getStorageRoot()
-                    .equals(MerkleTrie.EMPTY_TRIE_NODE_HASH);
-              })
+                  // We need to ensure that the accounts to be healed do not have empty storage.
+                  // Therefore, it is unnecessary to create trie heal requests for storage in this
+                  // case.
+                  // If we were to do so, we would be attempting to request storage that does not
+                  // exist from our peers,
+                  // which would cause sync issues.
+                  !stateTrieAccountValue.getStorageRoot().equals(MerkleTrie.EMPTY_TRIE_NODE_HASH))
           .ifPresent(
               stateTrieAccountValue -> {
                 // an account need a heal step
-                LoggerFactory.getLogger(AccountTrieNodeHealingRequest.class)
-                    .info(
-                        "DEBUG-SYNC getRootStorageRequests ifPresent"
-                            + accountHash
-                            + " "
-                            + stateTrieAccountValue.getStorageRoot()
-                            + " "
-                            + getRootHash());
-
                 requests.add(
                     createStorageTrieNodeDataRequest(
                         stateTrieAccountValue.getStorageRoot(),
@@ -204,14 +176,6 @@ public class AccountTrieNodeHealingRequest extends TrieNodeHealingRequest {
             .getTrieNodeUnsafe(Bytes.concatenate(accountHash, Bytes.EMPTY))
             .map(Hash::hash)
             .orElse(Hash.wrap(MerkleTrie.EMPTY_TRIE_NODE_HASH));
-    LoggerFactory.getLogger(AccountTrieNodeHealingRequest.class)
-        .info(
-            "DEBUG-SYNC getRequestsFromTrieNodeValue "
-                + accountHash
-                + " "
-                + storageRootFoundInDb
-                + " "
-                + accountValue.getStorageRoot());
     if (!storageRootFoundInDb.equals(accountValue.getStorageRoot())) {
       // If the storage root is not found in the database, add the account to the list of accounts
       // to be repaired
