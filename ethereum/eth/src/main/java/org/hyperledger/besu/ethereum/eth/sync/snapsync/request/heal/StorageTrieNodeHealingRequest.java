@@ -32,7 +32,6 @@ import java.util.stream.Stream;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.rlp.RLP;
-import org.slf4j.LoggerFactory;
 
 /** Represents a healing request for a storage trie node. */
 public class StorageTrieNodeHealingRequest extends TrieNodeHealingRequest {
@@ -66,20 +65,8 @@ public class StorageTrieNodeHealingRequest extends TrieNodeHealingRequest {
   @Override
   public Optional<Bytes> getExistingData(
       final WorldStateStorageCoordinator worldStateStorageCoordinator) {
-    final Optional<Bytes> accountStorageTrieNode =
-        worldStateStorageCoordinator.getAccountStorageTrieNode(
-            getAccountHash(), getLocation(), getNodeHash());
-    LoggerFactory.getLogger(AccountTrieNodeHealingRequest.class)
-        .info(
-            "DEBUG-SYNC storage getExistingData "
-                + getAccountHash()
-                + " "
-                + getLocation()
-                + " "
-                + getNodeHash()
-                + " "
-                + accountStorageTrieNode);
-    return accountStorageTrieNode;
+    return worldStateStorageCoordinator.getAccountStorageTrieNode(
+        getAccountHash(), getLocation(), getNodeHash());
   }
 
   @Override
