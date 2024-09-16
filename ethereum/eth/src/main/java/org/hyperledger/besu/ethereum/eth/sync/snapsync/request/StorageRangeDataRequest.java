@@ -16,7 +16,6 @@ package org.hyperledger.besu.ethereum.eth.sync.snapsync.request;
 
 import static org.hyperledger.besu.ethereum.eth.sync.snapsync.RequestType.STORAGE_RANGE;
 import static org.hyperledger.besu.ethereum.eth.sync.snapsync.StackTrie.FlatDatabaseUpdater.noop;
-import static org.hyperledger.besu.ethereum.trie.RangeManager.MAX_RANGE;
 import static org.hyperledger.besu.ethereum.trie.RangeManager.MIN_RANGE;
 import static org.hyperledger.besu.ethereum.trie.RangeManager.findNewBeginElementInRange;
 import static org.hyperledger.besu.ethereum.trie.RangeManager.getRangeCount;
@@ -279,12 +278,12 @@ public class StorageRangeDataRequest extends SnapDataRequest {
                           + missingRightElement
                           + " "
                           + getRootHash());
-
-              if (startKeyHash.equals(MIN_RANGE) && endKeyHash.equals(MAX_RANGE)) {
-                // need to heal this account storage
-                downloadState.addAccountToHealingList(CompactEncoding.bytesToPath(accountHash));
-              }
             });
+
+    if (startKeyHash.equals(MIN_RANGE) && !taskElement.proofs().isEmpty()) {
+      // need to heal this account storage
+      downloadState.addAccountToHealingList(CompactEncoding.bytesToPath(accountHash));
+    }
 
     return childRequests.stream();
   }
