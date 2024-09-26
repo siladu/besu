@@ -46,6 +46,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.IntSupplier;
 
+import com.google.common.collect.EvictingQueue;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.slf4j.Logger;
@@ -69,6 +70,7 @@ public class SnapWorldStateDownloader implements WorldStateDownloader {
 
   private final AtomicReference<SnapWorldDownloadState> downloadState = new AtomicReference<>();
   private final SyncDurationMetrics syncDurationMetrics;
+  public static final EvictingQueue<String> PERSIST_STACKTRACE_QUEUE = EvictingQueue.create(10_000);
 
   public SnapWorldStateDownloader(
       final EthContext ethContext,

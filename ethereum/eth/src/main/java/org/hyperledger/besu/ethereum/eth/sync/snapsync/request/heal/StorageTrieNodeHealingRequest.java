@@ -14,9 +14,12 @@
  */
 package org.hyperledger.besu.ethereum.eth.sync.snapsync.request.heal;
 
+import static com.google.common.base.Throwables.getStackTraceAsString;
+import static org.hyperledger.besu.ethereum.eth.sync.snapsync.SnapWorldStateDownloader.PERSIST_STACKTRACE_QUEUE;
 import static org.hyperledger.besu.ethereum.worldstate.WorldStateStorageCoordinator.applyForStrategy;
 
 import org.hyperledger.besu.datatypes.Hash;
+import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.eth.sync.snapsync.SnapSyncConfiguration;
 import org.hyperledger.besu.ethereum.eth.sync.snapsync.SnapSyncProcessState;
 import org.hyperledger.besu.ethereum.eth.sync.snapsync.SnapWorldDownloadState;
@@ -54,6 +57,20 @@ public class StorageTrieNodeHealingRequest extends TrieNodeHealingRequest {
     applyForStrategy(
         updater,
         onBonsai -> {
+          String persistContext =
+              "accountHash="
+                  + getAccountHash()
+                  + ",location="
+                  + getLocation()
+                  + ",pivotBlock="
+                  + snapSyncState
+                      .getPivotBlockHeader()
+                      .map(BlockHeader::toString)
+                      .orElse(String.valueOf(snapSyncState.getPivotBlockNumber().orElse(0L)))
+                  + ",stack="
+                  + getStackTraceAsString(new Exception())
+                  + ";";
+          PERSIST_STACKTRACE_QUEUE.add(persistContext);
           onBonsai.putAccountStorageTrieNode(getAccountHash(), getLocation(), getNodeHash(), data);
         },
         onForest -> {
