@@ -79,7 +79,7 @@ public class StorageTrieNodeHealingRequest extends TrieNodeHealingRequest {
     return 1;
   }
 
-  private synchronized void offer(String persistContext) {
+  private synchronized void offer(final String persistContext) {
     PERSIST_STACKTRACE_QUEUE.offer(persistContext);
   }
 
