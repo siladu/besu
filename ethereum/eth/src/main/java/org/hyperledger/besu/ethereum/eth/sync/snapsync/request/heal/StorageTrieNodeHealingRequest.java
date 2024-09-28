@@ -70,13 +70,17 @@ public class StorageTrieNodeHealingRequest extends TrieNodeHealingRequest {
                   + ",stack="
                   + getStackTraceAsString(new Exception())
                   + ";";
-          PERSIST_STACKTRACE_QUEUE.add(persistContext);
+          offer(persistContext);
           onBonsai.putAccountStorageTrieNode(getAccountHash(), getLocation(), getNodeHash(), data);
         },
         onForest -> {
           onForest.putAccountStorageTrieNode(getNodeHash(), data);
         });
     return 1;
+  }
+
+  private synchronized void offer(String persistContext) {
+    PERSIST_STACKTRACE_QUEUE.offer(persistContext);
   }
 
   @Override

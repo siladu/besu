@@ -70,7 +70,7 @@ public class SnapWorldStateDownloader implements WorldStateDownloader {
 
   private final AtomicReference<SnapWorldDownloadState> downloadState = new AtomicReference<>();
   private final SyncDurationMetrics syncDurationMetrics;
-  public static final EvictingQueue<String> PERSIST_STACKTRACE_QUEUE = EvictingQueue.create(10_000);
+  public static final EvictingQueue<String> PERSIST_STACKTRACE_QUEUE = EvictingQueue.create(5_000);
 
   public SnapWorldStateDownloader(
       final EthContext ethContext,
