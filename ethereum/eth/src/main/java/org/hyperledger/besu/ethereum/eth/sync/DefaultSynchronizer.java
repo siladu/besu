@@ -15,6 +15,7 @@
 package org.hyperledger.besu.ethereum.eth.sync;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.hyperledger.besu.ethereum.eth.sync.snapsync.SnapWorldStateDownloader.STACKTRACE_QUEUE_SIZE;
 
 import org.hyperledger.besu.consensus.merge.ForkchoiceEvent;
 import org.hyperledger.besu.consensus.merge.UnverifiedForkchoiceListener;
@@ -187,6 +188,7 @@ public class DefaultSynchronizer implements Synchronizer, UnverifiedForkchoiceLi
 
     // create a non-resync fast sync downloader:
     this.fastSyncDownloader = this.fastSyncFactory.get();
+    LOG.error("TODO SLD BESU_QUEUE_SIZE = {}", STACKTRACE_QUEUE_SIZE);
 
     metricsSystem.createLongGauge(
         BesuMetricCategory.ETHEREUM,

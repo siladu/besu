@@ -14,6 +14,7 @@
  */
 package org.hyperledger.besu.ethereum.eth.sync.snapsync;
 
+import static com.google.common.base.Throwables.getStackTraceAsString;
 import static org.hyperledger.besu.ethereum.eth.sync.StorageExceptionManager.canRetryOnError;
 import static org.hyperledger.besu.ethereum.eth.sync.StorageExceptionManager.errorCountAtThreshold;
 import static org.hyperledger.besu.ethereum.eth.sync.StorageExceptionManager.getRetryableErrorCounter;
@@ -92,7 +93,9 @@ public class PersistDataStep {
       }
       updater.commit();
     } catch (StorageException storageException) {
-      PERSIST_STACKTRACE_QUEUE.forEach(LOG::error);
+      PERSIST_STACKTRACE_QUEUE.forEach(
+          snapStack ->
+              LOG.error("{} {}", snapStack.toString(), getStackTraceAsString(snapStack.stack())));
       if (canRetryOnError(storageException)) {
         // We reset the task by setting it to null. This way, it is considered as failed by the
         // pipeline, and it will attempt to execute it again later. not display all the retryable

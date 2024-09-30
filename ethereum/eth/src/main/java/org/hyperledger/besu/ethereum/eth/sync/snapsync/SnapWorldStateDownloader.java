@@ -40,6 +40,7 @@ import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
@@ -47,6 +48,7 @@ import java.util.function.Function;
 import java.util.function.IntSupplier;
 
 import com.google.common.collect.EvictingQueue;
+import com.google.common.collect.Queues;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.slf4j.Logger;
@@ -70,7 +72,16 @@ public class SnapWorldStateDownloader implements WorldStateDownloader {
 
   private final AtomicReference<SnapWorldDownloadState> downloadState = new AtomicReference<>();
   private final SyncDurationMetrics syncDurationMetrics;
-  public static final EvictingQueue<String> PERSIST_STACKTRACE_QUEUE = EvictingQueue.create(1_000);
+
+  public record SnapStack(Hash accountHash, Bytes location, long pivotBlock, Throwable stack) {}
+
+  private static final int DEFAULT_STACKTRACE_QUEUE_SIZE = 1_000;
+  public static final int STACKTRACE_QUEUE_SIZE =
+      Optional.ofNullable(System.getenv("BESU_QUEUE_SIZE"))
+          .map(Integer::parseInt)
+          .orElse(DEFAULT_STACKTRACE_QUEUE_SIZE);
+  public static final Queue<SnapStack> PERSIST_STACKTRACE_QUEUE =
+      Queues.synchronizedQueue(EvictingQueue.create(STACKTRACE_QUEUE_SIZE));
 
   public SnapWorldStateDownloader(
       final EthContext ethContext,

@@ -14,15 +14,14 @@
  */
 package org.hyperledger.besu.ethereum.eth.sync.snapsync.request.heal;
 
-import static com.google.common.base.Throwables.getStackTraceAsString;
 import static org.hyperledger.besu.ethereum.eth.sync.snapsync.SnapWorldStateDownloader.PERSIST_STACKTRACE_QUEUE;
 import static org.hyperledger.besu.ethereum.worldstate.WorldStateStorageCoordinator.applyForStrategy;
 
 import org.hyperledger.besu.datatypes.Hash;
-import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.eth.sync.snapsync.SnapSyncConfiguration;
 import org.hyperledger.besu.ethereum.eth.sync.snapsync.SnapSyncProcessState;
 import org.hyperledger.besu.ethereum.eth.sync.snapsync.SnapWorldDownloadState;
+import org.hyperledger.besu.ethereum.eth.sync.snapsync.SnapWorldStateDownloader;
 import org.hyperledger.besu.ethereum.eth.sync.snapsync.request.SnapDataRequest;
 import org.hyperledger.besu.ethereum.trie.CompactEncoding;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateKeyValueStorage;
@@ -57,30 +56,33 @@ public class StorageTrieNodeHealingRequest extends TrieNodeHealingRequest {
     applyForStrategy(
         updater,
         onBonsai -> {
-          String persistContext =
-              "accountHash="
-                  + getAccountHash()
-                  + ",location="
-                  + getLocation()
-                  + ",pivotBlock="
-                  + snapSyncState
-                      .getPivotBlockHeader()
-                      .map(BlockHeader::toString)
-                      .orElse(String.valueOf(snapSyncState.getPivotBlockNumber().orElse(0L)))
-                  + ",stack="
-                  + getStackTraceAsString(new Exception())
-                  + ";";
-          offer(persistContext);
+          SnapWorldStateDownloader.SnapStack persistContext =
+              new SnapWorldStateDownloader.SnapStack(
+                  getAccountHash(),
+                  getLocation(),
+                  snapSyncState.getPivotBlockNumber().orElse(0),
+                  new Exception());
+          //          String persistContext =
+          //              "accountHash="
+          //                  + getAccountHash()
+          //                  + ",location="
+          //                  + getLocation()
+          //                  + ",pivotBlock="
+          //                  + snapSyncState
+          //                      .getPivotBlockHeader()
+          //                      .map(BlockHeader::toString)
+          //
+          // .orElse(String.valueOf(snapSyncState.getPivotBlockNumber().orElse(0L)))
+          //                  + ",stack="
+          //                  + getStackTraceAsString(new Exception())
+          //                  + ";";
+          PERSIST_STACKTRACE_QUEUE.offer(persistContext);
           onBonsai.putAccountStorageTrieNode(getAccountHash(), getLocation(), getNodeHash(), data);
         },
         onForest -> {
           onForest.putAccountStorageTrieNode(getNodeHash(), data);
         });
     return 1;
-  }
-
-  private synchronized void offer(final String persistContext) {
-    PERSIST_STACKTRACE_QUEUE.offer(persistContext);
   }
 
   @Override
