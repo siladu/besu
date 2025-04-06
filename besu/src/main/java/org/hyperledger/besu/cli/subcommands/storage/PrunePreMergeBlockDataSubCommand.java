@@ -18,9 +18,7 @@ import org.hyperledger.besu.cli.config.NetworkName;
 import org.hyperledger.besu.cli.util.VersionProvider;
 import org.hyperledger.besu.controller.BesuController;
 import org.hyperledger.besu.datatypes.Hash;
-import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.ethereum.chain.BlockchainStorage;
-import org.hyperledger.besu.ethereum.core.BlockBody;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -106,11 +104,15 @@ public class PrunePreMergeBlockDataSubCommand implements Runnable {
         // do not prune genesis block
         for (long i = 1; i < mergeBlockNumber; i += pruneRangeSize) {
           LOG.info(
-              "Starting pruning of block range {} to {}...", i, Math.min(i + pruneRangeSize, mergeBlockNumber));
+              "Starting pruning of block range {} to {}...",
+              i,
+              Math.min(i + pruneRangeSize, mergeBlockNumber));
           final long startBlockNumber = i;
           final long endBlockNumber = Math.min(startBlockNumber + pruneRangeSize, mergeBlockNumber);
           executor.submit(
-              () -> deleteBlockRange(startBlockNumber, endBlockNumber, mergeBlockNumber, blockchainStorage));
+              () ->
+                  deleteBlockRange(
+                      startBlockNumber, endBlockNumber, mergeBlockNumber, blockchainStorage));
         }
       }
     }
@@ -139,21 +141,25 @@ public class PrunePreMergeBlockDataSubCommand implements Runnable {
         continue;
       }
       final Hash h = maybeBlockHash.get();
-      final Optional<BlockBody> blockBody = blockchainStorage.getBlockBody(h);
-      if (blockBody.isPresent()) {
-        updater.removeTransactionReceipts(h);
-        updater.removeTotalDifficulty(h);
-        blockBody
-            .map((bb) -> bb.getTransactions())
-            .ifPresent(
-                (transactions) ->
-                    transactions.stream()
-                        .map(Transaction::getHash)
-                        .forEach((th) -> updater.removeTransactionLocation(th)));
-        updater.removeBlockBody(h);
-      }
+      //      final Optional<BlockBody> blockBody = blockchainStorage.getBlockBody(h);
+      //      if (blockBody.isPresent()) {
+      updater.removeTransactionReceipts(h);
+      updater.removeTotalDifficulty(h);
+      //        blockBody
+      //            .map((bb) -> bb.getTransactions())
+      //            .ifPresent(
+      //                (transactions) ->
+      //                    transactions.stream()
+      //                        .map(Transaction::getHash)
+      //                        .forEach((th) -> updater.removeTransactionLocation(th)));
+      updater.removeBlockBody(h);
+      //      }
     } while (++headerNumber < endBlockNumber);
     updater.commit();
-    LOG.info("...completed pruning of block range {} to {}; estimated {} remaining", startBlockNumber, endBlockNumber, mergeBlockNumber - endBlockNumber);
+    LOG.info(
+        "...completed pruning of block range {} to {}; estimated {} blocks remaining",
+        startBlockNumber,
+        endBlockNumber,
+        mergeBlockNumber - endBlockNumber);
   }
 }
