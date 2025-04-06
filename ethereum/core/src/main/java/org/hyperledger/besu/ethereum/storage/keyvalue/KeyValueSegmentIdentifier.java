@@ -58,16 +58,6 @@ public enum KeyValueSegmentIdentifier implements SegmentIdentifier {
     this(id, EnumSet.allOf(DataStorageFormat.class));
   }
 
-  KeyValueSegmentIdentifier(
-      final byte[] id, final boolean containsStaticData, final boolean eligibleToHighSpecFlag) {
-    this(
-        id,
-        EnumSet.allOf(DataStorageFormat.class),
-        containsStaticData,
-        eligibleToHighSpecFlag,
-        false);
-  }
-
   KeyValueSegmentIdentifier(final byte[] id, final EnumSet<DataStorageFormat> formats) {
     this(id, formats, false, false, false);
   }
