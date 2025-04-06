@@ -153,6 +153,8 @@ public class PrunePreMergeBlockDataSubCommand implements Runnable {
       //                        .map(Transaction::getHash)
       //                        .forEach((th) -> updater.removeTransactionLocation(th)));
       updater.removeBlockBody(h);
+      updater.removeBlockHeader(h);
+      updater.removeBlockHash(headerNumber);
       //      }
     } while (++headerNumber < endBlockNumber);
     updater.commit();
