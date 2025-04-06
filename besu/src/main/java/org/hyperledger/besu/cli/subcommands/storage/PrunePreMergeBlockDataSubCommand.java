@@ -17,11 +17,14 @@ package org.hyperledger.besu.cli.subcommands.storage;
 import org.hyperledger.besu.cli.config.NetworkName;
 import org.hyperledger.besu.cli.util.VersionProvider;
 import org.hyperledger.besu.controller.BesuController;
+import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.ethereum.chain.BlockchainStorage;
+import org.hyperledger.besu.ethereum.core.BlockBody;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -40,11 +43,12 @@ public class PrunePreMergeBlockDataSubCommand implements Runnable {
   private static final Logger LOG = LoggerFactory.getLogger(PrunePreMergeBlockDataSubCommand.class);
 
   private static final List<NetworkName> SUPPORTED_NETWORKS =
-      List.of(NetworkName.MAINNET, NetworkName.SEPOLIA);
+      List.of(NetworkName.MAINNET, NetworkName.SEPOLIA, NetworkName.HOODI);
   private static final long MAINNET_MERGE_BLOCK_NUMBER = 15_537_393;
   private static final long SEPOLIA_MERGE_BLOCK_NUMBER = 1_735_371;
+  private static final long HOODI_BLOCK_NUMBER = 50_000;
 
-  private static final int DEFAULT_THREADS = 4;
+  private static final int DEFAULT_THREADS = Runtime.getRuntime().availableProcessors() - 1;
   private static final int DEFAULT_PRUNE_RANGE_SIZE = 10000;
 
   @SuppressWarnings("unused")
@@ -79,11 +83,14 @@ public class PrunePreMergeBlockDataSubCommand implements Runnable {
       return;
     }
 
+    LOG.info("DEFAULT_THREADS = availableProcessors - 1: {}", DEFAULT_THREADS);
     LOG.info(
         "Pruning pre-merge blocks and transaction receipts, network={}, data path={}",
         network,
         dataPath);
     final long mergeBlockNumber = getMergeBlockNumber(network);
+    LOG.info("merge block number: {}", mergeBlockNumber);
+    LOG.info("prune range size: {}", pruneRangeSize);
 
     try (BesuController besuController = storageSubCommand.besuCommand.buildController()) {
 
@@ -96,50 +103,57 @@ public class PrunePreMergeBlockDataSubCommand implements Runnable {
                   besuController.getDataStorageConfiguration());
 
       try (ExecutorService executor = Executors.newFixedThreadPool(threads)) {
-        for (long i = 0; i < mergeBlockNumber; i += pruneRangeSize) {
-          final long headerNumber = i;
+        // do not prune genesis block
+        for (long i = 1; i < mergeBlockNumber; i += pruneRangeSize) {
+          LOG.info(
+              "Starting pruning of block range {} to {}...", i, Math.min(i + pruneRangeSize, mergeBlockNumber));
+          final long startBlockNumber = i;
+          final long endBlockNumber = Math.min(startBlockNumber + pruneRangeSize, mergeBlockNumber);
           executor.submit(
-              () -> deleteBlockRange(headerNumber, mergeBlockNumber, blockchainStorage));
+              () -> deleteBlockRange(startBlockNumber, endBlockNumber, mergeBlockNumber, blockchainStorage));
         }
       }
     }
+    LOG.info("Pruning pre-merge blocks and transaction receipts completed");
   }
 
   private static long getMergeBlockNumber(final NetworkName network) {
     return switch (network) {
       case MAINNET -> MAINNET_MERGE_BLOCK_NUMBER;
       case SEPOLIA -> SEPOLIA_MERGE_BLOCK_NUMBER;
+      case HOODI -> HOODI_BLOCK_NUMBER;
       default -> throw new RuntimeException("Unexpected network: " + network);
     };
   }
 
   private void deleteBlockRange(
       final long startBlockNumber,
+      final long endBlockNumber,
       final long mergeBlockNumber,
       final BlockchainStorage blockchainStorage) {
     BlockchainStorage.Updater updater = blockchainStorage.updater();
     long headerNumber = startBlockNumber;
-    final long endBlockNumber = Math.min(startBlockNumber + pruneRangeSize, mergeBlockNumber);
     do {
-      blockchainStorage
-          .getBlockHash(headerNumber)
-          .filter((h) -> blockchainStorage.getBlockBody(h).isPresent())
-          .ifPresent(
-              (h) -> {
-                updater.removeTransactionReceipts(h);
-                updater.removeTotalDifficulty(h);
-                blockchainStorage
-                    .getBlockBody(h)
-                    .map((bb) -> bb.getTransactions())
-                    .ifPresent(
-                        (transactions) ->
-                            transactions.stream()
-                                .map(Transaction::getHash)
-                                .forEach((th) -> updater.removeTransactionLocation(th)));
-                updater.removeBlockBody(h);
-              });
+      final Optional<Hash> maybeBlockHash = blockchainStorage.getBlockHash(headerNumber);
+      if (maybeBlockHash.isEmpty()) {
+        continue;
+      }
+      final Hash h = maybeBlockHash.get();
+      final Optional<BlockBody> blockBody = blockchainStorage.getBlockBody(h);
+      if (blockBody.isPresent()) {
+        updater.removeTransactionReceipts(h);
+        updater.removeTotalDifficulty(h);
+        blockBody
+            .map((bb) -> bb.getTransactions())
+            .ifPresent(
+                (transactions) ->
+                    transactions.stream()
+                        .map(Transaction::getHash)
+                        .forEach((th) -> updater.removeTransactionLocation(th)));
+        updater.removeBlockBody(h);
+      }
     } while (++headerNumber < endBlockNumber);
     updater.commit();
-    LOG.info("Completed deletion of block range {} to {}", startBlockNumber, endBlockNumber);
+    LOG.info("...completed pruning of block range {} to {}; estimated {} remaining", startBlockNumber, endBlockNumber, mergeBlockNumber - endBlockNumber);
   }
 }
