@@ -19,8 +19,6 @@ import org.hyperledger.besu.cli.util.VersionProvider;
 import org.hyperledger.besu.controller.BesuController;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.ethereum.chain.BlockchainStorage;
-import org.hyperledger.besu.ethereum.core.BlockBody;
-import org.hyperledger.besu.ethereum.core.Transaction;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -103,7 +101,7 @@ public class PrunePreMergeBlockDataSubCommand implements Runnable {
                   besuController.getDataStorageConfiguration());
 
       try (ExecutorService executor = Executors.newFixedThreadPool(threads)) {
-        // do not prune genesis block
+        // cannot prune genesis block so start at 1
         for (long i = 1; i < mergeBlockNumber; i += pruneRangeSize) {
           LOG.info(
               "Starting pruning of block range {} to {}...",
@@ -143,21 +141,19 @@ public class PrunePreMergeBlockDataSubCommand implements Runnable {
         continue;
       }
       final Hash h = maybeBlockHash.get();
-      final Optional<BlockBody> blockBody = blockchainStorage.getBlockBody(h);
-      if (blockBody.isPresent()) {
-        updater.removeTransactionReceipts(h);
-        updater.removeTotalDifficulty(h);
-        blockBody
-            .map((bb) -> bb.getTransactions())
-            .ifPresent(
-                (transactions) ->
-                    transactions.stream()
-                        .map(Transaction::getHash)
-                        .forEach((th) -> updater.removeTransactionLocation(th)));
-        updater.removeBlockBody(h);
-        updater.removeBlockHeader(h);
-        updater.removeBlockHash(headerNumber);
-      }
+      //      final Optional<BlockBody> blockBody = blockchainStorage.getBlockBody(h);
+      //      if (blockBody.isPresent()) {
+      updater.removeTransactionReceipts(h);
+      updater.removeTotalDifficulty(h);
+      //        blockBody
+      //            .map((bb) -> bb.getTransactions())
+      //            .ifPresent(
+      //                (transactions) ->
+      //                    transactions.stream()
+      //                        .map(Transaction::getHash)
+      //                        .forEach((th) -> updater.removeTransactionLocation(th)));
+      updater.removeBlockBody(h);
+      //      }
     } while (++headerNumber < endBlockNumber);
     updater.commit();
     LOG.info(
