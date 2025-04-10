@@ -33,7 +33,11 @@ import picocli.CommandLine.ParentCommand;
     description = "Print RocksDB information",
     mixinStandardHelpOptions = true,
     versionProvider = VersionProvider.class,
-    subcommands = {RocksDbSubCommand.RocksDbUsage.class, RocksDbSubCommand.RocksDbStats.class})
+    subcommands = {
+      RocksDbSubCommand.RocksDbUsage.class,
+      RocksDbSubCommand.RocksDbForceGc.class,
+      RocksDbSubCommand.RocksDbStats.class
+    })
 public class RocksDbSubCommand implements Runnable {
 
   @SuppressWarnings("unused")
@@ -50,6 +54,41 @@ public class RocksDbSubCommand implements Runnable {
   @Override
   public void run() {
     spec.commandLine().usage(System.out);
+  }
+
+  @Command(
+      name = "force-gc",
+      description =
+          "Attempt to force a garbage collection; intended for use after using prune-premerge-blocks",
+      mixinStandardHelpOptions = true,
+      versionProvider = VersionProvider.class)
+  static class RocksDbForceGc implements Runnable {
+
+    @SuppressWarnings("unused")
+    @CommandLine.Spec
+    private CommandLine.Model.CommandSpec spec;
+
+    @SuppressWarnings("unused")
+    @ParentCommand
+    private RocksDbSubCommand rocksDbSubCommand;
+
+    @Override
+    public void run() {
+
+      final PrintWriter out = spec.commandLine().getOut();
+
+      final String dbPath =
+          rocksDbSubCommand
+              .storageSubCommand
+              .besuCommand
+              .dataDir()
+              .resolve(DATABASE_PATH)
+              .toString();
+
+      out.println("Attempting to force garbage collection on RocksDB...");
+      RocksDbHelper.forceGCForEachColumnFamily(dbPath);
+      out.println("Done");
+    }
   }
 
   @Command(

@@ -38,6 +38,36 @@ public class RocksDbHelper {
   /** Default Constructor. */
   RocksDbHelper() {}
 
+  static void forceGCForEachColumnFamily(final String dbPath) {
+    RocksDB.loadLibrary();
+    Options options = new Options();
+    options.setCreateIfMissing(true);
+
+    // Open the RocksDB database with multiple column families
+    List<byte[]> cfNames;
+    try {
+      cfNames = RocksDB.listColumnFamilies(options, dbPath);
+    } catch (RocksDBException e) {
+      throw new RuntimeException(e);
+    }
+    final List<ColumnFamilyHandle> cfHandles = new ArrayList<>();
+    final List<ColumnFamilyDescriptor> cfDescriptors = new ArrayList<>();
+    for (byte[] cfName : cfNames) {
+      cfDescriptors.add(new ColumnFamilyDescriptor(cfName));
+    }
+    try (final RocksDB rocksdb = RocksDB.open(dbPath, cfDescriptors, cfHandles)) {
+      for (ColumnFamilyHandle cfHandle : cfHandles) {
+        rocksdb.compactRange(cfHandle);
+      }
+    } catch (RocksDBException e) {
+      throw new RuntimeException(e);
+    } finally {
+      for (ColumnFamilyHandle cfHandle : cfHandles) {
+        cfHandle.close();
+      }
+    }
+  }
+
   static void forEachColumnFamily(
       final String dbPath, final BiConsumer<RocksDB, ColumnFamilyHandle> task) {
     RocksDB.loadLibrary();
