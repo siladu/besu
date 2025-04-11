@@ -229,7 +229,7 @@ public abstract class RocksDBColumnarKeyValueStorage implements SegmentedKeyValu
     if (segment.containsStaticData()) {
       options
           .setEnableBlobFiles(true)
-          .setEnableBlobGarbageCollection(true)
+          .setEnableBlobGarbageCollection(segment.isStaticDataGarbageCollectionEnabled())
           // fraction of file age to be considered eligible for GC;
           // 0.25 = oldest 25% of files eligible;
           // 1 = all files eligible
