@@ -225,14 +225,11 @@ public abstract class RocksDBColumnarKeyValueStorage implements SegmentedKeyValu
             .setTtl(0)
             .setCompressionType(CompressionType.LZ4_COMPRESSION)
             .setTableFormatConfig(basedTableConfig)
-            .setLevelCompactionDynamicLevelBytes(dynamicLevelBytes);
-    if (segment.containsStaticData()) {
-      options
-          .setEnableBlobFiles(true)
-          .setEnableBlobGarbageCollection(segment.isStaticDataGarbageCollectionEnabled())
-          .setMinBlobSize(100)
-          .setBlobCompressionType(CompressionType.LZ4_COMPRESSION);
-    }
+            .setLevelCompactionDynamicLevelBytes(dynamicLevelBytes)
+            .setEnableBlobFiles(true)
+            .setEnableBlobGarbageCollection(true)
+            .setMinBlobSize(100)
+            .setBlobCompressionType(CompressionType.LZ4_COMPRESSION);
 
     return new ColumnFamilyDescriptor(segment.getId(), options);
   }
