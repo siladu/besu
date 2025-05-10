@@ -17,10 +17,14 @@ package org.hyperledger.besu.plugin.services.storage.rocksdb.configuration;
 import java.util.Optional;
 
 import com.google.common.base.MoreObjects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 
 /** The RocksDb cli options. */
 public class RocksDBCLIOptions {
+
+  private static final Logger LOG = LoggerFactory.getLogger(RocksDBCLIOptions.class);
 
   /** The constant DEFAULT_MAX_OPEN_FILES. */
   public static final int DEFAULT_MAX_OPEN_FILES = 1024;
@@ -58,6 +62,9 @@ public class RocksDBCLIOptions {
   /** Key name for configuring blob_garbage_collection_force_threshold */
   public static final String BLOB_GARBAGE_COLLECTION_FORCE_THRESHOLD =
       "--Xplugin-rocksdb-blob-garbage-collection-force-threshold";
+
+  /** Key name for configuring history expiry prune */
+  public static final String HISTORY_EXPIRY = "--Xplugin-rocksdb-history-expiry-prune-enabled";
 
   /** The Max open files. */
   @CommandLine.Option(
@@ -128,6 +135,14 @@ public class RocksDBCLIOptions {
       description = "Blob garbage collection force threshold (default: ${DEFAULT-VALUE})")
   Optional<Double> blobGarbageCollectionForceThreshold = Optional.empty();
 
+  @CommandLine.Option(
+      names = {HISTORY_EXPIRY},
+      hidden = true,
+      paramLabel = "<BOOLEAN>",
+      description =
+          "Enable recommend garbage collection settings following history expiry prune (default: ${DEFAULT-VALUE})")
+  boolean historyExpiryPruneEnabled = false;
+
   private RocksDBCLIOptions() {}
 
   /**
@@ -163,6 +178,23 @@ public class RocksDBCLIOptions {
    * @return the rocks db factory configuration
    */
   public RocksDBFactoryConfiguration toDomainObject() {
+    if (historyExpiryPruneEnabled) {
+      // TODO SLD could add extra validation to ensure
+      // --Xplugin-rocksdb-history-expiry-prune-enabled and
+      // --Xplugin-rocksdb-blockchain-blob-garbage-collection-enabled=false are not both set
+      isBlockchainGarbageCollectionEnabled = true;
+      blobGarbageCollectionAgeCutoff = Optional.of(blobGarbageCollectionAgeCutoff.orElse(0.5));
+      blobGarbageCollectionForceThreshold =
+          Optional.of(blobGarbageCollectionForceThreshold.orElse(0.1));
+      LOG.atInfo()
+          .setMessage("History expiry prune is enabled so setting {}; {}={}; {}={}")
+          .addArgument(BLOB_BLOCKCHAIN_GARBAGE_COLLECTION_ENABLED)
+          .addArgument(BLOB_GARBAGE_COLLECTION_AGE_CUTOFF)
+          .addArgument(blobGarbageCollectionAgeCutoff.get())
+          .addArgument(BLOB_GARBAGE_COLLECTION_FORCE_THRESHOLD)
+          .addArgument(blobGarbageCollectionForceThreshold.get())
+          .log();
+    }
     return new RocksDBFactoryConfiguration(
         maxOpenFiles,
         backgroundThreadCount,
@@ -180,6 +212,15 @@ public class RocksDBCLIOptions {
    */
   public boolean isHighSpec() {
     return isHighSpec;
+  }
+
+  /**
+   * Is history expiry prune enabled.
+   *
+   * @return the boolean
+   */
+  public boolean isHistoryExpiryPruneEnabled() {
+    return historyExpiryPruneEnabled;
   }
 
   /**
@@ -204,6 +245,7 @@ public class RocksDBCLIOptions {
         .add("isBlockchainGarbageCollectionEnabled", isBlockchainGarbageCollectionEnabled)
         .add("blobGarbageCollectionAgeCutoff", blobGarbageCollectionAgeCutoff)
         .add("blobGarbageCollectionForceThreshold", blobGarbageCollectionForceThreshold)
+        .add("historyExpiryPruneEnabled", historyExpiryPruneEnabled)
         .toString();
   }
 

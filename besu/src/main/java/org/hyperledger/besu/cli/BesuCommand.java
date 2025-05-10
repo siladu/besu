@@ -702,6 +702,12 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
       description = "Specifies whether to cache precompile results (default: ${DEFAULT-VALUE})")
   private final Boolean enablePrecompileCaching = false;
 
+  //  @CommandLine.Option(
+  //      names = {"--history-expiry-prune"},
+  //      description = "Convenience option to configure BlobDB garbage collecion settings following
+  // a history expiry prune")
+  private final Boolean historyExpiryPrune = false;
+
   // Plugins Configuration Option Group
   @CommandLine.ArgGroup(validate = false)
   PluginsConfigurationOptions pluginsConfigurationOptions = new PluginsConfigurationOptions();
@@ -1234,7 +1240,7 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
     besuPluginContext.addService(BlockchainService.class, blockchainServiceImpl);
 
     // register built-in plugins
-    rocksDBPlugin = new RocksDBPlugin();
+    rocksDBPlugin = new RocksDBPlugin(historyExpiryPrune);
     rocksDBPlugin.register(besuPluginContext);
     new InMemoryStoragePlugin().register(besuPluginContext);
 
@@ -2828,6 +2834,7 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
         .setTxPoolImplementation(buildTransactionPoolConfiguration().getTxPoolImplementation())
         .setWorldStateUpdateMode(unstableEvmOptions.toDomainObject().worldUpdaterMode())
         .setPluginContext(this.besuPluginContext)
+        .setHistoryExpiryPruneEnabled(rocksDBPlugin.isHistoryExpiryPruneEnabled())
         .setBlobDBSettings(rocksDBPlugin.getBlobDBSettings());
 
     return builder.build();

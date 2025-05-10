@@ -67,6 +67,7 @@ public class RocksDBKeyValueStorageFactory implements KeyValueStorageFactory {
   private final Supplier<RocksDBFactoryConfiguration> configuration;
   private final List<SegmentIdentifier> configuredSegments;
   private final List<SegmentIdentifier> ignorableSegments;
+  private boolean historyExpiryPruneEnabled = false;
 
   /**
    * Instantiates a new RocksDb key value storage factory.
@@ -75,16 +76,19 @@ public class RocksDBKeyValueStorageFactory implements KeyValueStorageFactory {
    * @param configuredSegments the segments
    * @param ignorableSegments the ignorable segments
    * @param rocksDBMetricsFactory the rocks db metrics factory
+   * @param historyExpiryPruneEnabled the history expiry prune enabled
    */
   public RocksDBKeyValueStorageFactory(
       final Supplier<RocksDBFactoryConfiguration> configuration,
       final List<SegmentIdentifier> configuredSegments,
       final List<SegmentIdentifier> ignorableSegments,
-      final RocksDBMetricsFactory rocksDBMetricsFactory) {
+      final RocksDBMetricsFactory rocksDBMetricsFactory,
+      final boolean historyExpiryPruneEnabled) {
     this.configuration = configuration;
     this.configuredSegments = configuredSegments;
     this.ignorableSegments = ignorableSegments;
     this.rocksDBMetricsFactory = rocksDBMetricsFactory;
+    this.historyExpiryPruneEnabled = historyExpiryPruneEnabled;
   }
 
   /**
@@ -98,7 +102,7 @@ public class RocksDBKeyValueStorageFactory implements KeyValueStorageFactory {
       final Supplier<RocksDBFactoryConfiguration> configuration,
       final List<SegmentIdentifier> configuredSegments,
       final RocksDBMetricsFactory rocksDBMetricsFactory) {
-    this(configuration, configuredSegments, List.of(), rocksDBMetricsFactory);
+    this(configuration, configuredSegments, List.of(), rocksDBMetricsFactory, false);
   }
 
   @Override
@@ -195,10 +199,18 @@ public class RocksDBKeyValueStorageFactory implements KeyValueStorageFactory {
               + " could not be found. You may not have the appropriate permission to access the item.";
       throw new StorageException(message, e);
     }
-    rocksDBConfiguration =
+    var configBuilder =
         RocksDBConfigurationBuilder.from(configuration.get())
-            .databaseDir(storagePath(commonConfiguration))
-            .build();
+            .databaseDir(storagePath(commonConfiguration));
+    if (historyExpiryPruneEnabled) {
+      LOG.info(
+          "History expiry prune is enabled so setting Xplugin-rocksdb-blockchain-blob-garbage-collection-enabled; Xplugin-rocksdb-blob-garbage-collection-age-cutoff=0.5; Xplugin-rocksdb-blob-garbage-collection-force-threshold=0.1");
+      configBuilder
+          .isBlockchainGarbageCollectionEnabled(true)
+          .blobGarbageCollectionAgeCutoff(Optional.of(0.5))
+          .blobGarbageCollectionForceThreshold(Optional.of(0.1));
+    }
+    rocksDBConfiguration = configBuilder.build();
   }
 
   private boolean requiresInit() {

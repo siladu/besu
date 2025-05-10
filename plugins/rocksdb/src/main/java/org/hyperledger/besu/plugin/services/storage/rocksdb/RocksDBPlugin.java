@@ -40,13 +40,15 @@ public class RocksDBPlugin implements BesuPlugin {
 
   private final RocksDBCLIOptions options;
   private final List<SegmentIdentifier> ignorableSegments = new ArrayList<>();
+  private final boolean historyExpiryPruneEnabled;
   private ServiceManager context;
   private RocksDBKeyValueStorageFactory factory;
   private RocksDBKeyValuePrivacyStorageFactory privacyFactory;
 
   /** Instantiates a newRocksDb plugin. */
-  public RocksDBPlugin() {
+  public RocksDBPlugin(final boolean historyExpiryPruneEnabled) {
     this.options = RocksDBCLIOptions.create();
+    this.historyExpiryPruneEnabled = historyExpiryPruneEnabled;
   }
 
   /**
@@ -118,6 +120,15 @@ public class RocksDBPlugin implements BesuPlugin {
   }
 
   /**
+   * Is history expiry enabled.
+   *
+   * @return the boolean
+   */
+  public boolean isHistoryExpiryPruneEnabled() {
+    return options.isHistoryExpiryPruneEnabled();
+  }
+
+  /**
    * Gets blob db settings.
    *
    * @return the blob db settings
@@ -136,7 +147,8 @@ public class RocksDBPlugin implements BesuPlugin {
             configuration,
             segments,
             ignorableSegments,
-            RocksDBMetricsFactory.PUBLIC_ROCKS_DB_METRICS);
+            RocksDBMetricsFactory.PUBLIC_ROCKS_DB_METRICS,
+            historyExpiryPruneEnabled);
     privacyFactory = new RocksDBKeyValuePrivacyStorageFactory(factory);
 
     service.registerKeyValueStorage(factory);
