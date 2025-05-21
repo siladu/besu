@@ -117,12 +117,12 @@ class OsakaModExpPrecompiledContractTest {
     final Bytes input = Bytes.fromHexString(inputHex);
 
     // Osaka implementation should compute successfully
-    final PrecompileContractResult osakaResult =
+    final PrecompiledContract.PrecompileContractResult osakaResult =
         osakaContract.computePrecompile(input, messageFrame);
     assertThat(osakaResult.isSuccessful()).isTrue();
 
     // Berlin implementation should also work for these valid inputs
-    final PrecompileContractResult berlinResult =
+    final PrecompiledContract.PrecompileContractResult berlinResult =
         berlinContract.computePrecompile(input, messageFrame);
     assertThat(berlinResult.isSuccessful()).isTrue();
 
@@ -136,14 +136,14 @@ class OsakaModExpPrecompiledContractTest {
     final Bytes input = Bytes.fromHexString(inputHex);
 
     // Osaka implementation should reject inputs that exceed EIP-7823 limits
-    final PrecompileContractResult osakaResult =
+    final PrecompiledContract.PrecompileContractResult osakaResult =
         osakaContract.computePrecompile(input, messageFrame);
     assertThat(osakaResult.isSuccessful()).isFalse();
     assertThat(osakaResult.getHaltReason())
         .isEqualTo(Optional.of(ExceptionalHaltReason.PRECOMPILE_ERROR));
 
     // Berlin implementation should accept them (since it doesn't have EIP-7823 limits)
-    final PrecompileContractResult berlinResult =
+    final PrecompiledContract.PrecompileContractResult berlinResult =
         berlinContract.computePrecompile(input, messageFrame);
     assertThat(berlinResult.isSuccessful()).isTrue();
   }
@@ -165,5 +165,40 @@ class OsakaModExpPrecompiledContractTest {
     // Gas calculation should be the same for both implementations
     // (EIP-7823 doesn't change gas calculation)
     assertThat(osakaContract.gasRequirement(input)).isEqualTo(berlinContract.gasRequirement(input));
+  }
+
+  @Test
+  void shouldPerformEarlyExitForOversizedInputs() {
+    // This test verifies the performance optimization for large inputs
+    // Generate a test input with very large base length but small actual data
+    final String inputHex =
+        "0000000000000000000000000000000000000000000000000000000000002000"
+            + // 8192 bytes (much larger than limit)
+            "0000000000000000000000000000000000000000000000000000000000000001"
+            + // 1 byte
+            "0000000000000000000000000000000000000000000000000000000000000001"
+            + // 1 byte
+            "01"; // actual data: just a single byte
+
+    final Bytes input = Bytes.fromHexString(inputHex);
+
+    // Osaka implementation should reject quickly without processing the entire input
+    final long startTimeOsaka = System.nanoTime();
+    final PrecompiledContract.PrecompileContractResult osakaResult =
+        osakaContract.computePrecompile(input, messageFrame);
+    final long endTimeOsaka = System.nanoTime();
+
+    assertThat(osakaResult.isSuccessful()).isFalse();
+    assertThat(osakaResult.getHaltReason())
+        .isEqualTo(Optional.of(ExceptionalHaltReason.PRECOMPILE_ERROR));
+
+    // For very large inputs, the berlin implementation would take much longer,
+    // but we're just checking that it accepts it in this test
+    final PrecompiledContract.PrecompileContractResult berlinResult =
+        berlinContract.computePrecompile(input, messageFrame);
+    assertThat(berlinResult.isSuccessful()).isTrue();
+
+    // The optimized code should return very quickly for invalid inputs without processing them
+    assertThat(endTimeOsaka - startTimeOsaka).isLessThan(1_000_000); // less than 1ms
   }
 }

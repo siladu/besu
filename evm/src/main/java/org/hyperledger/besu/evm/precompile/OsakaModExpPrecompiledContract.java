@@ -35,6 +35,10 @@ public class OsakaModExpPrecompiledContract
   /** Maximum size of each parameter (base, exponent, modulus) in bytes */
   private static final int MAX_LENGTH = 1024; // 8192 bits = 1024 bytes as per EIP-7823
 
+  /** Error result to avoid recreating it for each failure case */
+  private static final PrecompileContractResult HALT_RESULT =
+      PrecompileContractResult.halt(null, Optional.of(ExceptionalHaltReason.PRECOMPILE_ERROR));
+
   /**
    * Instantiates a new ModExp precompiled contract for Osaka with EIP-7823 limits.
    *
@@ -44,73 +48,65 @@ public class OsakaModExpPrecompiledContract
     super(gasCalculator);
   }
 
+  /**
+   * Check if the input parameters comply with EIP-7823 limits.
+   *
+   * @param input the input bytes
+   * @return true if all parameters are within limits, false otherwise
+   */
+  private boolean isWithinLimits(final Bytes input) {
+    // Fast path: check input size first - must be at least 96 bytes to contain length
+    // specifications
+    if (input.size() < BASE_OFFSET) {
+      return true; // Not enough bytes to specify lengths, will be handled by parent
+    }
+
+    // Optimization: Check for zeros in high-order bytes of the length fields
+    // If any length parameter has a non-zero byte in high order (>1024 bytes), it exceeds the limit
+
+    // Each length field is a 32-byte (256-bit) value, but we only care about the top 23 bytes
+    // (since 0xFF + 8 most significant bits would be > 1024 = 2^10 bytes)
+
+    // Check base length (bytes 0-22)
+    for (int i = 0; i < 23; i++) {
+      if (input.get(i) != 0) {
+        return false; // Exceeds limit
+      }
+    }
+
+    // Check exponent length (bytes 32-54)
+    for (int i = 32; i < 55; i++) {
+      if (input.get(i) != 0) {
+        return false; // Exceeds limit
+      }
+    }
+
+    // Check modulus length (bytes 64-86)
+    for (int i = 64; i < 87; i++) {
+      if (input.get(i) != 0) {
+        return false; // Exceeds limit
+      }
+    }
+
+    // If we reach this point, we need to check the lower bytes of each length field
+    final int baseLength = clampedToInt(baseLength(input));
+    final int exponentLength = clampedToInt(exponentLength(input));
+    final int modulusLength = clampedToInt(modulusLength(input));
+
+    // Apply EIP-7823 limits - all parameters must be <= 1024 bytes
+    return baseLength <= MAX_LENGTH && exponentLength <= MAX_LENGTH && modulusLength <= MAX_LENGTH;
+  }
+
   @Nonnull
   @Override
   public PrecompileContractResult computePrecompile(
       final Bytes input, @Nonnull final MessageFrame messageFrame) {
-    // First check if any of the length parameters exceed the EIP-7823 limit
-    final int baseLength = clampedToInt(baseLength(input));
-    final int exponentLength = clampedToInt(exponentLength(input));
-    final int modulusLength = clampedToInt(modulusLength(input));
-
-    // Apply EIP-7823: if any parameter exceeds the limit, return an error
-    if (baseLength > MAX_LENGTH || exponentLength > MAX_LENGTH || modulusLength > MAX_LENGTH) {
-      return PrecompileContractResult.halt(
-          null, Optional.of(ExceptionalHaltReason.PRECOMPILE_ERROR));
+    // Fast path: check if any parameter exceeds the EIP-7823 limit
+    if (!isWithinLimits(input)) {
+      return HALT_RESULT;
     }
 
-    // Continue with the original implementation
-    if (isNative()) {
-      return computeNative(input);
-    } else {
-      return computeDefault(input);
-    }
-  }
-
-  /**
-   * Compute native precompile contract with EIP-7823 limits.
-   *
-   * @param input the input
-   * @return the precompile contract result
-   */
-  @Override
-  public PrecompileContractResult computeNative(final @Nonnull Bytes input) {
-    // In the case of native implementation, we need to check the EIP-7823 limits again
-    final int baseLength = clampedToInt(baseLength(input));
-    final int exponentLength = clampedToInt(exponentLength(input));
-    final int modulusLength = clampedToInt(modulusLength(input));
-
-    // Apply EIP-7823: if any parameter exceeds the limit, return an error
-    if (baseLength > MAX_LENGTH || exponentLength > MAX_LENGTH || modulusLength > MAX_LENGTH) {
-      return PrecompileContractResult.halt(
-          null, Optional.of(ExceptionalHaltReason.PRECOMPILE_ERROR));
-    }
-
-    // Continue with parent's native implementation
-    return super.computeNative(input);
-  }
-
-  /**
-   * Compute default precompile contract with EIP-7823 limits.
-   *
-   * @param input the input
-   * @return the precompile contract result
-   */
-  @Nonnull
-  @Override
-  public PrecompileContractResult computeDefault(final Bytes input) {
-    // In the case of default implementation, we need to check the EIP-7823 limits again
-    final int baseLength = clampedToInt(baseLength(input));
-    final int exponentLength = clampedToInt(exponentLength(input));
-    final int modulusLength = clampedToInt(modulusLength(input));
-
-    // Apply EIP-7823: if any parameter exceeds the limit, return an error
-    if (baseLength > MAX_LENGTH || exponentLength > MAX_LENGTH || modulusLength > MAX_LENGTH) {
-      return PrecompileContractResult.halt(
-          null, Optional.of(ExceptionalHaltReason.PRECOMPILE_ERROR));
-    }
-
-    // Continue with parent's default implementation
-    return super.computeDefault(input);
+    // If all parameters are within limits, delegate to the parent implementation
+    return super.computePrecompile(input, messageFrame);
   }
 }
