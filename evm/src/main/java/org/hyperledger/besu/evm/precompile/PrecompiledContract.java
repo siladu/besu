@@ -83,6 +83,25 @@ public interface PrecompiledContract {
     }
 
     /**
+     * Check if the precompile contract result is successful.
+     *
+     * @return true if the result is successful, false otherwise
+     */
+    public boolean isSuccessful() {
+      return state == MessageFrame.State.COMPLETED_SUCCESS;
+    }
+
+    // getHaltReason
+    /**
+     * Get the halt reason.
+     *
+     * @return the halt reason
+     */
+    public Optional<ExceptionalHaltReason> getHaltReason() {
+      return haltReason;
+    }
+
+    /**
      * precompile contract result with revert state.
      *
      * @param output the output

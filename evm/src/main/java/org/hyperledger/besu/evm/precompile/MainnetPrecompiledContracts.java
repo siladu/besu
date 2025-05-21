@@ -172,6 +172,33 @@ public interface MainnetPrecompiledContracts {
   }
 
   /**
+   * Osaka precompile contract registry.
+   *
+   * @param gasCalculator the gas calculator
+   * @return the precompile contract registry
+   */
+  static PrecompileContractRegistry osaka(final GasCalculator gasCalculator) {
+    PrecompileContractRegistry precompileContractRegistry = new PrecompileContractRegistry();
+    populateForOsaka(precompileContractRegistry, gasCalculator);
+    return precompileContractRegistry;
+  }
+
+  /**
+   * Populate registry for Osaka.
+   *
+   * @param registry the registry
+   * @param gasCalculator the gas calculator
+   */
+  static void populateForOsaka(
+      final PrecompileContractRegistry registry, final GasCalculator gasCalculator) {
+    // Start with Prague precompiles
+    populateForPrague(registry, gasCalculator);
+
+    // Replace the ModExp precompile with the Osaka version that implements EIP-7823
+    registry.put(Address.MODEXP, new OsakaModExpPrecompiledContract(gasCalculator));
+  }
+
+  /**
    * FutureEIPs precompile contract registry.
    *
    * @param gasCalculator the gas calculator
