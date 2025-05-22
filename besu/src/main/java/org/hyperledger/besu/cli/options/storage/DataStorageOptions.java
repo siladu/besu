@@ -49,9 +49,6 @@ public class DataStorageOptions implements CLIOptions<DataStorageConfiguration> 
       fallbackValue = "true")
   private Boolean receiptCompactionEnabled = DEFAULT_RECEIPT_COMPACTION_ENABLED;
 
-  //      // TODO SLD could add extra validation to ensure
-  //      // --Xplugin-rocksdb-history-expiry-prune-enabled and
-  //      // --Xplugin-rocksdb-blockchain-blob-garbage-collection-enabled=false are not both set
   @CommandLine.Option(
       names = {"--Xhistory-expiry-prune"},
       hidden = true,
