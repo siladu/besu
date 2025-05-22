@@ -18,6 +18,9 @@ import static org.hyperledger.besu.plugin.services.storage.rocksdb.configuration
 import static org.hyperledger.besu.plugin.services.storage.rocksdb.configuration.BaseVersionedStorageFormat.BONSAI_WITH_VARIABLES;
 import static org.hyperledger.besu.plugin.services.storage.rocksdb.configuration.BaseVersionedStorageFormat.FOREST_WITH_RECEIPT_COMPACTION;
 import static org.hyperledger.besu.plugin.services.storage.rocksdb.configuration.BaseVersionedStorageFormat.FOREST_WITH_VARIABLES;
+import static org.hyperledger.besu.plugin.services.storage.rocksdb.configuration.RocksDBCLIOptions.BLOB_BLOCKCHAIN_GARBAGE_COLLECTION_ENABLED;
+import static org.hyperledger.besu.plugin.services.storage.rocksdb.configuration.RocksDBCLIOptions.BLOB_GARBAGE_COLLECTION_AGE_CUTOFF;
+import static org.hyperledger.besu.plugin.services.storage.rocksdb.configuration.RocksDBCLIOptions.BLOB_GARBAGE_COLLECTION_FORCE_THRESHOLD;
 
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
@@ -67,7 +70,6 @@ public class RocksDBKeyValueStorageFactory implements KeyValueStorageFactory {
   private final Supplier<RocksDBFactoryConfiguration> configuration;
   private final List<SegmentIdentifier> configuredSegments;
   private final List<SegmentIdentifier> ignorableSegments;
-  private boolean historyExpiryPruneEnabled = false;
 
   /**
    * Instantiates a new RocksDb key value storage factory.
@@ -76,19 +78,16 @@ public class RocksDBKeyValueStorageFactory implements KeyValueStorageFactory {
    * @param configuredSegments the segments
    * @param ignorableSegments the ignorable segments
    * @param rocksDBMetricsFactory the rocks db metrics factory
-   * @param historyExpiryPruneEnabled the history expiry prune enabled
    */
   public RocksDBKeyValueStorageFactory(
       final Supplier<RocksDBFactoryConfiguration> configuration,
       final List<SegmentIdentifier> configuredSegments,
       final List<SegmentIdentifier> ignorableSegments,
-      final RocksDBMetricsFactory rocksDBMetricsFactory,
-      final boolean historyExpiryPruneEnabled) {
+      final RocksDBMetricsFactory rocksDBMetricsFactory) {
     this.configuration = configuration;
     this.configuredSegments = configuredSegments;
     this.ignorableSegments = ignorableSegments;
     this.rocksDBMetricsFactory = rocksDBMetricsFactory;
-    this.historyExpiryPruneEnabled = historyExpiryPruneEnabled;
   }
 
   /**
@@ -102,7 +101,7 @@ public class RocksDBKeyValueStorageFactory implements KeyValueStorageFactory {
       final Supplier<RocksDBFactoryConfiguration> configuration,
       final List<SegmentIdentifier> configuredSegments,
       final RocksDBMetricsFactory rocksDBMetricsFactory) {
-    this(configuration, configuredSegments, List.of(), rocksDBMetricsFactory, false);
+    this(configuration, configuredSegments, List.of(), rocksDBMetricsFactory);
   }
 
   @Override
@@ -199,17 +198,30 @@ public class RocksDBKeyValueStorageFactory implements KeyValueStorageFactory {
               + " could not be found. You may not have the appropriate permission to access the item.";
       throw new StorageException(message, e);
     }
+    final RocksDBFactoryConfiguration factoryConfig = configuration.get();
     var configBuilder =
-        RocksDBConfigurationBuilder.from(configuration.get())
+        RocksDBConfigurationBuilder.from(factoryConfig)
             .databaseDir(storagePath(commonConfiguration));
-    if (historyExpiryPruneEnabled) {
-      LOG.info(
-          "History expiry prune is enabled so setting Xplugin-rocksdb-blockchain-blob-garbage-collection-enabled; Xplugin-rocksdb-blob-garbage-collection-age-cutoff=0.5; Xplugin-rocksdb-blob-garbage-collection-force-threshold=0.1");
-      configBuilder
-          .isBlockchainGarbageCollectionEnabled(true)
-          .blobGarbageCollectionAgeCutoff(Optional.of(0.5))
-          .blobGarbageCollectionForceThreshold(Optional.of(0.1));
+
+    if (commonConfiguration.getDataStorageConfiguration().isHistoryExpiryPruneEnabled()) {
+      configBuilder.isBlockchainGarbageCollectionEnabled(true);
+      final double blobGarbageCollectionAgeCutoff =
+          factoryConfig.getBlobGarbageCollectionAgeCutoff().orElse(0.5);
+      final double blobGarbageCollectionForceThreshold =
+          factoryConfig.getBlobGarbageCollectionForceThreshold().orElse(0.1);
+      configBuilder.blobGarbageCollectionAgeCutoff(Optional.of(blobGarbageCollectionAgeCutoff));
+      configBuilder.blobGarbageCollectionForceThreshold(
+          Optional.of(blobGarbageCollectionForceThreshold));
+      LOG.atInfo()
+          .setMessage("History expiry prune is enabled so setting {}; {}={}; {}={}")
+          .addArgument(BLOB_BLOCKCHAIN_GARBAGE_COLLECTION_ENABLED)
+          .addArgument(BLOB_GARBAGE_COLLECTION_AGE_CUTOFF)
+          .addArgument(blobGarbageCollectionAgeCutoff)
+          .addArgument(BLOB_GARBAGE_COLLECTION_FORCE_THRESHOLD)
+          .addArgument(blobGarbageCollectionForceThreshold)
+          .log();
     }
+
     rocksDBConfiguration = configBuilder.build();
   }
 

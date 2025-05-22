@@ -627,7 +627,7 @@ public class ThreadBesuNodeRunner implements BesuNodeRunner {
       commandLine.parseArgs(extraCLIOptions.toArray(new String[0]));
 
       // register built-in plugins
-      new RocksDBPlugin(false).register(besuPluginContext);
+      new RocksDBPlugin().register(besuPluginContext);
     }
 
     @Provides
