@@ -170,13 +170,21 @@ public abstract class BenchmarkExecutor {
    * @param execTime time that took for an iteration to complete.
    */
   protected void logPrecompilePerformance(
-      final String testCase, final long gasCost, final double execTime) {
+      final String testCase,
+      final boolean isEvenModulus,
+      final long gasCost,
+      final double execTime) {
     double derivedGas = execTime * GAS_PER_SECOND_STANDARD;
 
     precompileTableHeader.run();
     output.printf(
-        "%-30s | %,8d gas | %,8.0f gas | %,12.1f ns | %,10.2f MGps%n",
-        testCase, gasCost, derivedGas, execTime * 1_000_000_000, gasCost / execTime / 1_000_000);
+        "%-30s | isEvenModulus= %b | %,8d gas | %,8.0f gas | %,12.1f ns | %,10.2f MGps%n",
+        testCase,
+        isEvenModulus,
+        gasCost,
+        derivedGas,
+        execTime * 1_000_000_000,
+        gasCost / execTime / 1_000_000);
     precompileTableHeader = () -> {};
   }
 

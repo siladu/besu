@@ -297,4 +297,20 @@ public class BigIntegerModularExponentiationPrecompiledContract
           null, Optional.of(ExceptionalHaltReason.PRECOMPILE_ERROR));
     }
   }
+
+  public static boolean isEvenModulus(final Bytes input) {
+    // The last byte of the modulus is the only one that matters for even/odd.
+    final byte lastByte = extractLastByte(input, MODULUS_LENGTH_OFFSET, PARAMETER_LENGTH);
+    return (lastByte & 0x01) == 0;
+  }
+
+  private static byte extractLastByte(final Bytes input, final int offset, final int length) {
+    if (offset >= input.size() || length == 0) {
+      return 0;
+    } else if (offset + length <= input.size()) {
+      return input.get(offset + length - 1);
+    }
+    Bytes partial = input.slice(offset);
+    return partial.get(partial.size() - 1);
+  }
 }

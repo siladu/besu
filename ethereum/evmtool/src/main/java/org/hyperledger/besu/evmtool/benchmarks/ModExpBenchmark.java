@@ -398,9 +398,10 @@ public class ModExpBenchmark extends BenchmarkExecutor {
     for (final Map.Entry<String, Bytes> testCase : testcases.entrySet()) {
       final double execTime =
           runPrecompileBenchmark(testCase.getKey(), testCase.getValue(), contract);
-
+      final boolean evenModulus =
+          BigIntegerModularExponentiationPrecompiledContract.isEvenModulus(testCase.getValue());
       long gasCost = contract.gasRequirement(testCase.getValue());
-      logPrecompilePerformance(testCase.getKey(), gasCost, execTime);
+      logPrecompilePerformance(testCase.getKey(), evenModulus, gasCost, execTime);
     }
   }
 
