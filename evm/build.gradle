@@ -37,6 +37,7 @@ dependencies {
   annotationProcessor 'com.google.dagger:dagger-compiler'
 
   implementation project(':crypto:algorithms')
+  implementation 'org.hyperledger.besu:secp256r1'
   implementation project(':datatypes')
   implementation project(':ethereum:rlp')
   implementation project(':util')
@@ -48,7 +49,9 @@ dependencies {
   implementation 'io.consensys.tuweni:tuweni-bytes'
   implementation 'io.consensys.tuweni:tuweni-units'
   implementation 'org.hyperledger.besu:arithmetic'
-  implementation'org.hyperledger.besu:gnark'
+  implementation 'org.hyperledger.besu:gnark'
+  implementation 'org.hyperledger.besu:secp256k1'
+  implementation 'org.hyperledger.besu:boringssl'
   implementation 'io.consensys.protocols:jc-kzg-4844'
 
   compileOnly 'com.fasterxml.jackson.core:jackson-databind'

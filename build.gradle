@@ -180,7 +180,11 @@ configure(allprojects - project(':platform')) {
       content { includeGroupByRegex('com\\.splunk\\..*') }
     }
 
+    mavenLocal()
+
     mavenCentral()
+
+    mavenLocal()
 
     // ethereum execution spec tests fixtures. Exclusively for ethereum submodule to run ref tests
     def ethExecSpecTestsRepo = ivy {
