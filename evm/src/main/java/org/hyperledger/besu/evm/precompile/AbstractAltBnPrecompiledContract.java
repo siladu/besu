@@ -19,7 +19,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
-import org.hyperledger.besu.nativelib.gnark.LibGnarkEIP196;
+import org.hyperledger.besu.nativelib.bls12_381.LibEthPairings;
 
 import java.util.Optional;
 
@@ -49,7 +49,7 @@ public abstract class AbstractAltBnPrecompiledContract extends AbstractPrecompil
    */
   public static boolean maybeEnableNative() {
     try {
-      useNative = LibGnarkEIP196.ENABLED;
+      useNative = LibEthPairings.ENABLED;
     } catch (UnsatisfiedLinkError | NoClassDefFoundError ule) {
       LOG.info("altbn128 native precompile not available: {}", ule.getMessage());
       useNative = false;
@@ -91,7 +91,7 @@ public abstract class AbstractAltBnPrecompiledContract extends AbstractPrecompil
     this.operationId = operationId;
     this.inputLimit = inputLen + 1;
 
-    if (!LibGnarkEIP196.ENABLED) {
+    if (!LibEthPairings.ENABLED) {
       LOG.info("Native alt bn128 not available");
     }
   }
@@ -106,16 +106,16 @@ public abstract class AbstractAltBnPrecompiledContract extends AbstractPrecompil
   @NotNull
   public PrecompileContractResult computeNative(
       final @NotNull Bytes input, final MessageFrame messageFrame) {
-    final byte[] result = new byte[LibGnarkEIP196.EIP196_PREALLOCATE_FOR_RESULT_BYTES];
-    final byte[] error = new byte[LibGnarkEIP196.EIP196_PREALLOCATE_FOR_ERROR_BYTES];
+    final byte[] result = new byte[LibEthPairings.EIP196_PREALLOCATE_FOR_RESULT_BYTES];
+    final byte[] error = new byte[LibEthPairings.EIP196_PREALLOCATE_FOR_ERROR_BYTES];
 
     final IntByReference o_len =
-        new IntByReference(LibGnarkEIP196.EIP196_PREALLOCATE_FOR_RESULT_BYTES);
+        new IntByReference(LibEthPairings.EIP196_PREALLOCATE_FOR_RESULT_BYTES);
     final IntByReference err_len =
-        new IntByReference(LibGnarkEIP196.EIP196_PREALLOCATE_FOR_ERROR_BYTES);
+        new IntByReference(LibEthPairings.EIP196_PREALLOCATE_FOR_ERROR_BYTES);
     final int inputSize = Math.min(inputLimit, input.size());
     final int errorNo =
-        LibGnarkEIP196.eip196_perform_operation(
+        LibEthPairings.eip196_perform_operation(
             operationId,
             input.slice(0, inputSize).toArrayUnsafe(),
             inputSize,
