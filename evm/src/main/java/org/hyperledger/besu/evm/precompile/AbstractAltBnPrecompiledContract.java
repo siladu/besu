@@ -19,6 +19,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
+import org.hyperledger.besu.nativelib.constantine.LibConstantineEIP196;
 import org.hyperledger.besu.nativelib.gnark.LibGnarkEIP196;
 
 import java.util.Optional;
@@ -49,7 +50,7 @@ public abstract class AbstractAltBnPrecompiledContract extends AbstractPrecompil
    */
   public static boolean maybeEnableNative() {
     try {
-      useNative = LibGnarkEIP196.ENABLED;
+      useNative = LibConstantineEIP196.ENABLED;
     } catch (UnsatisfiedLinkError | NoClassDefFoundError ule) {
       LOG.info("altbn128 native precompile not available: {}", ule.getMessage());
       useNative = false;
@@ -72,7 +73,7 @@ public abstract class AbstractAltBnPrecompiledContract extends AbstractPrecompil
   }
 
   private final byte operationId;
-  private final int inputLimit;
+  protected final int inputLimit;
 
   /**
    * Instantiates a new Abstract alt bn precompiled contract.
@@ -91,7 +92,7 @@ public abstract class AbstractAltBnPrecompiledContract extends AbstractPrecompil
     this.operationId = operationId;
     this.inputLimit = inputLen + 1;
 
-    if (!LibGnarkEIP196.ENABLED) {
+    if (!LibConstantineEIP196.ENABLED) {
       LOG.info("Native alt bn128 not available");
     }
   }

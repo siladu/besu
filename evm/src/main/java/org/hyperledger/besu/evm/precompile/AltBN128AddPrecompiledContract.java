@@ -14,11 +14,14 @@
  */
 package org.hyperledger.besu.evm.precompile;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import org.hyperledger.besu.crypto.altbn128.AltBn128Point;
 import org.hyperledger.besu.crypto.altbn128.Fq;
 import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
+import org.hyperledger.besu.nativelib.constantine.LibConstantineEIP196;
 import org.hyperledger.besu.nativelib.gnark.LibGnarkEIP196;
 
 import java.math.BigInteger;
@@ -27,6 +30,7 @@ import java.util.Optional;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.sun.jna.ptr.IntByReference;
 import jakarta.validation.constraints.NotNull;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.MutableBytes;
@@ -99,6 +103,31 @@ public class AltBN128AddPrecompiledContract extends AbstractAltBnPrecompiledCont
       bnAddCache.put(cacheKey, res);
     }
     return res.cachedResult();
+  }
+
+  @Override
+  public PrecompileContractResult computeNative(
+      final @NotNull Bytes input, final MessageFrame messageFrame) {
+    final byte[] result = new byte[LibGnarkEIP196.EIP196_PREALLOCATE_FOR_RESULT_BYTES];
+    final byte[] error = new byte[LibGnarkEIP196.EIP196_PREALLOCATE_FOR_ERROR_BYTES];
+
+    final IntByReference o_len = new IntByReference(64);
+    final IntByReference err_len =
+        new IntByReference(LibGnarkEIP196.EIP196_PREALLOCATE_FOR_ERROR_BYTES);
+    final int inputSize = Math.min(inputLimit, input.size());
+    final int errorNo =
+        LibConstantineEIP196.bn254_g1add(
+            result, o_len.getValue(), input.slice(0, inputSize).toArrayUnsafe(), inputSize);
+
+    if (errorNo == 0) {
+      return PrecompileContractResult.success(Bytes.wrap(result, 0, o_len.getValue()));
+    } else {
+      final String errorString = new String(error, 0, err_len.getValue(), UTF_8);
+      messageFrame.setRevertReason(Bytes.wrap(error, 0, err_len.getValue()));
+      LOG.trace("Error executing precompiled contract {}: '{}'", getName(), errorString);
+      return PrecompileContractResult.halt(
+          null, Optional.of(ExceptionalHaltReason.PRECOMPILE_ERROR));
+    }
   }
 
   private static PrecompileContractResult computeDefault(final Bytes input) {
