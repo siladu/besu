@@ -23,7 +23,6 @@ import org.hyperledger.besu.nativelib.gnark.LibGnarkEIP196;
 
 import java.util.Optional;
 
-import com.sun.jna.ptr.IntByReference;
 import jakarta.validation.constraints.NotNull;
 import org.apache.tuweni.bytes.Bytes;
 import org.slf4j.Logger;
@@ -109,10 +108,10 @@ public abstract class AbstractAltBnPrecompiledContract extends AbstractPrecompil
     final byte[] result = new byte[LibGnarkEIP196.EIP196_PREALLOCATE_FOR_RESULT_BYTES];
     final byte[] error = new byte[LibGnarkEIP196.EIP196_PREALLOCATE_FOR_ERROR_BYTES];
 
-    final IntByReference o_len =
-        new IntByReference(LibGnarkEIP196.EIP196_PREALLOCATE_FOR_RESULT_BYTES);
-    final IntByReference err_len =
-        new IntByReference(LibGnarkEIP196.EIP196_PREALLOCATE_FOR_ERROR_BYTES);
+    //    final IntByReference o_len =
+    //        new IntByReference(LibGnarkEIP196.EIP196_PREALLOCATE_FOR_RESULT_BYTES);
+    //    final IntByReference err_len =
+    //        new IntByReference(LibGnarkEIP196.EIP196_PREALLOCATE_FOR_ERROR_BYTES);
     final int inputSize = Math.min(inputLimit, input.size());
     final int errorNo =
         LibGnarkEIP196.eip196_perform_operation(
@@ -120,15 +119,15 @@ public abstract class AbstractAltBnPrecompiledContract extends AbstractPrecompil
             input.slice(0, inputSize).toArrayUnsafe(),
             inputSize,
             result,
-            o_len,
+            null,
             error,
-            err_len);
+            null);
 
     if (errorNo == 0) {
-      return PrecompileContractResult.success(Bytes.wrap(result, 0, o_len.getValue()));
+      return PrecompileContractResult.success(Bytes.wrap(result, 0, 64));
     } else {
-      final String errorString = new String(error, 0, err_len.getValue(), UTF_8);
-      messageFrame.setRevertReason(Bytes.wrap(error, 0, err_len.getValue()));
+      final String errorString = new String(error, 0, 0, UTF_8);
+      messageFrame.setRevertReason(Bytes.wrap(error, 0, 0));
       LOG.trace("Error executing precompiled contract {}: '{}'", getName(), errorString);
       return PrecompileContractResult.halt(
           null, Optional.of(ExceptionalHaltReason.PRECOMPILE_ERROR));
