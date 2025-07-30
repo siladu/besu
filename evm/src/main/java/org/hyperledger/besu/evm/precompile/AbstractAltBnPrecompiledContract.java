@@ -107,29 +107,23 @@ public abstract class AbstractAltBnPrecompiledContract extends AbstractPrecompil
   public PrecompileContractResult computeNative(
       final @NotNull Bytes input, final MessageFrame messageFrame) {
     final byte[] result = new byte[LibGnarkEIP196.EIP196_PREALLOCATE_FOR_RESULT_BYTES];
-    final byte[] error = new byte[LibGnarkEIP196.EIP196_PREALLOCATE_FOR_ERROR_BYTES];
 
-    final IntByReference o_len =
-        new IntByReference(LibGnarkEIP196.EIP196_PREALLOCATE_FOR_RESULT_BYTES);
-    final IntByReference err_len =
-        new IntByReference(LibGnarkEIP196.EIP196_PREALLOCATE_FOR_ERROR_BYTES);
     final int inputSize = Math.min(inputLimit, input.size());
     final int errorNo =
         LibGnarkEIP196.eip196_perform_operation(
             operationId,
             input.slice(0, inputSize).toArrayUnsafe(),
             inputSize,
-            result,
-            o_len,
-            error,
-            err_len);
+            result);
 
-    if (errorNo == 0) {
-      return PrecompileContractResult.success(Bytes.wrap(result, 0, o_len.getValue()));
+    if (errorNo == LibGnarkEIP196.EIP196_ERR_CODE_SUCCESS) {
+      // return PrecompileContractResult.success(Bytes.wrap(result, 0, o_len.getValue()));
+      return PrecompileContractResult.success(Bytes.wrap(result, 0, result.length));
     } else {
-      final String errorString = new String(error, 0, err_len.getValue(), UTF_8);
-      messageFrame.setRevertReason(Bytes.wrap(error, 0, err_len.getValue()));
-      LOG.trace("Error executing precompiled contract {}: '{}'", getName(), errorString);
+      // final String errorString = new String(error, 0, err_len.getValue(), UTF_8);
+      // messageFrame.setRevertReason(Bytes.wrap(error, 0, err_len.getValue()));
+      messageFrame.setRevertReason(Bytes.wrap("error".getBytes(UTF_8)));
+      LOG.trace("Error executing precompiled contract {}: '{}'", getName(), errorNo);
       return PrecompileContractResult.halt(
           null, Optional.of(ExceptionalHaltReason.PRECOMPILE_ERROR));
     }
