@@ -106,11 +106,10 @@ public abstract class AbstractAltBnPrecompiledContract extends AbstractPrecompil
   @NotNull
   public PrecompileContractResult computeNative(
       final @NotNull Bytes input, final MessageFrame messageFrame) {
-    final byte[] result = new byte[LibGnarkEIP196.EIP196_PREALLOCATE_FOR_RESULT_BYTES];
+    final byte[] result = new byte[64];
     final byte[] error = new byte[LibGnarkEIP196.EIP196_PREALLOCATE_FOR_ERROR_BYTES];
 
-    final IntByReference o_len =
-        new IntByReference(LibGnarkEIP196.EIP196_PREALLOCATE_FOR_RESULT_BYTES);
+    final IntByReference o_len = new IntByReference(64);
     final IntByReference err_len =
         new IntByReference(LibGnarkEIP196.EIP196_PREALLOCATE_FOR_ERROR_BYTES);
     final int inputSize = Math.min(inputLimit, input.size());
