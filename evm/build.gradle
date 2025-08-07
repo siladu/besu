@@ -49,6 +49,8 @@ dependencies {
   implementation 'io.consensys.tuweni:tuweni-units'
   implementation 'org.hyperledger.besu:arithmetic'
   implementation 'org.hyperledger.besu:gnark'
+  implementation 'org.hyperledger.besu:secp256k1'
+  implementation 'org.hyperledger.besu:secp256r1'
   implementation 'org.hyperledger.besu:boringssl'
   implementation 'io.consensys.protocols:jc-kzg-4844'
 
@@ -61,6 +63,8 @@ dependencies {
   testImplementation 'org.junit.jupiter:junit-jupiter'
   testImplementation 'org.mockito:mockito-core'
   testImplementation 'org.mockito:mockito-junit-jupiter'
+
+  testImplementation 'org.hyperledger.besu:secp256k1'
 }
 
 publishing {
