@@ -25,7 +25,7 @@ import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 
 /** The Mod operation. */
-public class ModOperation extends AbstractFixedCostOperation {
+public class ModOperationOpt extends AbstractFixedCostOperation {
 
   private static final OperationResult modSuccess = new OperationResult(5, null);
 
@@ -34,7 +34,7 @@ public class ModOperation extends AbstractFixedCostOperation {
    *
    * @param gasCalculator the gas calculator
    */
-  public ModOperation(final GasCalculator gasCalculator) {
+  public ModOperationOpt(final GasCalculator gasCalculator) {
     super(0x06, "MOD", 2, 1, gasCalculator, gasCalculator.getLowTierGasCost());
   }
 
