@@ -90,8 +90,11 @@ public class ModOperation extends AbstractFixedCostOperation {
       return modSuccess;
     }
 
-    // 64-bit fast path: both values fit in a single long
-    if (trimmedDividend.size() <= 8 && trimmedDivisor.size() <= 8) {
+    // 64-bit fast path: both values fit in a single long AND are positive when interpreted as
+    // signed
+    // This avoids issues with Java's signed arithmetic on unsigned EVM values
+    if (trimmedDividend.size() <= 7 && trimmedDivisor.size() <= 7) {
+      // With 7 bytes max, we're guaranteed to be in positive long range
       long dividendLong = bytesToLong(trimmedDividend);
       long divisorLong = bytesToLong(trimmedDivisor);
       long result = dividendLong % divisorLong;

@@ -109,7 +109,10 @@ class ModOperationTest {
 
     Operation.OperationResult result = ModOperation.staticOperation(frame);
     assertThat(result.getGasCost()).isEqualTo(5);
-    assertThat(frame.popStackItem()).isEqualTo(Bytes.fromHexString("0x0000000000000000000000000000000000000000000000000000000000000ffe"));
+    assertThat(frame.popStackItem())
+        .isEqualTo(
+            Bytes.fromHexString(
+                "0x0000000000000000000000000000000000000000000000000000000000000ffe"));
   }
 
   @Test
@@ -124,9 +127,11 @@ class ModOperationTest {
 
     Operation.OperationResult result = ModOperationOpt.staticOperation(frame);
     assertThat(result.getGasCost()).isEqualTo(5);
-    assertThat(frame.popStackItem()).isEqualTo(Bytes.fromHexString("0x0000000000000000000000000000000000000000000000000000000000000ffe"));
+    assertThat(frame.popStackItem())
+        .isEqualTo(
+            Bytes.fromHexString(
+                "0x0000000000000000000000000000000000000000000000000000000000000ffe"));
   }
-
 
   public static MessageFrame createMessageFrame() {
     return MessageFrame.builder()
