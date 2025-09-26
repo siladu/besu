@@ -14,12 +14,9 @@
  */
 package org.hyperledger.besu.ethereum.vm.operations;
 
-import org.hyperledger.besu.evm.frame.MessageFrame;
-import org.hyperledger.besu.evm.operation.Operation;
-
-import java.util.concurrent.TimeUnit;
-
 import org.apache.tuweni.bytes.Bytes;
+import org.hyperledger.besu.evm.frame.MessageFrame;
+import org.hyperledger.besu.evm.operation.EqOperation;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Measurement;
@@ -31,41 +28,65 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
+import java.util.concurrent.TimeUnit;
+
 @State(Scope.Thread)
 @Warmup(iterations = 2, time = 1, timeUnit = TimeUnit.SECONDS)
 @OutputTimeUnit(value = TimeUnit.NANOSECONDS)
 @Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
 @BenchmarkMode(Mode.AverageTime)
-public abstract class BinaryOperationBenchmark {
+public class EqOperationOriginalWorstCaseBenchmark {
 
-  protected static final int SAMPLE_SIZE = 30_000;
+  private static final Bytes ONE = Bytes.fromHexString("0x01");
+  private static final Bytes INPUT_2 =
+      Bytes.fromHexString("0xfffffffffffffffffffffffffffffffffffffffe");
+  private static final Bytes ALL_BITS =
+      Bytes.fromHexString("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
-  protected Bytes[] aPool;
-  protected Bytes[] bPool;
-  protected int index;
   protected MessageFrame frame;
 
-  @Setup()
+  @Setup
   public void setUp() {
     frame = BenchmarkHelper.createMessageCallFrame();
-    aPool = new Bytes[SAMPLE_SIZE];
-    bPool = new Bytes[SAMPLE_SIZE];
-    BenchmarkHelper.fillPool(aPool);
-    BenchmarkHelper.fillPool(bPool);
-    index = 0;
   }
 
   @Benchmark
-  public void executeOperation(final Blackhole blackhole) {
-    frame.pushStackItem(bPool[index]);
-    frame.pushStackItem(aPool[index]);
+  public void worstCaseInputEmpty(final Blackhole blackhole) {
+    frame.pushStackItem(Bytes.EMPTY);
+    frame.pushStackItem(Bytes.EMPTY);
 
-    blackhole.consume(invoke(frame));
+    blackhole.consume(EqOperation.staticOperationOriginal(frame));
 
     frame.popStackItem();
-
-    index = (index + 1) % SAMPLE_SIZE;
   }
 
-  protected abstract Operation.OperationResult invoke(MessageFrame frame);
+  @Benchmark
+  public void worstCaseInput1(final Blackhole blackhole) {
+    frame.pushStackItem(ONE);
+    frame.pushStackItem(ONE);
+
+    blackhole.consume(EqOperation.staticOperationOriginal(frame));
+
+    frame.popStackItem();
+  }
+
+  @Benchmark
+  public void worstCaseInput2(final Blackhole blackhole) {
+    frame.pushStackItem(INPUT_2);
+    frame.pushStackItem(INPUT_2);
+
+    blackhole.consume(EqOperation.staticOperationOriginal(frame));
+
+    frame.popStackItem();
+  }
+
+  @Benchmark
+  public void worstCaseInputNotEqual(final Blackhole blackhole) {
+    frame.pushStackItem(ALL_BITS);
+    frame.pushStackItem(Bytes.EMPTY);
+
+    blackhole.consume(EqOperation.staticOperationOriginal(frame));
+
+    frame.popStackItem();
+  }
 }

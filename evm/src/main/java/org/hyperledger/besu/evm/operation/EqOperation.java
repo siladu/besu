@@ -44,6 +44,17 @@ public class EqOperation extends AbstractFixedCostOperation {
     return staticOperation(frame);
   }
 
+  public static OperationResult staticOperationOriginal(final MessageFrame frame) {
+    final Bytes value0 = frame.popStackItem().trimLeadingZeros();
+    final Bytes value1 = frame.popStackItem().trimLeadingZeros();
+
+    final Bytes result = (value0.equals(value1) ? UInt256.ONE : UInt256.ZERO);
+
+    frame.pushStackItem(result);
+
+    return eqSuccess;
+  }
+
   /**
    * Performs Eq operation.
    *
