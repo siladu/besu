@@ -22,11 +22,14 @@ import java.math.BigInteger;
 import java.util.Arrays;
 
 import org.apache.tuweni.bytes.Bytes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** The Add mod operation. */
 public class AddModOperation extends AbstractFixedCostOperation {
 
   private static final OperationResult addModSuccess = new OperationResult(8, null);
+  private static final Logger LOG = LoggerFactory.getLogger(AddModOperation.class);
 
   /**
    * Instantiates a new Add mod operation.
@@ -56,6 +59,13 @@ public class AddModOperation extends AbstractFixedCostOperation {
 
     if (value2.isZero()) {
       frame.pushStackItem(Bytes.EMPTY);
+      LOG.atInfo()
+          .setMessage("ADDMOD({},{},{}) = {}")
+          .addArgument(value0)
+          .addArgument(value1)
+          .addArgument(value2)
+          .addArgument(Bytes.EMPTY)
+          .log();
     } else {
       BigInteger b0 = new BigInteger(1, value0.toArrayUnsafe());
       BigInteger b1 = new BigInteger(1, value1.toArrayUnsafe());
@@ -71,6 +81,13 @@ public class AddModOperation extends AbstractFixedCostOperation {
       Arrays.fill(padding, result.signum() < 0 ? (byte) 0xFF : 0x00);
 
       frame.pushStackItem(Bytes.concatenate(Bytes.wrap(padding), resultBytes));
+      LOG.atInfo()
+          .setMessage("ADDMOD({},{},{}) = {}")
+          .addArgument(value0)
+          .addArgument(value1)
+          .addArgument(value2)
+          .addArgument(resultBytes)
+          .log();
     }
     return addModSuccess;
   }

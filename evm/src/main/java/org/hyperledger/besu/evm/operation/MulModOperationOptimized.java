@@ -20,11 +20,14 @@ import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 
 import org.apache.tuweni.bytes.Bytes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** The Mul mod operation. */
 public class MulModOperationOptimized extends AbstractFixedCostOperation {
 
   private static final OperationResult mulModSuccess = new OperationResult(8, null);
+  private static final Logger LOG = LoggerFactory.getLogger(MulModOperationOptimized.class);
 
   /**
    * Instantiates a new Mul mod operation.
@@ -63,6 +66,13 @@ public class MulModOperationOptimized extends AbstractFixedCostOperation {
     }
 
     frame.pushStackItem(resultBytes);
+    LOG.atInfo()
+        .setMessage("Optimised MULMOD({},{},{}) = {}")
+        .addArgument(value0)
+        .addArgument(value1)
+        .addArgument(value2)
+        .addArgument(resultBytes)
+        .log();
     return mulModSuccess;
   }
 }

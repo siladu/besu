@@ -28,6 +28,7 @@ import org.apache.tuweni.bytes.Bytes32;
 public class ModOperation extends AbstractFixedCostOperation {
 
   private static final OperationResult modSuccess = new OperationResult(5, null);
+  private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(ModOperation.class);
 
   /**
    * Instantiates a new Mod operation.
@@ -54,6 +55,12 @@ public class ModOperation extends AbstractFixedCostOperation {
     final Bytes value1 = frame.popStackItem();
     if (value1.isZero()) {
       frame.pushStackItem(Bytes32.ZERO);
+      LOG.atInfo()
+          .setMessage("MOD({},{}) = {}")
+          .addArgument(value0)
+          .addArgument(value1)
+          .addArgument(Bytes32.EMPTY)
+          .log();
     } else {
       BigInteger b1 = new BigInteger(1, value0.toArrayUnsafe());
       BigInteger b2 = new BigInteger(1, value1.toArrayUnsafe());
@@ -68,6 +75,12 @@ public class ModOperation extends AbstractFixedCostOperation {
       Arrays.fill(padding, result.signum() < 0 ? (byte) 0xFF : 0x00);
 
       frame.pushStackItem(Bytes.concatenate(Bytes.wrap(padding), resultBytes));
+      LOG.atInfo()
+          .setMessage("MOD({},{}) = {}")
+          .addArgument(value0)
+          .addArgument(value1)
+          .addArgument(resultBytes)
+          .log();
     }
     return modSuccess;
   }

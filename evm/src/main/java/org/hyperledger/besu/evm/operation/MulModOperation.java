@@ -27,6 +27,8 @@ import org.apache.tuweni.bytes.Bytes;
 public class MulModOperation extends AbstractFixedCostOperation {
 
   private static final OperationResult mulModSuccess = new OperationResult(8, null);
+  private static final org.slf4j.Logger LOG =
+      org.slf4j.LoggerFactory.getLogger(MulModOperation.class);
 
   /**
    * Instantiates a new Mul mod operation.
@@ -55,6 +57,13 @@ public class MulModOperation extends AbstractFixedCostOperation {
 
     if (value2.isZero()) {
       frame.pushStackItem(Bytes.EMPTY);
+      LOG.atInfo()
+          .setMessage("MULMOD({},{},{}) = {}")
+          .addArgument(value0)
+          .addArgument(value1)
+          .addArgument(value2)
+          .addArgument(Bytes.EMPTY)
+          .log();
     } else {
       BigInteger b0 = new BigInteger(1, value0.toArrayUnsafe());
       BigInteger b1 = new BigInteger(1, value1.toArrayUnsafe());
@@ -70,6 +79,13 @@ public class MulModOperation extends AbstractFixedCostOperation {
       Arrays.fill(padding, result.signum() < 0 ? (byte) 0xFF : 0x00);
 
       frame.pushStackItem(Bytes.concatenate(Bytes.wrap(padding), resultBytes));
+      LOG.atInfo()
+          .setMessage("MULMOD({},{},{}) = {}")
+          .addArgument(value0)
+          .addArgument(value1)
+          .addArgument(value2)
+          .addArgument(resultBytes)
+          .log();
     }
     return mulModSuccess;
   }

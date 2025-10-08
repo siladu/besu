@@ -21,11 +21,14 @@ import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** The Mod operation. */
 public class ModOperationOptimized extends AbstractFixedCostOperation {
 
   private static final OperationResult modSuccess = new OperationResult(5, null);
+  private static final Logger LOG = LoggerFactory.getLogger(ModOperationOptimized.class);
 
   /**
    * Instantiates a new Mod operation.
@@ -60,6 +63,12 @@ public class ModOperationOptimized extends AbstractFixedCostOperation {
       resultBytes = Bytes.wrap(b0.mod(b1).toBytesBE());
     }
     frame.pushStackItem(resultBytes);
+    LOG.atInfo()
+        .setMessage("Optimised MOD({},{}) = {}")
+        .addArgument(value0)
+        .addArgument(value1)
+        .addArgument(resultBytes)
+        .log();
     return modSuccess;
   }
 }

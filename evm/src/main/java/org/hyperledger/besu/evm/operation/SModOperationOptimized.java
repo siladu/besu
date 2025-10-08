@@ -21,11 +21,14 @@ import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** The SMod operation. */
 public class SModOperationOptimized extends AbstractFixedCostOperation {
 
   private static final OperationResult smodSuccess = new OperationResult(5, null);
+  private static final Logger LOG = LoggerFactory.getLogger(SModOperationOptimized.class);
 
   /**
    * Instantiates a new SMod operation.
@@ -61,7 +64,12 @@ public class SModOperationOptimized extends AbstractFixedCostOperation {
       resultBytes = Bytes.wrap(b0.signedMod(b1).toBytesBE());
     }
     frame.pushStackItem(resultBytes);
-
+    LOG.atInfo()
+        .setMessage("Optimised SMOD({},{}) = {}")
+        .addArgument(value0)
+        .addArgument(value1)
+        .addArgument(resultBytes)
+        .log();
     return smodSuccess;
   }
 }

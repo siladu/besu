@@ -27,6 +27,8 @@ import org.apache.tuweni.bytes.Bytes;
 public class SModOperation extends AbstractFixedCostOperation {
 
   private static final OperationResult smodSuccess = new OperationResult(5, null);
+  private static final org.slf4j.Logger LOG =
+      org.slf4j.LoggerFactory.getLogger(SModOperation.class);
 
   /**
    * Instantiates a new SMod operation.
@@ -77,6 +79,12 @@ public class SModOperation extends AbstractFixedCostOperation {
       Arrays.fill(padding, result.signum() < 0 ? (byte) 0xFF : 0x00);
 
       frame.pushStackItem(Bytes.concatenate(Bytes.wrap(padding), resultBytes));
+      LOG.atTrace()
+          .setMessage("SMOD({},{}) = {}")
+          .addArgument(value0)
+          .addArgument(value1)
+          .addArgument(resultBytes)
+          .log();
     }
     return smodSuccess;
   }
