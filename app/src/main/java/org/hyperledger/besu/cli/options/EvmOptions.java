@@ -72,7 +72,7 @@ public class EvmOptions implements CLIOptions<EvmConfiguration> {
       fallbackValue = "true",
       hidden = true,
       arity = "1")
-  private boolean enableOptimizedOpcodes = true;
+  private boolean enableOptimizedOpcodes = false;
 
   @Override
   public EvmConfiguration toDomainObject() {
