@@ -125,7 +125,12 @@ public class PostMergeContext implements MergeContext {
 
   @Override
   public boolean isSyncing() {
-    return Optional.ofNullable(syncState.get()).map(s -> !s.isInSync()).orElse(Boolean.TRUE)
+    final Optional<SyncState> maybeSyncState = Optional.ofNullable(syncState.get());
+    LOG.error("[isSyncing] Syncing state is {}", maybeSyncState);
+    return maybeSyncState.map(s -> {
+      LOG.error("[isSyncing] s.isInSync {}", s.isInSync());
+      return !s.isInSync();
+    }).orElse(Boolean.TRUE)
         // this is necessary for when we do not have a sync target yet, like at startup.
         // not being stopped at ttd implies we are syncing.
         && Optional.ofNullable(syncState.get())

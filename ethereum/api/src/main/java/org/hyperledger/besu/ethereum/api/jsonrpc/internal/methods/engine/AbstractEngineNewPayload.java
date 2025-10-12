@@ -220,7 +220,10 @@ public abstract class AbstractEngineNewPayload extends ExecutionEngineJsonRpcMet
       return new JsonRpcErrorResponse(reqId, RpcErrorType.INVALID_EXECUTION_REQUESTS_PARAMS);
     }
 
-    if (mergeContext.get().isSyncing()) {
+    LOG.error("checking...mergeContext.get().isSyncing()...");
+    final boolean syncing = mergeContext.get().isSyncing();
+    LOG.error("mergeContext.get().isSyncing() = " + syncing);
+    if (syncing) {
       LOG.debug("We are syncing");
       return respondWith(reqId, blockParam, null, SYNCING);
     }

@@ -14,6 +14,7 @@
  */
 package org.hyperledger.besu.ethereum.eth.sync.state;
 
+import io.netty.handler.logging.LogLevel;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.chain.ChainHead;
@@ -40,6 +41,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class SyncState {
 
+  private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(SyncState.class);
   private final Blockchain blockchain;
   private final EthPeers ethPeers;
 
@@ -187,6 +189,8 @@ public class SyncState {
   }
 
   public Optional<Boolean> hasReachedTerminalDifficulty() {
+    LOG.error("[hasReachedTerminalDifficulty] isInitialSyncPhaseDone = {}", isInitialSyncPhaseDone);
+    LOG.error("[hasReachedTerminalDifficulty] reachedTerminalDifficulty = {}", reachedTerminalDifficulty);
     if (isInitialSyncPhaseDone) {
       return reachedTerminalDifficulty;
     }
@@ -198,12 +202,22 @@ public class SyncState {
       final Optional<ChainHeadEstimate> syncTargetChain,
       final Optional<ChainHeadEstimate> bestPeerChain,
       final long syncTolerance) {
-    return isInitialSyncPhaseDone
+    LOG.error("[isInSync] isInSync(localChain={}, syncTargetChain={}, bestPeerChain={}, syncTolerance={})",
+        localChain, syncTargetChain, bestPeerChain, syncTolerance);
+    LOG.error("[isInSync] isInitialSyncPhaseDone={}", isInitialSyncPhaseDone);
+    LOG.error("[isInSync] reachedTerminalDifficulty={}", reachedTerminalDifficulty);
+    final boolean isInSyncSyncTargetChain = isInSync(localChain, syncTargetChain, syncTolerance);
+    final boolean isInSyncBestPeerChain = isInSync(localChain, bestPeerChain, syncTolerance);
+    final boolean isInSync = isInitialSyncPhaseDone
         && reachedTerminalDifficulty.orElse(true)
         // Sync target may be temporarily empty while we switch sync targets during a sync, so
         // check both the sync target and our best peer to determine if we're in sync or not
-        && isInSync(localChain, syncTargetChain, syncTolerance)
-        && isInSync(localChain, bestPeerChain, syncTolerance);
+        && isInSyncSyncTargetChain
+        && isInSyncBestPeerChain;
+    LOG.error("[isInSync] isInSyncSyncTargetChain={}", isInSyncSyncTargetChain);
+    LOG.error("[isInSync] isInSyncBestPeerChain={}", isInSyncBestPeerChain);
+    LOG.error("[isInSync] isInSync={}", isInSync);
+    return isInSync;
   }
 
   private boolean isInSync(
@@ -216,14 +230,20 @@ public class SyncState {
   }
 
   private ChainHead getLocalChainHead() {
+    LOG.error("[getLocalChainHead] Local chain head: {}", blockchain.getChainHead());
     return blockchain.getChainHead();
   }
 
   private Optional<ChainHeadEstimate> getSyncTargetChainHead() {
+    LOG.error("[getSyncTargetChainHead] Sync target: {}", syncTarget);
+    LOG.error("[getSyncTargetChainHead] Sync target peer: {}", syncTarget.map(SyncTarget::peer));
+    LOG.error("[getSyncTargetChainHead] Sync target peer chainStateSnapshot: {}", syncTarget.map(SyncTarget::peer).map(EthPeer::chainStateSnapshot));
     return syncTarget.map(SyncTarget::peer).map(EthPeer::chainStateSnapshot);
   }
 
   public Optional<ChainHeadEstimate> getBestPeerChainHead() {
+    LOG.error("[getBestPeerChainHead] Best peer with height estimate: {}", ethPeers.bestPeerWithHeightEstimate());
+    LOG.error("[getBestPeerChainHead] Best peer with height estimate chainStateSnapshot: {}", ethPeers.bestPeerWithHeightEstimate().map(EthPeer::chainStateSnapshot));
     return ethPeers.bestPeerWithHeightEstimate().map(EthPeer::chainStateSnapshot);
   }
 
@@ -321,6 +341,7 @@ public class SyncState {
   }
 
   public void markInitialSyncPhaseAsDone() {
+    LOG.error("markInitialSyncPhaseAsDone");
     isInitialSyncPhaseDone = true;
     isResyncNeeded = false;
     completionListenerSubscribers.forEach(InitialSyncCompletionListener::onInitialSyncCompleted);

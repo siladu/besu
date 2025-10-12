@@ -55,4 +55,14 @@ public final class ChainHead {
   public BlockHeader getBlockHeader() {
     return blockHeader;
   }
+
+  @Override
+  public String toString() {
+    return "ChainHead{" +
+        "hash=" + hash +
+        ", blockHeader=" + blockHeader +
+        ", totalDifficulty=" + totalDifficulty +
+        ", height=" + height +
+        '}';
+  }
 }

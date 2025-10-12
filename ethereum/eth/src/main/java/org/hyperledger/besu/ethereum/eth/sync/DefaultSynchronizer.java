@@ -232,7 +232,7 @@ public class DefaultSynchronizer implements Synchronizer, UnverifiedForkchoiceLi
       if (fastSyncDownloader.isPresent()) {
         future = fastSyncDownloader.get().start().thenCompose(this::handleSyncResult);
       } else {
-        syncState.markInitialSyncPhaseAsDone();
+        syncState.markInitialSyncPhaseAsDone(); // TODO SLD HERE
         future = startFullSync();
       }
       return future.thenApply(this::finalizeSync);

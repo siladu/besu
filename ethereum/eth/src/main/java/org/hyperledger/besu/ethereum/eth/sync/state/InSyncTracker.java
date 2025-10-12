@@ -23,6 +23,7 @@ import java.util.function.Consumer;
 
 /** Tracks the sync status of this node within the specified {@code syncTolerance}. */
 class InSyncTracker {
+  private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(InSyncTracker.class);
   private InSyncState state = InSyncState.UNKNOWN;
   // If the local chain is no more than {@code syncTolerance} behind the estimated highest chain,
   // then the tracker considers this local node to be in sync
@@ -41,8 +42,16 @@ class InSyncTracker {
 
   public static boolean isInSync(
       final ChainHead localChain, final ChainHeadEstimate remoteChain, final long syncTolerance) {
+    LOG.error(
+        "[isInSync] Checking sync status: local {}, remote {}, tolerance {}",
+        localChain,
+        remoteChain,
+        syncTolerance);
     final boolean inSyncByHeight =
         remoteChain.getEstimatedHeight() - localChain.getHeight() <= syncTolerance;
+    LOG.error("[isInSync] isSyncByHeight = remoteChain.getEstimatedHeight() - localChain.getHeight() {} <= syncTolerence {} = {}", remoteChain.getEstimatedHeight() - localChain.getHeight(), syncTolerance, inSyncByHeight);
+    LOG.error("[isInSync] remoteChain.chainIsBetterThan(localChain) = {}", remoteChain.chainIsBetterThan(localChain));
+    LOG.error("[isInSync] isInSync = inSyncByHeight || !remoteChain.chainIsBetterThan(localChain) = {}", inSyncByHeight || !remoteChain.chainIsBetterThan(localChain));
     return inSyncByHeight || !remoteChain.chainIsBetterThan(localChain);
   }
 
