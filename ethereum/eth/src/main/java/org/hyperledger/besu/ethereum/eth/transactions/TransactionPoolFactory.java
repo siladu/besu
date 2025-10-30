@@ -30,11 +30,16 @@ import org.hyperledger.besu.ethereum.eth.transactions.layered.LayeredPendingTran
 import org.hyperledger.besu.ethereum.eth.transactions.layered.ReadyTransactions;
 import org.hyperledger.besu.ethereum.eth.transactions.layered.SenderBalanceChecker;
 import org.hyperledger.besu.ethereum.eth.transactions.layered.SparseTransactions;
+import org.hyperledger.besu.ethereum.eth.transactions.preload.TransactionPoolPreloader;
 import org.hyperledger.besu.ethereum.eth.transactions.sorter.AbstractPendingTransactionsSorter;
 import org.hyperledger.besu.ethereum.eth.transactions.sorter.BaseFeePendingTransactionsSorter;
 import org.hyperledger.besu.ethereum.eth.transactions.sorter.GasPricePendingTransactionsSorter;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.feemarket.FeeMarket;
+import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.BonsaiWorldStateProvider;
+import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.cache.BonsaiCachedMerkleTrieLoader;
+import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.storage.BonsaiWorldStateKeyValueStorage;
+import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 import org.hyperledger.besu.plugin.services.BesuEvents;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 
@@ -367,7 +372,96 @@ public class TransactionPoolFactory {
               senderBalanceChecker);
     }
 
-    return new LayeredPendingTransactions(
-        transactionPoolConfiguration, pendingTransactionsSorter, ethScheduler);
+    final LayeredPendingTransactions layeredPendingTransactions =
+        new LayeredPendingTransactions(
+            transactionPoolConfiguration, pendingTransactionsSorter, ethScheduler);
+
+    // Initialize preloader if enabled and using Bonsai
+    if (transactionPoolConfiguration.getPreloadConfiguration().isEnabled()) {
+      try {
+        createAndStartPreloader(
+            protocolContext,
+            layeredPendingTransactions,
+            pendingTransactionsSorter,
+            transactionPoolConfiguration,
+            metrics);
+      } catch (Exception e) {
+        LOG.warn("Failed to initialize transaction pool preloader, continuing without it", e);
+      }
+    }
+
+    return layeredPendingTransactions;
+  }
+
+  /**
+   * Creates and starts the transaction pool preloader if Bonsai storage is available.
+   *
+   * @param protocolContext the protocol context
+   * @param pendingTransactions the pending transactions
+   * @param prioritizedTransactions the prioritized transactions layer
+   * @param config the transaction pool configuration
+   * @param metrics the transaction pool metrics
+   */
+  private static void createAndStartPreloader(
+      final ProtocolContext protocolContext,
+      final PendingTransactions pendingTransactions,
+      final AbstractPrioritizedTransactions prioritizedTransactions,
+      final TransactionPoolConfiguration config,
+      final TransactionPoolMetrics metrics) {
+
+    final WorldStateArchive worldStateArchive = protocolContext.getWorldStateArchive();
+
+    // Only enable for Bonsai storage
+    if (!(worldStateArchive instanceof BonsaiWorldStateProvider)) {
+      LOG.info(
+          "Transaction pool preloading is only supported with Bonsai storage, skipping initialization");
+      return;
+    }
+
+    final BonsaiWorldStateProvider bonsaiProvider = (BonsaiWorldStateProvider) worldStateArchive;
+    final BonsaiCachedMerkleTrieLoader merkleTrieLoader =
+        bonsaiProvider.getCachedMerkleTrieLoader();
+
+    // Get the world state storage
+    final var worldState = bonsaiProvider.getWorldState();
+    if (!(worldState
+        instanceof
+        org.hyperledger.besu.ethereum.trie.pathbased.bonsai.worldview.BonsaiWorldState)) {
+      LOG.warn("Unable to get BonsaiWorldState for preloading, preloader will not be initialized");
+      return;
+    }
+
+    final var bonsaiWorldState =
+        (org.hyperledger.besu.ethereum.trie.pathbased.bonsai.worldview.BonsaiWorldState) worldState;
+    final BonsaiWorldStateKeyValueStorage worldStateStorage =
+        bonsaiWorldState.getWorldStateStorage();
+
+    // Create and start the preloader
+    final TransactionPoolPreloader preloader =
+        new TransactionPoolPreloader(
+            config.getPreloadConfiguration(),
+            prioritizedTransactions,
+            merkleTrieLoader,
+            worldStateStorage,
+            worldStateArchive,
+            metrics.getMetricsSystem());
+
+    preloader.start(pendingTransactions);
+
+    // Subscribe to block events to notify preloader
+    protocolContext
+        .getBlockchain()
+        .observeBlockAdded(
+            event -> {
+              if (event.getEventType()
+                      == org.hyperledger.besu.ethereum.chain.BlockAddedEvent.EventType.HEAD_ADVANCED
+                  || event.getEventType()
+                      == org.hyperledger.besu.ethereum.chain.BlockAddedEvent.EventType
+                          .CHAIN_REORG) {
+                preloader.onBlockAdded(event.getHeader());
+              }
+            });
+
+    LOG.info("Transaction pool preloader initialized and started");
   }
 }

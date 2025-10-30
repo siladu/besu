@@ -31,6 +31,7 @@ import org.hyperledger.besu.datatypes.TransactionType;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.eth.transactions.ImmutableTransactionPoolConfiguration;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPoolConfiguration;
+import org.hyperledger.besu.ethereum.eth.transactions.preload.TransactionPoolPreloadConfiguration;
 import org.hyperledger.besu.plugin.services.TransactionPoolValidatorService;
 import org.hyperledger.besu.util.number.Fraction;
 import org.hyperledger.besu.util.number.Percentage;
@@ -252,6 +253,71 @@ public class TransactionPoolOptions implements CLIOptions<TransactionPoolConfigu
     Integer txPoolMaxSize = TransactionPoolConfiguration.DEFAULT_MAX_PENDING_TRANSACTIONS;
   }
 
+  @CommandLine.ArgGroup(validate = false, heading = "@|bold Tx Pool Preload Options|@%n")
+  private final Preload preloadOptions = new Preload();
+
+  static class Preload {
+    private static final String TX_POOL_PRELOAD_ENABLED = "--tx-pool-preload-enabled";
+    private static final String TX_POOL_PRELOAD_BATCH_SIZE = "--tx-pool-preload-batch-size";
+    private static final String TX_POOL_PRELOAD_INTERVAL = "--tx-pool-preload-interval";
+    private static final String TX_POOL_PRELOAD_IMMEDIATE_COUNT =
+        "--tx-pool-preload-immediate-count";
+    private static final String TX_POOL_PRELOAD_WORKER_THREADS = "--tx-pool-preload-worker-threads";
+    private static final String TX_POOL_PRELOAD_MAX_PER_SECOND = "--tx-pool-preload-max-per-second";
+
+    @CommandLine.Option(
+        names = {TX_POOL_PRELOAD_ENABLED},
+        paramLabel = "<Boolean>",
+        description =
+            "Enable proactive preloading of account state from transactions in the prioritized layer (Bonsai only) (default: ${DEFAULT-VALUE})",
+        fallbackValue = "true",
+        arity = "0..1")
+    private Boolean enabled = false;
+
+    @CommandLine.Option(
+        names = {TX_POOL_PRELOAD_BATCH_SIZE},
+        paramLabel = MANDATORY_INTEGER_FORMAT_HELP,
+        description =
+            "Number of top prioritized transactions to preload per batch (default: ${DEFAULT-VALUE})",
+        arity = "1")
+    private Integer batchSize = TransactionPoolPreloadConfiguration.DEFAULT_BATCH_SIZE;
+
+    @CommandLine.Option(
+        names = {TX_POOL_PRELOAD_INTERVAL},
+        paramLabel = "<LONG>",
+        converter = DurationMillisConverter.class,
+        description =
+            "Interval in milliseconds for refreshing the preload queue (default: ${DEFAULT-VALUE})",
+        arity = "1")
+    private Duration preloadInterval = TransactionPoolPreloadConfiguration.DEFAULT_PRELOAD_INTERVAL;
+
+    @CommandLine.Option(
+        names = {TX_POOL_PRELOAD_IMMEDIATE_COUNT},
+        paramLabel = MANDATORY_INTEGER_FORMAT_HELP,
+        description =
+            "Number of top transactions to preload immediately when added to pool (default: ${DEFAULT-VALUE})",
+        arity = "1")
+    private Integer immediatePreloadCount =
+        TransactionPoolPreloadConfiguration.DEFAULT_IMMEDIATE_PRELOAD_COUNT;
+
+    @CommandLine.Option(
+        names = {TX_POOL_PRELOAD_WORKER_THREADS},
+        paramLabel = MANDATORY_INTEGER_FORMAT_HELP,
+        description =
+            "Number of worker threads for executing preload operations (default: ${DEFAULT-VALUE})",
+        arity = "1")
+    private Integer workerThreads = TransactionPoolPreloadConfiguration.DEFAULT_WORKER_THREADS;
+
+    @CommandLine.Option(
+        names = {TX_POOL_PRELOAD_MAX_PER_SECOND},
+        paramLabel = MANDATORY_INTEGER_FORMAT_HELP,
+        description =
+            "Maximum number of preload operations per second (rate limiting) (default: ${DEFAULT-VALUE})",
+        arity = "1")
+    private Integer maxPreloadsPerSecond =
+        TransactionPoolPreloadConfiguration.DEFAULT_MAX_PRELOADS_PER_SECOND;
+  }
+
   @CommandLine.ArgGroup(validate = false)
   private final Unstable unstableOptions = new Unstable();
 
@@ -431,6 +497,15 @@ public class TransactionPoolOptions implements CLIOptions<TransactionPoolConfigu
                 .peerTrackerForgetEvictedTxs(
                     Optional.ofNullable(unstableOptions.peerTrackerForgetEvictedTxs)
                         .orElse(deriveDefaultPeersTrackerForgetEvictedTxs(txPoolImplementation)))
+                .build())
+        .preloadConfiguration(
+            TransactionPoolPreloadConfiguration.builder()
+                .enabled(preloadOptions.enabled)
+                .batchSize(preloadOptions.batchSize)
+                .preloadInterval(preloadOptions.preloadInterval)
+                .immediatePreloadCount(preloadOptions.immediatePreloadCount)
+                .workerThreads(preloadOptions.workerThreads)
+                .maxPreloadsPerSecond(preloadOptions.maxPreloadsPerSecond)
                 .build())
         .build();
   }

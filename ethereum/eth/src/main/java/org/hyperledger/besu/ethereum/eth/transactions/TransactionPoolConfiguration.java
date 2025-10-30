@@ -17,6 +17,7 @@ package org.hyperledger.besu.ethereum.eth.transactions;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.TransactionType;
 import org.hyperledger.besu.datatypes.Wei;
+import org.hyperledger.besu.ethereum.eth.transactions.preload.TransactionPoolPreloadConfiguration;
 import org.hyperledger.besu.plugin.services.TransactionPoolValidatorService;
 import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolValidator;
 import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolValidatorFactory;
@@ -214,5 +215,10 @@ public interface TransactionPoolConfiguration {
   @Value.Default
   default Unstable getUnstable() {
     return Unstable.DEFAULT;
+  }
+
+  @Value.Default
+  default TransactionPoolPreloadConfiguration getPreloadConfiguration() {
+    return TransactionPoolPreloadConfiguration.disabled();
   }
 }
