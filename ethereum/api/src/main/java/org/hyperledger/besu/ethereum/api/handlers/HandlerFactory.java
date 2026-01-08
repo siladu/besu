@@ -18,6 +18,8 @@ import org.hyperledger.besu.ethereum.api.jsonrpc.JsonRpcConfiguration;
 import org.hyperledger.besu.ethereum.api.jsonrpc.authentication.AuthenticationService;
 import org.hyperledger.besu.ethereum.api.jsonrpc.execution.JsonRpcExecutor;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.JsonRpcMethod;
+import org.hyperledger.besu.plugin.services.metrics.Histogram;
+import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
 
 import java.util.Collection;
 import java.util.Map;
@@ -53,6 +55,15 @@ public class HandlerFactory {
       final JsonRpcExecutor jsonRpcExecutor,
       final Tracer tracer,
       final JsonRpcConfiguration jsonRpcConfiguration) {
-    return JsonRpcExecutorHandler.handler(jsonRpcExecutor, tracer, jsonRpcConfiguration);
+    return JsonRpcExecutorHandler.handler(jsonRpcExecutor, tracer, jsonRpcConfiguration, null);
+  }
+
+  public static Handler<RoutingContext> jsonRpcExecutor(
+      final JsonRpcExecutor jsonRpcExecutor,
+      final Tracer tracer,
+      final JsonRpcConfiguration jsonRpcConfiguration,
+      final LabelledMetric<Histogram> handlerToFlushHistogram) {
+    return JsonRpcExecutorHandler.handler(
+        jsonRpcExecutor, tracer, jsonRpcConfiguration, handlerToFlushHistogram);
   }
 }

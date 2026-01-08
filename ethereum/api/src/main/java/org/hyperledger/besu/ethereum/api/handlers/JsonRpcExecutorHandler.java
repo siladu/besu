@@ -20,6 +20,8 @@ import org.hyperledger.besu.ethereum.api.jsonrpc.JsonRpcConfiguration;
 import org.hyperledger.besu.ethereum.api.jsonrpc.context.ContextKey;
 import org.hyperledger.besu.ethereum.api.jsonrpc.execution.JsonRpcExecutor;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.RpcErrorType;
+import org.hyperledger.besu.plugin.services.metrics.Histogram;
+import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -38,7 +40,8 @@ public class JsonRpcExecutorHandler {
   public static Handler<RoutingContext> handler(
       final JsonRpcExecutor jsonRpcExecutor,
       final Tracer tracer,
-      final JsonRpcConfiguration jsonRpcConfiguration) {
+      final JsonRpcConfiguration jsonRpcConfiguration,
+      final LabelledMetric<Histogram> handlerToFlushHistogram) {
     return ctx -> {
       long timeoutMillis = jsonRpcConfiguration.getHttpTimeoutSec() * 1000;
       final long timerId =
@@ -61,6 +64,15 @@ public class JsonRpcExecutorHandler {
                   });
 
       ctx.put("timerId", timerId);
+
+      // CAPTURE T0 - Request parsed and ready for execution
+      final long t0 = System.nanoTime();
+      ctx.put("rpc_t0_ns", t0);
+
+      // Store histogram for use in JsonRpcObjectExecutor
+      if (handlerToFlushHistogram != null) {
+        ctx.put("rpc_handler_to_flush_histogram", handlerToFlushHistogram);
+      }
 
       try {
         createExecutor(jsonRpcExecutor, tracer, ctx, jsonRpcConfiguration)

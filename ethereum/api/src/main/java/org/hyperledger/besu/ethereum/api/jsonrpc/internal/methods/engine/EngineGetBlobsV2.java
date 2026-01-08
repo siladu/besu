@@ -58,35 +58,35 @@ public class EngineGetBlobsV2 extends ExecutionEngineJsonRpcMethod {
   private final Optional<Long> osakaMilestone;
 
   public EngineGetBlobsV2(
-      final Vertx vertx,
-      final ProtocolContext protocolContext,
-      final ProtocolSchedule protocolSchedule,
-      final EngineCallListener engineCallListener,
-      final TransactionPool transactionPool,
-      final MetricsSystem metricsSystem) {
+          final Vertx vertx,
+          final ProtocolContext protocolContext,
+          final ProtocolSchedule protocolSchedule,
+          final EngineCallListener engineCallListener,
+          final TransactionPool transactionPool,
+          final MetricsSystem metricsSystem) {
     super(vertx, protocolSchedule, protocolContext, engineCallListener);
     this.transactionPool = transactionPool;
     // create counters
     this.requestedCounter =
-        metricsSystem.createCounter(
-            BesuMetricCategory.RPC,
-            "execution_engine_getblobs_requested_total",
-            "Number of blobs requested via engine_getBlobsV2");
+            metricsSystem.createCounter(
+                    BesuMetricCategory.RPC,
+                    "execution_engine_getblobs_requested_total",
+                    "Number of blobs requested via engine_getBlobsV2");
     this.availableCounter =
-        metricsSystem.createCounter(
-            BesuMetricCategory.RPC,
-            "execution_engine_getblobs_available_total",
-            "Number of blobs requested via engine_getBlobsV2 that are present in the blob pool");
+            metricsSystem.createCounter(
+                    BesuMetricCategory.RPC,
+                    "execution_engine_getblobs_available_total",
+                    "Number of blobs requested via engine_getBlobsV2 that are present in the blob pool");
     this.hitCounter =
-        metricsSystem.createCounter(
-            BesuMetricCategory.RPC,
-            "execution_engine_getblobs_hit_total",
-            "Number of calls to engine_getBlobsV2 that returned at least one blob");
+            metricsSystem.createCounter(
+                    BesuMetricCategory.RPC,
+                    "execution_engine_getblobs_hit_total",
+                    "Number of calls to engine_getBlobsV2 that returned at least one blob");
     this.missCounter =
-        metricsSystem.createCounter(
-            BesuMetricCategory.RPC,
-            "execution_engine_getblobs_miss_total",
-            "Number of calls to engine_getBlobsV2 that returned zero blobs");
+            metricsSystem.createCounter(
+                    BesuMetricCategory.RPC,
+                    "execution_engine_getblobs_miss_total",
+                    "Number of calls to engine_getBlobsV2 that returned zero blobs");
     this.osakaMilestone = protocolSchedule.milestoneFor(OSAKA);
   }
 
@@ -100,8 +100,8 @@ public class EngineGetBlobsV2 extends ExecutionEngineJsonRpcMethod {
     final VersionedHash[] versionedHashes = extractVersionedHashes(requestContext);
     if (versionedHashes.length > REQUEST_MAX_VERSIONED_HASHES) {
       return new JsonRpcErrorResponse(
-          requestContext.getRequest().getId(),
-          RpcErrorType.INVALID_ENGINE_GET_BLOBS_TOO_LARGE_REQUEST);
+              requestContext.getRequest().getId(),
+              RpcErrorType.INVALID_ENGINE_GET_BLOBS_TOO_LARGE_REQUEST);
     }
     if (mergeContext.get().isSyncing()) {
       return new JsonRpcSuccessResponse(requestContext.getRequest().getId(), null);
@@ -133,11 +133,11 @@ public class EngineGetBlobsV2 extends ExecutionEngineJsonRpcMethod {
     availableCounter.inc(validBundles.size());
 
     LOG.debug(
-        "Requested {} bundles, found {} valid bundles, {} missing, {} unsupported",
-        versionedHashes.length,
-        validBundles.size(),
-        missingBlobs,
-        unsupportedBlobs);
+            "Requested {} bundles, found {} valid bundles, {} missing, {} unsupported",
+            versionedHashes.length,
+            validBundles.size(),
+            missingBlobs,
+            unsupportedBlobs);
 
     // V2 returns null if any requested blobs are missing or unsupported
     if (missingBlobs > 0 || unsupportedBlobs > 0) {
@@ -146,7 +146,7 @@ public class EngineGetBlobsV2 extends ExecutionEngineJsonRpcMethod {
     }
 
     final List<BlobAndProofV2> results =
-        validBundles.parallelStream().map(this::createBlobAndProofV2).toList();
+            validBundles.parallelStream().map(this::createBlobAndProofV2).toList();
 
     hitCounter.inc();
     return new JsonRpcSuccessResponse(requestContext.getRequest().getId(), results);
@@ -157,18 +157,18 @@ public class EngineGetBlobsV2 extends ExecutionEngineJsonRpcMethod {
       return requestContext.getRequiredParameter(0, VersionedHash[].class);
     } catch (JsonRpcParameter.JsonRpcParameterException e) {
       throw new InvalidJsonRpcParameters(
-          "Invalid versioned hashes parameter (index 0)",
-          RpcErrorType.INVALID_VERSIONED_HASHES_PARAMS,
-          e);
+              "Invalid versioned hashes parameter (index 0)",
+              RpcErrorType.INVALID_VERSIONED_HASHES_PARAMS,
+              e);
     }
   }
 
   private BlobAndProofV2 createBlobAndProofV2(final BlobProofBundle blobProofBundle) {
     return new BlobAndProofV2(
-        HexUtils.toFastHex(blobProofBundle.getBlob().getData(), true),
-        blobProofBundle.getKzgProof().parallelStream()
-            .map(proof -> HexUtils.toFastHex(proof.getData(), true))
-            .toList());
+            HexUtils.toFastHex(blobProofBundle.getBlob().getData(), true),
+            blobProofBundle.getKzgProof().parallelStream()
+                    .map(proof -> HexUtils.toFastHex(proof.getData(), true))
+                    .toList());
   }
 
   @Override

@@ -18,6 +18,7 @@ import static io.netty.handler.codec.http.HttpHeaderValues.APPLICATION_JSON;
 
 import org.hyperledger.besu.ethereum.api.jsonrpc.JsonRpcConfiguration;
 import org.hyperledger.besu.ethereum.api.jsonrpc.context.ContextKey;
+import org.hyperledger.besu.ethereum.api.jsonrpc.context.RpcTimingContext;
 import org.hyperledger.besu.ethereum.api.jsonrpc.execution.JsonRpcExecutor;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequest;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcErrorResponse;
@@ -84,13 +85,30 @@ public abstract class AbstractJsonRpcExecutor {
       final RoutingContext ctx) {
     final Optional<User> user = ContextKey.AUTHENTICATED_USER.extractFrom(ctx, Optional::empty);
     final Context spanContext = ctx.get(SPAN_CONTEXT);
+
+    // Extract or create RpcTimingContext
+    RpcTimingContext timingContext = ctx.get("rpc_timing_context");
+    if (timingContext == null) {
+      // Create timing context if not already present
+      final Long t0 = ctx.get("rpc_t0_ns");
+      if (t0 != null) {
+        timingContext =
+            new RpcTimingContext(
+                jsonRequest.getString("method"),
+                jsonRequest.getValue("id"),
+                t0);
+        ctx.put("rpc_timing_context", timingContext);
+      }
+    }
+
     return jsonRpcExecutor.execute(
         user,
         tracer,
         spanContext,
         () -> !ctx.response().closed(),
         jsonRequest,
-        req -> req.mapTo(JsonRpcRequest.class));
+        req -> req.mapTo(JsonRpcRequest.class),
+        timingContext);
   }
 
   protected static void handleJsonRpcError(

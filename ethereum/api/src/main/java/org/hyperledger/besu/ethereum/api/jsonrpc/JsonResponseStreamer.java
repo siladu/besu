@@ -14,6 +14,10 @@
  */
 package org.hyperledger.besu.ethereum.api.jsonrpc;
 
+import org.hyperledger.besu.ethereum.api.jsonrpc.context.RpcTimingContext;
+import org.hyperledger.besu.plugin.services.metrics.Histogram;
+import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.concurrent.atomic.AtomicReference;
@@ -34,11 +38,18 @@ public class JsonResponseStreamer extends OutputStream {
   private boolean chunked = false;
   private boolean closed = false;
   private final AtomicReference<Throwable> failure = new AtomicReference<>();
+  private final RpcTimingContext timingContext;
+  private final LabelledMetric<Histogram> handlerToFlushHistogram;
 
   public JsonResponseStreamer(
-      final HttpServerResponse response, final SocketAddress socketAddress) {
+      final HttpServerResponse response,
+      final SocketAddress socketAddress,
+      final RpcTimingContext timingContext,
+      final LabelledMetric<Histogram> handlerToFlushHistogram) {
     this.response = response;
     this.remoteAddress = socketAddress;
+    this.timingContext = timingContext;
+    this.handlerToFlushHistogram = handlerToFlushHistogram;
     this.response.exceptionHandler(
         event -> {
           LOG.debug("Write to remote address {} failed", remoteAddress, event);
@@ -69,7 +80,42 @@ public class JsonResponseStreamer extends OutputStream {
   @Override
   public void close() throws IOException {
     if (!closed) {
-      response.end();
+      // CAPTURE T2 - Right before calling response.end()
+      final long t2 = timingContext != null ? timingContext.getHandlerEndNs() : 0;
+
+      // Call response.end() and hook into completion to capture T3
+      response
+          .end()
+          .onComplete(
+              ar -> {
+                // CAPTURE T3 - Response fully flushed to socket
+                final long t3 = System.nanoTime();
+
+                if (timingContext != null && t2 > 0) {
+                  final double t2t3Ms = (t3 - t2) / 1_000_000.0;
+
+                  // Only record for engine methods
+                  if (timingContext.getMethod().startsWith("engine_")) {
+                    // Record metric
+                    if (handlerToFlushHistogram != null) {
+                      handlerToFlushHistogram
+                          .labels(timingContext.getMethod())
+                          .observe(t2t3Ms / 1000.0); // Convert to seconds
+                    }
+
+                    // Log at DEBUG level
+                    if (LOG.isDebugEnabled()) {
+                      LOG.debug(
+                          "[{}] [id={}] Response flushed T3, serialization={}ms, total={}ms",
+                          timingContext.getMethod(),
+                          timingContext.getRequestId(),
+                          String.format("%.2f", t2t3Ms),
+                          String.format("%.2f", timingContext.getTotalMs(t3)));
+                    }
+                  }
+                }
+              });
+
       closed = true;
     }
   }

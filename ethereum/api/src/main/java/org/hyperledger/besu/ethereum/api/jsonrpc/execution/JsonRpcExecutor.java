@@ -17,6 +17,7 @@ package org.hyperledger.besu.ethereum.api.jsonrpc.execution;
 import static org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.RpcErrorType.INVALID_REQUEST;
 
 import org.hyperledger.besu.ethereum.api.jsonrpc.RpcMethod;
+import org.hyperledger.besu.ethereum.api.jsonrpc.context.RpcTimingContext;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequest;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequestContext;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.JsonRpcRequestId;
@@ -61,7 +62,8 @@ public class JsonRpcExecutor {
       final Context spanContext,
       final Supplier<Boolean> alive,
       final JsonObject jsonRpcRequest,
-      final Function<JsonObject, JsonRpcRequest> requestBodyProvider) {
+      final Function<JsonObject, JsonRpcRequest> requestBodyProvider,
+      final RpcTimingContext timingContext) {
     try {
       final JsonRpcRequest requestBody = requestBodyProvider.apply(jsonRpcRequest);
       final JsonRpcRequestId id = new JsonRpcRequestId(requestBody.getId());
@@ -90,7 +92,10 @@ public class JsonRpcExecutor {
       final JsonRpcMethod method = rpcMethods.get(requestBody.getMethod());
 
       return rpcProcessor.process(
-          id, method, span, new JsonRpcRequestContext(requestBody, optionalUser, alive));
+          id,
+          method,
+          span,
+          new JsonRpcRequestContext(requestBody, optionalUser, alive, timingContext));
     } catch (final IllegalArgumentException e) {
       try {
         final Integer id = jsonRpcRequest.getInteger("id", null);

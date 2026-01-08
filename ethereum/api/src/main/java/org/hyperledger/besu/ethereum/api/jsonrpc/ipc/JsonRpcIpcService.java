@@ -157,7 +157,8 @@ public class JsonRpcIpcService {
                         } else {
                           return req.mapTo(JsonRpcRequest.class);
                         }
-                      });
+                      },
+                      null);
               promise.complete(jsonRpcResponse);
             })
         .onSuccess(
@@ -205,7 +206,8 @@ public class JsonRpcIpcService {
                           null,
                           closedSocket::get,
                           jsonRequest,
-                          req -> req.mapTo(JsonRpcRequest.class)));
+                          req -> req.mapTo(JsonRpcRequest.class),
+                          null));
                 }
                 promise.complete(responses);
               })

@@ -25,6 +25,7 @@ import org.hyperledger.besu.ethereum.api.jsonrpc.authentication.AuthenticationUt
 import org.hyperledger.besu.ethereum.api.jsonrpc.authentication.DefaultAuthenticationService;
 import org.hyperledger.besu.ethereum.api.jsonrpc.execution.AuthenticatedJsonRpcProcessor;
 import org.hyperledger.besu.ethereum.api.jsonrpc.execution.BaseJsonRpcProcessor;
+import org.hyperledger.besu.ethereum.api.jsonrpc.execution.DetailedTimingJsonRpcProcessor;
 import org.hyperledger.besu.ethereum.api.jsonrpc.execution.JsonRpcExecutor;
 import org.hyperledger.besu.ethereum.api.jsonrpc.execution.JsonRpcProcessor;
 import org.hyperledger.besu.ethereum.api.jsonrpc.execution.TimedJsonRpcProcessor;
@@ -46,6 +47,7 @@ import org.hyperledger.besu.nat.core.domain.NatServiceType;
 import org.hyperledger.besu.nat.core.domain.NetworkProtocol;
 import org.hyperledger.besu.nat.upnp.UpnpNatManager;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
+import org.hyperledger.besu.plugin.services.metrics.Histogram;
 import org.hyperledger.besu.plugin.services.metrics.LabelledMetric;
 import org.hyperledger.besu.plugin.services.metrics.OperationTimer;
 import org.hyperledger.besu.util.ExceptionUtils;
@@ -135,6 +137,9 @@ public class EngineJsonRpcService {
   private final NatService natService;
   private final Path dataDir;
   private final LabelledMetric<OperationTimer> requestTimer;
+  private final LabelledMetric<Histogram> requestToHandlerHistogram;
+  private final LabelledMetric<Histogram> handlerExecutionHistogram;
+  private final LabelledMetric<Histogram> handlerToFlushHistogram;
   private TracerProvider tracerProvider;
   private Tracer tracer;
   private final int maxActiveConnections;
@@ -185,6 +190,31 @@ public class EngineJsonRpcService {
             "request_time",
             "Time taken to process a JSON-RPC request",
             "methodName");
+
+    this.requestToHandlerHistogram =
+        metricsSystem.createLabelledHistogram(
+            BesuMetricCategory.RPC,
+            "request_to_handler_seconds",
+            "Time from request parsed to handler start (queueing)",
+            new double[] {0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0},
+            "methodName");
+
+    this.handlerExecutionHistogram =
+        metricsSystem.createLabelledHistogram(
+            BesuMetricCategory.RPC,
+            "handler_execution_seconds",
+            "Time spent in handler execution",
+            new double[] {0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0},
+            "methodName");
+
+    this.handlerToFlushHistogram =
+        metricsSystem.createLabelledHistogram(
+            BesuMetricCategory.RPC,
+            "handler_to_flush_seconds",
+            "Time from handler return to response flushed",
+            new double[] {0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0},
+            "methodName");
+
     JsonRpcProcessor jsonRpcProcessor = new BaseJsonRpcProcessor();
     if (metricsSystem instanceof OpenTelemetrySystem) {
       this.tracerProvider = ((OpenTelemetrySystem) metricsSystem).getTracerProvider();
@@ -456,24 +486,32 @@ public class EngineJsonRpcService {
               new JsonRpcExecutor(
                   new AuthenticatedJsonRpcProcessor(
                       new TimedJsonRpcProcessor(
-                          new TracedJsonRpcProcessor(new BaseJsonRpcProcessor(), metricsSystem),
+                          new DetailedTimingJsonRpcProcessor(
+                              new TracedJsonRpcProcessor(new BaseJsonRpcProcessor(), metricsSystem),
+                              requestToHandlerHistogram,
+                              handlerExecutionHistogram),
                           requestTimer),
                       authenticationService.get(),
                       config.getNoAuthRpcApis()),
                   rpcMethods),
               tracer,
-              config),
+              config,
+              handlerToFlushHistogram),
           false);
     } else {
       mainRoute.blockingHandler(
           HandlerFactory.jsonRpcExecutor(
               new JsonRpcExecutor(
                   new TimedJsonRpcProcessor(
-                      new TracedJsonRpcProcessor(new BaseJsonRpcProcessor(), metricsSystem),
+                      new DetailedTimingJsonRpcProcessor(
+                          new TracedJsonRpcProcessor(new BaseJsonRpcProcessor(), metricsSystem),
+                          requestToHandlerHistogram,
+                          handlerExecutionHistogram),
                       requestTimer),
                   rpcMethods),
               tracer,
-              config),
+              config,
+              handlerToFlushHistogram),
           false);
     }
 

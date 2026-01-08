@@ -73,8 +73,16 @@ public class JsonRpcObjectExecutor extends AbstractJsonRpcExecutor {
     if (jsonRpcResponse.getType() == RpcResponseType.NONE) {
       response.end();
     } else {
+      // Extract timing context and histogram from RoutingContext
+      final org.hyperledger.besu.ethereum.api.jsonrpc.context.RpcTimingContext timingContext =
+          ctx.get("rpc_timing_context");
+      final org.hyperledger.besu.plugin.services.metrics.LabelledMetric<
+              org.hyperledger.besu.plugin.services.metrics.Histogram>
+          histogram = ctx.get("rpc_handler_to_flush_histogram");
+
       try (final JsonResponseStreamer streamer =
-          new JsonResponseStreamer(response, ctx.request().remoteAddress())) {
+          new JsonResponseStreamer(
+              response, ctx.request().remoteAddress(), timingContext, histogram)) {
         // underlying output stream lifecycle is managed by the json object writer
         lazyTraceLogger(() -> getJsonObjectMapper().writeValueAsString(jsonRpcResponse));
         jsonObjectWriter.writeValue(streamer, jsonRpcResponse);

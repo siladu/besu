@@ -14,6 +14,7 @@
  */
 package org.hyperledger.besu.ethereum.api.jsonrpc.internal;
 
+import org.hyperledger.besu.ethereum.api.jsonrpc.context.RpcTimingContext;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.JsonRpcParameter.JsonRpcParameterException;
 
 import java.util.List;
@@ -28,6 +29,7 @@ public class JsonRpcRequestContext {
   private final JsonRpcRequest jsonRpcRequest;
   private final Optional<User> user;
   private final Supplier<Boolean> alive;
+  private final RpcTimingContext timingContext;
 
   public JsonRpcRequestContext(final JsonRpcRequest jsonRpcRequest) {
     this(jsonRpcRequest, () -> true);
@@ -50,9 +52,18 @@ public class JsonRpcRequestContext {
       final JsonRpcRequest jsonRpcRequest,
       final Optional<User> user,
       final Supplier<Boolean> alive) {
+    this(jsonRpcRequest, user, alive, null);
+  }
+
+  public JsonRpcRequestContext(
+      final JsonRpcRequest jsonRpcRequest,
+      final Optional<User> user,
+      final Supplier<Boolean> alive,
+      final RpcTimingContext timingContext) {
     this.jsonRpcRequest = jsonRpcRequest;
     this.user = user;
     this.alive = alive;
+    this.timingContext = timingContext;
   }
 
   public JsonRpcRequest getRequest() {
@@ -97,5 +108,9 @@ public class JsonRpcRequestContext {
 
   public boolean isAlive() {
     return alive.get();
+  }
+
+  public RpcTimingContext getTimingContext() {
+    return timingContext;
   }
 }

@@ -54,7 +54,7 @@ public class JsonRpcArrayExecutor extends AbstractJsonRpcExecutor {
     final JsonArray batchJsonRequest = getRequestBodyAsJsonArray(ctx);
     if (isBatchSizeValid(batchJsonRequest)) {
       try (final JsonResponseStreamer streamer =
-          new JsonResponseStreamer(response, ctx.request().remoteAddress())) {
+          new JsonResponseStreamer(response, ctx.request().remoteAddress(), null, null)) {
         executeRpcRequestBatch(batchJsonRequest, streamer);
       }
     } else {

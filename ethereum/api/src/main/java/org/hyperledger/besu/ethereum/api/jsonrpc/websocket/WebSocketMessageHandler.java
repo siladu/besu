@@ -98,7 +98,8 @@ public class WebSocketMessageHandler {
                                   req.mapTo(WebSocketRpcRequest.class);
                               websocketRequest.setConnectionId(websocket.textHandlerID());
                               return websocketRequest;
-                            });
+                            },
+                            null);
                     promise.complete(jsonRpcResponse);
                   } catch (RuntimeException e) {
                     promise.fail(e);
@@ -141,7 +142,8 @@ public class WebSocketMessageHandler {
                                     req.mapTo(WebSocketRpcRequest.class);
                                 websocketRequest.setConnectionId(websocket.textHandlerID());
                                 return websocketRequest;
-                              }));
+                              },
+                              null));
                     }
                     promise.complete(responses);
                   })
