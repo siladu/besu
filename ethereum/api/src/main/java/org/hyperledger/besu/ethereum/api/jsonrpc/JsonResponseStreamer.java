@@ -41,6 +41,8 @@ public class JsonResponseStreamer extends OutputStream {
   private final RpcTimingContext timingContext;
   private final LabelledMetric<Histogram> handlerToFlushHistogram;
   private long jacksonEndNs = 0;  // Track when Jackson completes
+  private int writeCount = 0;  // Track number of write() calls
+  private long totalBytesWritten = 0;  // Track total bytes written
 
   public JsonResponseStreamer(
       final HttpServerResponse response,
@@ -76,6 +78,10 @@ public class JsonResponseStreamer extends OutputStream {
     Buffer buf = Buffer.buffer(len);
     buf.appendBytes(bbuf, off, len);
     response.write(buf).onFailure(this::handleFailure);
+
+    // Track write statistics
+    writeCount++;
+    totalBytesWritten += len;
   }
 
   @Override
@@ -134,7 +140,7 @@ public class JsonResponseStreamer extends OutputStream {
                               : "";
 
                       LOG.info(
-                          "[{}] [id={}]{} TIMING: queue={}ms exec={}ms jackson={}ms flush={}ms TOTAL={}ms",
+                          "[{}] [id={}]{} TIMING: queue={}ms exec={}ms jackson={}ms flush={}ms TOTAL={}ms | writes={} bytes={}",
                           timingContext.getMethod(),
                           timingContext.getRequestId(),
                           metadataStr,
@@ -142,7 +148,9 @@ public class JsonResponseStreamer extends OutputStream {
                           String.format("%.2f", t1t2Ms),
                           String.format("%.2f", t2t2_5Ms),
                           String.format("%.2f", t2_5t3Ms),
-                          String.format("%.2f", timingContext.getTotalMs(t3)));
+                          String.format("%.2f", timingContext.getTotalMs(t3)),
+                          writeCount,
+                          totalBytesWritten);
                     }
                   }
                 }
