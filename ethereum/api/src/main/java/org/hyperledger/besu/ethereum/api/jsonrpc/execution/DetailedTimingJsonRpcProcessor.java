@@ -80,19 +80,24 @@ public class DetailedTimingJsonRpcProcessor implements JsonRpcProcessor {
 
     // Get T0 from timing context (if available)
     final RpcTimingContext timingContext = request.getTimingContext();
-    if (timingContext != null && isEngineMethod) {
-      final long t0 = timingContext.getRequestParsedNs();
+    if (timingContext != null) {
+      // Store T1 in timing context for consolidated logging later
+      timingContext.setHandlerStartNs(t1);
 
-      // Calculate and record T0→T1 (queueing delay)
-      final double t0t1Ms = (t1 - t0) / 1_000_000.0;
-      requestToHandlerHistogram.labels(methodName).observe(t0t1Ms / 1000.0);
+      if (isEngineMethod) {
+        final long t0 = timingContext.getRequestParsedNs();
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(
-            "[{}] [id={}] Handler start T1, queueing={}ms",
-            methodName,
-            id.getValue(),
-            String.format("%.2f", t0t1Ms));
+        // Calculate and record T0→T1 (queueing delay)
+        final double t0t1Ms = (t1 - t0) / 1_000_000.0;
+        requestToHandlerHistogram.labels(methodName).observe(t0t1Ms / 1000.0);
+
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(
+              "[{}] [id={}] Handler start T1, queueing={}ms",
+              methodName,
+              id.getValue(),
+              String.format("%.2f", t0t1Ms));
+        }
       }
     }
 

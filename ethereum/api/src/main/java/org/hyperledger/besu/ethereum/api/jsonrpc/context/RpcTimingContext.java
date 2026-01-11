@@ -31,7 +31,9 @@ public class RpcTimingContext {
   private final String method;
   private final Object requestId;
   private final long requestParsedNs; // T0
+  private long handlerStartNs; // T1
   private long handlerEndNs; // T2
+  private String metadata; // Optional metadata (e.g., "14 blobs" for engine_getBlobsV2)
 
   /**
    * Creates a new timing context for an RPC request.
@@ -74,6 +76,24 @@ public class RpcTimingContext {
   }
 
   /**
+   * Gets the timestamp when the handler started (T1).
+   *
+   * @return timestamp in nanoseconds
+   */
+  public long getHandlerStartNs() {
+    return handlerStartNs;
+  }
+
+  /**
+   * Sets the timestamp when the handler started (T1).
+   *
+   * @param handlerStartNs timestamp in nanoseconds
+   */
+  public void setHandlerStartNs(final long handlerStartNs) {
+    this.handlerStartNs = handlerStartNs;
+  }
+
+  /**
    * Gets the timestamp when the handler completed (T2).
    *
    * @return timestamp in nanoseconds
@@ -89,6 +109,24 @@ public class RpcTimingContext {
    */
   public void setHandlerEndNs(final long handlerEndNs) {
     this.handlerEndNs = handlerEndNs;
+  }
+
+  /**
+   * Gets optional metadata about the request.
+   *
+   * @return metadata string (e.g., "14 blobs") or null
+   */
+  public String getMetadata() {
+    return metadata;
+  }
+
+  /**
+   * Sets optional metadata about the request.
+   *
+   * @param metadata metadata string (e.g., "14 blobs")
+   */
+  public void setMetadata(final String metadata) {
+    this.metadata = metadata;
   }
 
   /**

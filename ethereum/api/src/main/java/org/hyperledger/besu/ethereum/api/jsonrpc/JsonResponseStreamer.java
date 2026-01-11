@@ -40,6 +40,7 @@ public class JsonResponseStreamer extends OutputStream {
   private final AtomicReference<Throwable> failure = new AtomicReference<>();
   private final RpcTimingContext timingContext;
   private final LabelledMetric<Histogram> handlerToFlushHistogram;
+  private long jacksonEndNs = 0;  // Track when Jackson completes
 
   public JsonResponseStreamer(
       final HttpServerResponse response,
@@ -80,7 +81,10 @@ public class JsonResponseStreamer extends OutputStream {
   @Override
   public void close() throws IOException {
     if (!closed) {
-      // CAPTURE T2 - Right before calling response.end()
+      // CAPTURE T2.5 - Jackson serialization just completed
+      jacksonEndNs = System.nanoTime();
+
+      // Get T2 from handler completion
       final long t2 = timingContext != null ? timingContext.getHandlerEndNs() : 0;
 
       // Call response.end() and hook into completion to capture T3
@@ -91,7 +95,9 @@ public class JsonResponseStreamer extends OutputStream {
                 // CAPTURE T3 - Response fully flushed to socket
                 final long t3 = System.nanoTime();
 
-                if (timingContext != null && t2 > 0) {
+                if (timingContext != null && t2 > 0 && jacksonEndNs > 0) {
+                  final double t2t2_5Ms = (jacksonEndNs - t2) / 1_000_000.0;
+                  final double t2_5t3Ms = (t3 - jacksonEndNs) / 1_000_000.0;
                   final double t2t3Ms = (t3 - t2) / 1_000_000.0;
 
                   // Only record for engine methods
@@ -103,13 +109,39 @@ public class JsonResponseStreamer extends OutputStream {
                           .observe(t2t3Ms / 1000.0); // Convert to seconds
                     }
 
-                    // Log at DEBUG level
+                    // Log at DEBUG level with breakdown
                     if (LOG.isDebugEnabled()) {
                       LOG.debug(
-                          "[{}] [id={}] Response flushed T3, serialization={}ms, total={}ms",
+                          "[{}] [id={}] Response flushed T3, jackson={}ms, flush={}ms, serialization={}ms, total={}ms",
                           timingContext.getMethod(),
                           timingContext.getRequestId(),
+                          String.format("%.2f", t2t2_5Ms),
+                          String.format("%.2f", t2_5t3Ms),
                           String.format("%.2f", t2t3Ms),
+                          String.format("%.2f", timingContext.getTotalMs(t3)));
+                    }
+
+                    // CONSOLIDATED TIMING LOG - All phases in one line
+                    if (LOG.isInfoEnabled() && timingContext.getHandlerStartNs() > 0) {
+                      final long t0 = timingContext.getRequestParsedNs();
+                      final long t1 = timingContext.getHandlerStartNs();
+                      final double t0t1Ms = (t1 - t0) / 1_000_000.0;
+                      final double t1t2Ms = (t2 - t1) / 1_000_000.0;
+
+                      final String metadataStr =
+                          timingContext.getMetadata() != null
+                              ? " | " + timingContext.getMetadata()
+                              : "";
+
+                      LOG.info(
+                          "[{}] [id={}]{} TIMING: queue={}ms exec={}ms jackson={}ms flush={}ms TOTAL={}ms",
+                          timingContext.getMethod(),
+                          timingContext.getRequestId(),
+                          metadataStr,
+                          String.format("%.2f", t0t1Ms),
+                          String.format("%.2f", t1t2Ms),
+                          String.format("%.2f", t2t2_5Ms),
+                          String.format("%.2f", t2_5t3Ms),
                           String.format("%.2f", timingContext.getTotalMs(t3)));
                     }
                   }

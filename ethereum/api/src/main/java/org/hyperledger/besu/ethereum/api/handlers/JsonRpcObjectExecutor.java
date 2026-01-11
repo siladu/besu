@@ -80,6 +80,21 @@ public class JsonRpcObjectExecutor extends AbstractJsonRpcExecutor {
               org.hyperledger.besu.plugin.services.metrics.Histogram>
           histogram = ctx.get("rpc_handler_to_flush_histogram");
 
+      // Add metadata for engine_getBlobsV2 requests
+      if (timingContext != null
+          && "engine_getBlobsV2".equals(timingContext.getMethod())
+          && jsonRpcResponse instanceof org.hyperledger.besu.ethereum.api.jsonrpc.internal.response
+              .JsonRpcSuccessResponse) {
+        final Object result =
+            ((org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcSuccessResponse)
+                    jsonRpcResponse)
+                .getResult();
+        if (result instanceof java.util.List) {
+          final int blobCount = ((java.util.List<?>) result).size();
+          timingContext.setMetadata(blobCount + " blobs");
+        }
+      }
+
       try (final JsonResponseStreamer streamer =
           new JsonResponseStreamer(
               response, ctx.request().remoteAddress(), timingContext, histogram)) {
