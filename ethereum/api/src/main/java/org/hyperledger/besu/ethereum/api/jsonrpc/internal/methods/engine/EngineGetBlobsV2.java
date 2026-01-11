@@ -14,6 +14,7 @@
  */
 package org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.engine;
 
+import static ethereum.ckzg4844.CKZG4844JNI.BLS_MODULUS;
 import static org.hyperledger.besu.datatypes.HardforkId.MainnetHardforkId.OSAKA;
 import static org.hyperledger.besu.ethereum.core.kzg.CKZG4844Helper.computeBlobKzgProofs;
 import static org.hyperledger.besu.ethereum.mainnet.MainnetBlobsValidator.hashCommitment;
@@ -43,9 +44,11 @@ import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.metrics.Counter;
 import org.hyperledger.besu.util.HexUtils;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 import java.util.stream.IntStream;
 
 import ethereum.ckzg4844.CKZG4844JNI;
@@ -169,9 +172,27 @@ public class EngineGetBlobsV2 extends ExecutionEngineJsonRpcMethod {
     return List.copyOf(bundles);
   }
 
+  private static final int BYTES_PER_FIELD_ELEMENT = 32;
+  private static final int FIELD_ELEMENTS_PER_BLOB = 4096;
+  private static final int BLOB_BYTES = BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB; // 131072
+
   private BlobProofBundle createBundle(final int seed) {
-    final byte[] rawMaterial = new byte[131072];
-    rawMaterial[0] = (byte) seed;
+    final Random random = new Random(seed);
+    final byte[] rawMaterial = new byte[BLOB_BYTES];
+    final byte[] fe = new byte[BYTES_PER_FIELD_ELEMENT];
+
+    for (int i = 0; i < FIELD_ELEMENTS_PER_BLOB; i++) {
+      BigInteger v;
+
+      // rejection sampling: v < BLS_MODULUS
+      do {
+        random.nextBytes(fe);
+        v = new BigInteger(1, fe); // big-endian, unsigned
+      } while (v.compareTo(BLS_MODULUS) >= 0);
+
+      System.arraycopy(fe, 0, rawMaterial, i * BYTES_PER_FIELD_ELEMENT,
+              BYTES_PER_FIELD_ELEMENT);
+    }
 
     final Bytes48 commitment = Bytes48.wrap(CKZG4844JNI.blobToKzgCommitment(rawMaterial));
 
