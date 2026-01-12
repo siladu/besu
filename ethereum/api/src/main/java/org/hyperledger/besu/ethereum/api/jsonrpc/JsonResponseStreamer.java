@@ -32,6 +32,8 @@ public class JsonResponseStreamer extends OutputStream {
 
   private static final Logger LOG = LoggerFactory.getLogger(JsonResponseStreamer.class);
 
+  private static final int FLUSH_THRESHOLD = 64 * 1024; // 64KB buffer threshold
+
   private final HttpServerResponse response;
   private final SocketAddress remoteAddress;
   private final byte[] singleByteBuf = new byte[1];
@@ -41,8 +43,13 @@ public class JsonResponseStreamer extends OutputStream {
   private final RpcTimingContext timingContext;
   private final LabelledMetric<Histogram> handlerToFlushHistogram;
   private long jacksonEndNs = 0;  // Track when Jackson completes
-  private int writeCount = 0;  // Track number of write() calls
+  private int writeCount = 0;  // Track number of Jackson write() calls
   private long totalBytesWritten = 0;  // Track total bytes written
+
+  // Option B: Buffer accumulation for batched writes
+  private final java.util.List<Buffer> pendingBuffers = new java.util.ArrayList<>();
+  private int pendingBytes = 0;
+  private int actualWriteCount = 0;  // Track actual response.write() calls
 
   public JsonResponseStreamer(
       final HttpServerResponse response,
@@ -75,18 +82,52 @@ public class JsonResponseStreamer extends OutputStream {
       chunked = true;
     }
 
+    // Buffer the write instead of immediate response.write()
     Buffer buf = Buffer.buffer(len);
     buf.appendBytes(bbuf, off, len);
-    response.write(buf).onFailure(this::handleFailure);
+    pendingBuffers.add(buf);
+    pendingBytes += len;
 
-    // Track write statistics
+    // Track Jackson write statistics
     writeCount++;
     totalBytesWritten += len;
+
+    // Flush when we hit the threshold
+    if (pendingBytes >= FLUSH_THRESHOLD) {
+      flushPending();
+    }
+  }
+
+  /**
+   * Flush all pending buffered writes to the response.
+   * Combines all pending buffers into one and sends via a single response.write() call.
+   */
+  private void flushPending() {
+    if (pendingBuffers.isEmpty()) {
+      return;
+    }
+
+    // Combine all pending buffers into one
+    Buffer combined = Buffer.buffer(pendingBytes);
+    for (Buffer b : pendingBuffers) {
+      combined.appendBuffer(b);
+    }
+
+    // Single response.write() for all accumulated data
+    response.write(combined).onFailure(this::handleFailure);
+    actualWriteCount++;
+
+    // Clear buffers for next batch
+    pendingBuffers.clear();
+    pendingBytes = 0;
   }
 
   @Override
   public void close() throws IOException {
     if (!closed) {
+      // Flush any remaining buffered data
+      flushPending();
+
       // CAPTURE T2.5 - Jackson serialization just completed
       jacksonEndNs = System.nanoTime();
 
@@ -140,7 +181,7 @@ public class JsonResponseStreamer extends OutputStream {
                               : "";
 
                       LOG.info(
-                          "[{}] [id={}]{} TIMING: queue={}ms exec={}ms jackson={}ms flush={}ms TOTAL={}ms | writes={} bytes={}",
+                          "[{}] [id={}]{} TIMING: queue={}ms exec={}ms jackson={}ms flush={}ms TOTAL={}ms | writes={}/{} bytes={}",
                           timingContext.getMethod(),
                           timingContext.getRequestId(),
                           metadataStr,
@@ -149,6 +190,7 @@ public class JsonResponseStreamer extends OutputStream {
                           String.format("%.2f", t2t2_5Ms),
                           String.format("%.2f", t2_5t3Ms),
                           String.format("%.2f", timingContext.getTotalMs(t3)),
+                          actualWriteCount,
                           writeCount,
                           totalBytesWritten);
                     }
