@@ -73,12 +73,9 @@ public class JsonRpcObjectExecutor extends AbstractJsonRpcExecutor {
     if (jsonRpcResponse.getType() == RpcResponseType.NONE) {
       response.end();
     } else {
-      // Extract timing context and histogram from RoutingContext
+      // Extract timing context from RoutingContext
       final org.hyperledger.besu.ethereum.api.jsonrpc.context.RpcTimingContext timingContext =
           ctx.get("rpc_timing_context");
-      final org.hyperledger.besu.plugin.services.metrics.LabelledMetric<
-              org.hyperledger.besu.plugin.services.metrics.Histogram>
-          histogram = ctx.get("rpc_handler_to_flush_histogram");
 
       // Add metadata for engine_getBlobsV2 requests
       if (timingContext != null
@@ -95,13 +92,62 @@ public class JsonRpcObjectExecutor extends AbstractJsonRpcExecutor {
         }
       }
 
-      try (final JsonResponseStreamer streamer =
-          new JsonResponseStreamer(
-              response, ctx.request().remoteAddress(), timingContext, histogram)) {
-        // underlying output stream lifecycle is managed by the json object writer
-        lazyTraceLogger(() -> getJsonObjectMapper().writeValueAsString(jsonRpcResponse));
-        jsonObjectWriter.writeValue(streamer, jsonRpcResponse);
-      }
+      // Option A: Serialize to string and send in one shot (revert PR #3076)
+      // This eliminates 553 write() calls for 16 blobs, trading memory for flush performance
+
+      // Capture T2 from handler completion
+      final long t2 = timingContext != null ? timingContext.getHandlerEndNs() : 0;
+
+      // Serialize to string (jackson work happens here)
+      final String jsonString = jsonObjectWriter.writeValueAsString(jsonRpcResponse);
+      lazyTraceLogger(() -> jsonString);
+
+      // Capture T2.5 (jackson serialization complete)
+      final long jacksonEndNs = System.nanoTime();
+
+      // Send response and capture T3 when flush completes
+      response
+          .end(jsonString)
+          .onComplete(
+              ar -> {
+                // Capture T3 - response fully flushed
+                final long t3 = System.nanoTime();
+
+                // Log timing breakdown for engine methods
+                if (timingContext != null
+                    && t2 > 0
+                    && timingContext.getMethod().startsWith("engine_")) {
+                  final double t2t2_5Ms = (jacksonEndNs - t2) / 1_000_000.0;
+                  final double t2_5t3Ms = (t3 - jacksonEndNs) / 1_000_000.0;
+
+                  final org.slf4j.Logger LOG =
+                      org.slf4j.LoggerFactory.getLogger(JsonRpcObjectExecutor.class);
+
+                  if (LOG.isInfoEnabled() && timingContext.getHandlerStartNs() > 0) {
+                    final long t0 = timingContext.getRequestParsedNs();
+                    final long t1 = timingContext.getHandlerStartNs();
+                    final double t0t1Ms = (t1 - t0) / 1_000_000.0;
+                    final double t1t2Ms = (t2 - t1) / 1_000_000.0;
+
+                    final String metadataStr =
+                        timingContext.getMetadata() != null
+                            ? " | " + timingContext.getMetadata()
+                            : "";
+
+                    LOG.info(
+                        "[{}] [id={}]{} TIMING: queue={}ms exec={}ms jackson={}ms flush={}ms TOTAL={}ms | bytes={}",
+                        timingContext.getMethod(),
+                        timingContext.getRequestId(),
+                        metadataStr,
+                        String.format("%.2f", t0t1Ms),
+                        String.format("%.2f", t1t2Ms),
+                        String.format("%.2f", t2t2_5Ms),
+                        String.format("%.2f", t2_5t3Ms),
+                        String.format("%.2f", timingContext.getTotalMs(t3)),
+                        jsonString.length());
+                  }
+                }
+              });
     }
   }
 
