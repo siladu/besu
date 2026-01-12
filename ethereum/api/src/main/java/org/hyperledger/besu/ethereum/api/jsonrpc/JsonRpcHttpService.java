@@ -450,7 +450,13 @@ public class JsonRpcHttpService {
             .setHost(config.getHost())
             .setPort(config.getPort())
             .setHandle100ContinueAutomatically(true)
-            .setCompressionSupported(true);
+            .setCompressionSupported(true)
+            // TCP optimizations for low-latency responses
+            .setTcpNoDelay(true) // Disable Nagle's algorithm - send immediately
+            .setTcpKeepAlive(true) // Keep connections alive
+            .setTcpFastOpen(true) // Enable TCP Fast Open for faster connection setup
+            .setSendBufferSize(256 * 1024) // 256KB send buffer for large responses
+            .setReceiveBufferSize(256 * 1024); // 256KB receive buffer
 
     applyTlsConfig(httpServerOptions);
     return httpServerOptions;
