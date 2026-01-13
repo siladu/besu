@@ -2407,9 +2407,8 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
   private String detectNativeTransport() {
     try {
       // Check for io_uring first (highest priority on Linux 5.9+)
-      Class.forName("io.netty.channel.uring.IOUring");
-      if ((boolean)
-          Class.forName("io.netty.channel.uring.IOUring").getMethod("isAvailable").invoke(null)) {
+      Class<?> ioUringClass = Class.forName("io.netty.channel.uring.IoUring");
+      if ((boolean) ioUringClass.getMethod("isAvailable").invoke(null)) {
         return "io_uring";
       }
     } catch (Exception e) {
@@ -2442,7 +2441,7 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
     // Check io_uring availability and prefer it over epoll on Linux 5.9+
     // This must be set before Vertx is created
     try {
-      Class<?> ioUringClass = Class.forName("io.netty.channel.uring.IOUring");
+      Class<?> ioUringClass = Class.forName("io.netty.channel.uring.IoUring");
       boolean available = (boolean) ioUringClass.getMethod("isAvailable").invoke(null);
       if (available) {
         if (System.getProperty("io.vertx.core.transport") == null) {
