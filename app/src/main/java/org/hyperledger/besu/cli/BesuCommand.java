@@ -2458,9 +2458,9 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
           }
         }
       } catch (ClassNotFoundException e) {
-        logger.debug("io_uring class not found, will use epoll/kqueue");
+        logger.info("io_uring class not found, will use epoll/kqueue");
       } catch (Exception e) {
-        logger.debug("Error checking io_uring availability: {}", e.getMessage());
+        logger.info("Error checking io_uring availability: {}", e.getMessage());
       }
     }
 
