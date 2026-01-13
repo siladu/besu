@@ -90,6 +90,7 @@ dependencies {
   runtimeOnly 'org.apache.logging.log4j:log4j-jul'
   runtimeOnly 'com.splunk.logging:splunk-library-javalogging'
   runtimeOnly 'org.fusesource.jansi:jansi' // for color logging in windows
+  runtimeOnly 'io.netty:netty-transport-native-io_uring' // for io_uring on Linux 5.9+
 
   testImplementation project(path: ':ethereum:core', configuration: 'testSupportArtifacts')
   testImplementation project(path: ':crypto:services', configuration: 'testSupportArtifacts')
