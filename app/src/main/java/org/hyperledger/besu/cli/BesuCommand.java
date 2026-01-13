@@ -2439,6 +2439,21 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
   }
 
   private VertxOptions createVertxOptions(final MetricsSystem metricsSystem) {
+    // Prefer io_uring over epoll on Linux 5.9+ for better I/O performance
+    // This must be set before Vertx is created
+    if (System.getProperty("io.vertx.core.transport") == null) {
+      try {
+        Class.forName("io.netty.channel.uring.IOUring");
+        if ((boolean)
+            Class.forName("io.netty.channel.uring.IOUring").getMethod("isAvailable").invoke(null)) {
+          System.setProperty("io.vertx.core.transport", "io_uring");
+          logger.debug("Requesting io_uring transport");
+        }
+      } catch (Exception e) {
+        // io_uring not available, will fall back to epoll/kqueue
+      }
+    }
+
     return new VertxOptions()
         .setPreferNativeTransport(true)
         .setMetricsOptions(
