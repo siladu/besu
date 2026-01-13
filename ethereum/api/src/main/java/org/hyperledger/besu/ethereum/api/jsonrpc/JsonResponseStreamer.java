@@ -23,8 +23,9 @@ import java.io.OutputStream;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.net.SocketAddress;
@@ -36,6 +37,9 @@ public class JsonResponseStreamer extends OutputStream {
   private static final Logger LOG = LoggerFactory.getLogger(JsonResponseStreamer.class);
 
   private static final int FLUSH_THRESHOLD = 64 * 1024; // 64KB buffer threshold
+
+  // Use pooled direct buffers to avoid heap-to-direct copy on socket write
+  private static final ByteBufAllocator ALLOCATOR = PooledByteBufAllocator.DEFAULT;
 
   private final HttpServerResponse response;
   private final SocketAddress remoteAddress;
@@ -62,8 +66,8 @@ public class JsonResponseStreamer extends OutputStream {
     this.remoteAddress = socketAddress;
     this.timingContext = timingContext;
     this.handlerToFlushHistogram = handlerToFlushHistogram;
-    // Initialize composite buffer for vectored I/O - max 1024 components
-    this.compositeBuf = Unpooled.compositeBuffer(1024);
+    // Initialize composite buffer for vectored I/O with direct memory - max 1024 components
+    this.compositeBuf = ALLOCATOR.compositeDirectBuffer(1024);
     this.response.exceptionHandler(
         event -> {
           LOG.debug("Write to remote address {} failed", remoteAddress, event);
@@ -86,9 +90,10 @@ public class JsonResponseStreamer extends OutputStream {
       chunked = true;
     }
 
-    // Add to composite buffer - must copy since Jackson reuses its internal buffer
-    ByteBuf copied = Unpooled.copiedBuffer(bbuf, off, len);
-    compositeBuf.addComponent(true, copied);
+    // Add to composite buffer using direct memory - must copy since Jackson reuses its buffer
+    ByteBuf direct = ALLOCATOR.directBuffer(len);
+    direct.writeBytes(bbuf, off, len);
+    compositeBuf.addComponent(true, direct);
 
     // Track Jackson write statistics
     writeCount++;
@@ -115,9 +120,9 @@ public class JsonResponseStreamer extends OutputStream {
     response.write(vertxBuf).onFailure(this::handleFailure);
     actualWriteCount++;
 
-    // Release the old composite and create a new one for next batch
+    // Release the old composite and create a new one with direct memory for next batch
     compositeBuf.release();
-    compositeBuf = Unpooled.compositeBuffer(1024);
+    compositeBuf = ALLOCATOR.compositeDirectBuffer(1024);
   }
 
   @Override
