@@ -2443,14 +2443,24 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
     // This must be set before Vertx is created
     if (System.getProperty("io.vertx.core.transport") == null) {
       try {
-        Class.forName("io.netty.channel.uring.IOUring");
-        if ((boolean)
-            Class.forName("io.netty.channel.uring.IOUring").getMethod("isAvailable").invoke(null)) {
+        Class<?> ioUringClass = Class.forName("io.netty.channel.uring.IOUring");
+        boolean available = (boolean) ioUringClass.getMethod("isAvailable").invoke(null);
+        if (available) {
           System.setProperty("io.vertx.core.transport", "io_uring");
-          logger.debug("Requesting io_uring transport");
+          logger.info("io_uring transport available, requesting it");
+        } else {
+          // Log why io_uring is not available
+          Throwable cause = (Throwable) ioUringClass.getMethod("unavailabilityCause").invoke(null);
+          if (cause != null) {
+            logger.info("io_uring not available: {}", cause.getMessage());
+          } else {
+            logger.info("io_uring not available (no cause provided)");
+          }
         }
+      } catch (ClassNotFoundException e) {
+        logger.debug("io_uring class not found, will use epoll/kqueue");
       } catch (Exception e) {
-        // io_uring not available, will fall back to epoll/kqueue
+        logger.debug("Error checking io_uring availability: {}", e.getMessage());
       }
     }
 
