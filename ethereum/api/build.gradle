@@ -86,6 +86,7 @@ dependencies {
   runtimeOnly 'org.bouncycastle:bcpkix-jdk18on'
   runtimeOnly 'io.netty:netty-transport-native-epoll'
   runtimeOnly 'io.netty:netty-transport-native-kqueue'
+  runtimeOnly 'io.netty:netty-transport-native-io_uring'
 
   testImplementation project(':config')
   testImplementation project(path: ':config', configuration: 'testSupportArtifacts')

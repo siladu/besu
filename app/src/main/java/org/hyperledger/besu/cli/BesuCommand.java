@@ -2393,7 +2393,49 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
    */
   @VisibleForTesting
   protected Vertx createVertx(final VertxOptions vertxOptions) {
-    return Vertx.vertx(vertxOptions);
+    final Vertx vertx = Vertx.vertx(vertxOptions);
+    if (vertx.isNativeTransportEnabled()) {
+      // Detect which native transport is being used
+      String transport = detectNativeTransport();
+      logger.info("Vert.x native transport enabled: {}", transport);
+    } else {
+      logger.info("Vert.x using NIO transport (native transport not available)");
+    }
+    return vertx;
+  }
+
+  private String detectNativeTransport() {
+    try {
+      // Check for io_uring first (highest priority on Linux 5.9+)
+      Class.forName("io.netty.channel.uring.IOUring");
+      if ((boolean)
+          Class.forName("io.netty.channel.uring.IOUring").getMethod("isAvailable").invoke(null)) {
+        return "io_uring";
+      }
+    } catch (Exception e) {
+      // io_uring not available
+    }
+    try {
+      // Check for epoll (Linux)
+      Class.forName("io.netty.channel.epoll.Epoll");
+      if ((boolean)
+          Class.forName("io.netty.channel.epoll.Epoll").getMethod("isAvailable").invoke(null)) {
+        return "epoll";
+      }
+    } catch (Exception e) {
+      // epoll not available
+    }
+    try {
+      // Check for kqueue (macOS/BSD)
+      Class.forName("io.netty.channel.kqueue.KQueue");
+      if ((boolean)
+          Class.forName("io.netty.channel.kqueue.KQueue").getMethod("isAvailable").invoke(null)) {
+        return "kqueue";
+      }
+    } catch (Exception e) {
+      // kqueue not available
+    }
+    return "unknown native transport";
   }
 
   private VertxOptions createVertxOptions(final MetricsSystem metricsSystem) {

@@ -38,12 +38,11 @@ import org.slf4j.LoggerFactory;
  * </ul>
  *
  * <p>For Engine API methods (those starting with "engine_"), this processor records metrics and
- * logs detailed timing breakdowns at DEBUG level, showing queueing delay (T0→T1) and execution
- * time (T1→T2).
+ * logs detailed timing breakdowns at DEBUG level, showing queueing delay (T0→T1) and execution time
+ * (T1→T2).
  */
 public class DetailedTimingJsonRpcProcessor implements JsonRpcProcessor {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(DetailedTimingJsonRpcProcessor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DetailedTimingJsonRpcProcessor.class);
 
   private final JsonRpcProcessor rpcProcessor;
   private final LabelledMetric<Histogram> requestToHandlerHistogram;

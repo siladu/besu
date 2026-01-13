@@ -45,13 +45,13 @@ public class JsonResponseStreamer extends OutputStream {
   private final AtomicReference<Throwable> failure = new AtomicReference<>();
   private final RpcTimingContext timingContext;
   private final LabelledMetric<Histogram> handlerToFlushHistogram;
-  private long jacksonEndNs = 0;  // Track when Jackson completes
-  private int writeCount = 0;  // Track number of Jackson write() calls
-  private long totalBytesWritten = 0;  // Track total bytes written
+  private long jacksonEndNs = 0; // Track when Jackson completes
+  private int writeCount = 0; // Track number of Jackson write() calls
+  private long totalBytesWritten = 0; // Track total bytes written
 
   // Option D: Vectored I/O with CompositeByteBuf for zero-copy buffer aggregation
   private CompositeByteBuf compositeBuf;
-  private int actualWriteCount = 0;  // Track actual response.write() calls
+  private int actualWriteCount = 0; // Track actual response.write() calls
 
   public JsonResponseStreamer(
       final HttpServerResponse response,
@@ -101,8 +101,8 @@ public class JsonResponseStreamer extends OutputStream {
   }
 
   /**
-   * Flush all pending buffered writes to the response using vectored I/O.
-   * The CompositeByteBuf enables Netty to use writev() syscall for efficient writes.
+   * Flush all pending buffered writes to the response using vectored I/O. The CompositeByteBuf
+   * enables Netty to use writev() syscall for efficient writes.
    */
   private void flushPending() {
     if (compositeBuf.readableBytes() == 0) {
