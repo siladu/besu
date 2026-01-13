@@ -22,6 +22,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.concurrent.atomic.AtomicReference;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.Unpooled;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.net.SocketAddress;
@@ -46,9 +49,8 @@ public class JsonResponseStreamer extends OutputStream {
   private int writeCount = 0;  // Track number of Jackson write() calls
   private long totalBytesWritten = 0;  // Track total bytes written
 
-  // Option B: Buffer accumulation for batched writes
-  private final java.util.List<Buffer> pendingBuffers = new java.util.ArrayList<>();
-  private int pendingBytes = 0;
+  // Option D: Vectored I/O with CompositeByteBuf for zero-copy buffer aggregation
+  private CompositeByteBuf compositeBuf;
   private int actualWriteCount = 0;  // Track actual response.write() calls
 
   public JsonResponseStreamer(
@@ -60,6 +62,8 @@ public class JsonResponseStreamer extends OutputStream {
     this.remoteAddress = socketAddress;
     this.timingContext = timingContext;
     this.handlerToFlushHistogram = handlerToFlushHistogram;
+    // Initialize composite buffer for vectored I/O - max 1024 components
+    this.compositeBuf = Unpooled.compositeBuffer(1024);
     this.response.exceptionHandler(
         event -> {
           LOG.debug("Write to remote address {} failed", remoteAddress, event);
@@ -82,44 +86,38 @@ public class JsonResponseStreamer extends OutputStream {
       chunked = true;
     }
 
-    // Buffer the write instead of immediate response.write()
-    Buffer buf = Buffer.buffer(len);
-    buf.appendBytes(bbuf, off, len);
-    pendingBuffers.add(buf);
-    pendingBytes += len;
+    // Add to composite buffer - must copy since Jackson reuses its internal buffer
+    ByteBuf copied = Unpooled.copiedBuffer(bbuf, off, len);
+    compositeBuf.addComponent(true, copied);
 
     // Track Jackson write statistics
     writeCount++;
     totalBytesWritten += len;
 
     // Flush when we hit the threshold
-    if (pendingBytes >= FLUSH_THRESHOLD) {
+    if (compositeBuf.readableBytes() >= FLUSH_THRESHOLD) {
       flushPending();
     }
   }
 
   /**
-   * Flush all pending buffered writes to the response.
-   * Combines all pending buffers into one and sends via a single response.write() call.
+   * Flush all pending buffered writes to the response using vectored I/O.
+   * The CompositeByteBuf enables Netty to use writev() syscall for efficient writes.
    */
   private void flushPending() {
-    if (pendingBuffers.isEmpty()) {
+    if (compositeBuf.readableBytes() == 0) {
       return;
     }
 
-    // Combine all pending buffers into one
-    Buffer combined = Buffer.buffer(pendingBytes);
-    for (Buffer b : pendingBuffers) {
-      combined.appendBuffer(b);
-    }
-
-    // Single response.write() for all accumulated data
-    response.write(combined).onFailure(this::handleFailure);
+    // Wrap composite buffer in Vert.x Buffer and write
+    // Netty can use vectored I/O (writev syscall) for composite buffers
+    Buffer vertxBuf = Buffer.buffer(compositeBuf.retain());
+    response.write(vertxBuf).onFailure(this::handleFailure);
     actualWriteCount++;
 
-    // Clear buffers for next batch
-    pendingBuffers.clear();
-    pendingBytes = 0;
+    // Release the old composite and create a new one for next batch
+    compositeBuf.release();
+    compositeBuf = Unpooled.compositeBuffer(1024);
   }
 
   @Override
@@ -127,6 +125,11 @@ public class JsonResponseStreamer extends OutputStream {
     if (!closed) {
       // Flush any remaining buffered data
       flushPending();
+
+      // Release the empty composite buffer created after final flush
+      if (compositeBuf.refCnt() > 0) {
+        compositeBuf.release();
+      }
 
       // CAPTURE T2.5 - Jackson serialization just completed
       jacksonEndNs = System.nanoTime();
