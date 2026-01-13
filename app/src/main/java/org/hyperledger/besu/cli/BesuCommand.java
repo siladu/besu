@@ -2439,30 +2439,29 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
   }
 
   private VertxOptions createVertxOptions(final MetricsSystem metricsSystem) {
-    // Prefer io_uring over epoll on Linux 5.9+ for better I/O performance
+    // Check io_uring availability and prefer it over epoll on Linux 5.9+
     // This must be set before Vertx is created
-    logger.info("Checking io_uring availability...");
-    if (System.getProperty("io.vertx.core.transport") == null) {
-      try {
-        Class<?> ioUringClass = Class.forName("io.netty.channel.uring.IOUring");
-        boolean available = (boolean) ioUringClass.getMethod("isAvailable").invoke(null);
-        if (available) {
+    try {
+      Class<?> ioUringClass = Class.forName("io.netty.channel.uring.IOUring");
+      boolean available = (boolean) ioUringClass.getMethod("isAvailable").invoke(null);
+      if (available) {
+        if (System.getProperty("io.vertx.core.transport") == null) {
           System.setProperty("io.vertx.core.transport", "io_uring");
-          logger.info("io_uring transport available, requesting it");
-        } else {
-          // Log why io_uring is not available
-          Throwable cause = (Throwable) ioUringClass.getMethod("unavailabilityCause").invoke(null);
-          if (cause != null) {
-            logger.info("io_uring not available: {}", cause.getMessage());
-          } else {
-            logger.info("io_uring not available (no cause provided)");
-          }
         }
-      } catch (ClassNotFoundException e) {
-        logger.info("io_uring class not found, will use epoll/kqueue");
-      } catch (Exception e) {
-        logger.info("Error checking io_uring availability: {}", e.getMessage());
+        logger.info("io_uring native transport is available");
+      } else {
+        // Log why io_uring is not available
+        Throwable cause = (Throwable) ioUringClass.getMethod("unavailabilityCause").invoke(null);
+        if (cause != null) {
+          logger.info("io_uring not available: {}", cause.getMessage());
+        } else {
+          logger.info("io_uring class found but native library not available");
+        }
       }
+    } catch (ClassNotFoundException e) {
+      logger.info("io_uring class not found in classpath");
+    } catch (Exception e) {
+      logger.info("Error checking io_uring: {}", e.getMessage());
     }
 
     return new VertxOptions()
