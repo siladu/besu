@@ -561,7 +561,7 @@ public class EngineJsonRpcService {
             .setHost(config.getHost())
             .setPort(config.getPort())
             .setHandle100ContinueAutomatically(true)
-            .setCompressionSupported(true);
+            .setCompressionSupported(false);
 
     httpServerOptions.setMaxWebSocketFrameSize(socketConfiguration.getMaxFrameSize());
     httpServerOptions.setMaxWebSocketMessageSize(socketConfiguration.getMaxFrameSize() * 4);
