@@ -83,8 +83,9 @@ public class JsonRpcObjectExecutor extends AbstractJsonRpcExecutor {
       // Add metadata for engine_getBlobsV2 requests
       if (timingContext != null
           && "engine_getBlobsV2".equals(timingContext.getMethod())
-          && jsonRpcResponse instanceof org.hyperledger.besu.ethereum.api.jsonrpc.internal.response
-              .JsonRpcSuccessResponse) {
+          && jsonRpcResponse
+              instanceof
+              org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcSuccessResponse) {
         final Object result =
             ((org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.JsonRpcSuccessResponse)
                     jsonRpcResponse)

@@ -93,10 +93,7 @@ public abstract class AbstractJsonRpcExecutor {
       final Long t0 = ctx.get("rpc_t0_ns");
       if (t0 != null) {
         timingContext =
-            new RpcTimingContext(
-                jsonRequest.getString("method"),
-                jsonRequest.getValue("id"),
-                t0);
+            new RpcTimingContext(jsonRequest.getString("method"), jsonRequest.getValue("id"), t0);
         ctx.put("rpc_timing_context", timingContext);
 
         // Set request arrived timestamp (T-2) if available

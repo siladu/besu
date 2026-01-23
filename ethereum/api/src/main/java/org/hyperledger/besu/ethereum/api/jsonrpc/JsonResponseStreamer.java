@@ -40,9 +40,9 @@ public class JsonResponseStreamer extends OutputStream {
   private final AtomicReference<Throwable> failure = new AtomicReference<>();
   private final RpcTimingContext timingContext;
   private final LabelledMetric<Histogram> handlerToFlushHistogram;
-  private long jacksonEndNs = 0;  // Track when Jackson completes
-  private int writeCount = 0;  // Track number of write() calls
-  private long totalBytesWritten = 0;  // Track total bytes written
+  private long jacksonEndNs = 0; // Track when Jackson completes
+  private int writeCount = 0; // Track number of write() calls
+  private long totalBytesWritten = 0; // Track total bytes written
 
   public JsonResponseStreamer(
       final HttpServerResponse response,
