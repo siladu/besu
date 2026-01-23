@@ -81,6 +81,10 @@ public class JsonRpcParserHandler {
       if (ctx.getBody() == null) {
         errorResponse(response, RpcErrorType.PARSE_ERROR);
       } else {
+        // Capture T-1 - timestamp before JSON parsing begins
+        final long requestReceivedNs = System.nanoTime();
+        ctx.put("rpc_request_received_ns", requestReceivedNs);
+
         try {
           ctx.put(ContextKey.REQUEST_BODY_AS_JSON_OBJECT.name(), ctx.getBodyAsJson());
         } catch (DecodeException | ClassCastException jsonObjectDecodeException) {

@@ -98,16 +98,37 @@ public abstract class AbstractJsonRpcExecutor {
                 jsonRequest.getValue("id"),
                 t0);
         ctx.put("rpc_timing_context", timingContext);
+
+        // Set request arrived timestamp (T-2) if available
+        final Long requestArrivedNs = ctx.get("rpc_request_arrived_ns");
+        if (requestArrivedNs != null) {
+          timingContext.setRequestArrivedNs(requestArrivedNs);
+        }
+
+        // Set request received timestamp (T-1) if available
+        final Long requestReceivedNs = ctx.get("rpc_request_received_ns");
+        if (requestReceivedNs != null) {
+          timingContext.setRequestReceivedNs(requestReceivedNs);
+        }
       }
     }
 
+    // Wrap the requestBodyProvider to track deserialization time
+    final RpcTimingContext finalTimingContext = timingContext;
     return jsonRpcExecutor.execute(
         user,
         tracer,
         spanContext,
         () -> !ctx.response().closed(),
         jsonRequest,
-        req -> req.mapTo(JsonRpcRequest.class),
+        req -> {
+          final JsonRpcRequest result = req.mapTo(JsonRpcRequest.class);
+          // Capture T0.5 - after deserialization
+          if (finalTimingContext != null) {
+            finalTimingContext.setRequestDeserializedNs(System.nanoTime());
+          }
+          return result;
+        },
         timingContext);
   }
 

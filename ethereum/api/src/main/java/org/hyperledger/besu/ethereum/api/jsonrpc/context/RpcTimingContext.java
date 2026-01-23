@@ -21,8 +21,11 @@ package org.hyperledger.besu.ethereum.api.jsonrpc.context;
  * breakdown:
  *
  * <ul>
+ *   <li>T-2: Request arrived (before body read/decompression)
+ *   <li>T-1: Request body received, before JSON parsing
  *   <li>T0: Request parsed and ready for execution
- *   <li>T1: Handler execution starts (calculated from T0)
+ *   <li>T0.5: Request deserialized (mapTo JsonRpcRequest)
+ *   <li>T1: Handler execution starts
  *   <li>T2: Handler execution completes
  *   <li>T3: Response fully flushed to client socket
  * </ul>
@@ -30,7 +33,10 @@ package org.hyperledger.besu.ethereum.api.jsonrpc.context;
 public class RpcTimingContext {
   private final String method;
   private final Object requestId;
+  private long requestArrivedNs; // T-2 (before body read/decompression)
+  private long requestReceivedNs; // T-1 (before JSON parsing)
   private final long requestParsedNs; // T0
+  private long requestDeserializedNs; // T0.5 (after mapTo)
   private long handlerStartNs; // T1
   private long handlerEndNs; // T2
   private String metadata; // Optional metadata (e.g., "14 blobs" for engine_getBlobsV2)
@@ -67,12 +73,66 @@ public class RpcTimingContext {
   }
 
   /**
+   * Gets the timestamp when the request arrived (T-2).
+   *
+   * @return timestamp in nanoseconds
+   */
+  public long getRequestArrivedNs() {
+    return requestArrivedNs;
+  }
+
+  /**
+   * Sets the timestamp when the request arrived (T-2).
+   *
+   * @param requestArrivedNs timestamp in nanoseconds
+   */
+  public void setRequestArrivedNs(final long requestArrivedNs) {
+    this.requestArrivedNs = requestArrivedNs;
+  }
+
+  /**
+   * Gets the timestamp when the request body was received (T-1).
+   *
+   * @return timestamp in nanoseconds
+   */
+  public long getRequestReceivedNs() {
+    return requestReceivedNs;
+  }
+
+  /**
+   * Sets the timestamp when the request body was received (T-1).
+   *
+   * @param requestReceivedNs timestamp in nanoseconds
+   */
+  public void setRequestReceivedNs(final long requestReceivedNs) {
+    this.requestReceivedNs = requestReceivedNs;
+  }
+
+  /**
    * Gets the timestamp when the request was parsed (T0).
    *
    * @return timestamp in nanoseconds
    */
   public long getRequestParsedNs() {
     return requestParsedNs;
+  }
+
+  /**
+   * Gets the timestamp when the request was deserialized to JsonRpcRequest (T0.5).
+   *
+   * @return timestamp in nanoseconds
+   */
+  public long getRequestDeserializedNs() {
+    return requestDeserializedNs;
+  }
+
+  /**
+   * Sets the timestamp when the request was deserialized to JsonRpcRequest (T0.5).
+   *
+   * @param requestDeserializedNs timestamp in nanoseconds
+   */
+  public void setRequestDeserializedNs(final long requestDeserializedNs) {
+    this.requestDeserializedNs = requestDeserializedNs;
   }
 
   /**

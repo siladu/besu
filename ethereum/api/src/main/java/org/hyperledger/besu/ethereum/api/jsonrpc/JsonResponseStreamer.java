@@ -129,9 +129,19 @@ public class JsonResponseStreamer extends OutputStream {
 
                     // CONSOLIDATED TIMING LOG - All phases in one line
                     if (LOG.isInfoEnabled() && timingContext.getHandlerStartNs() > 0) {
+                      final long tMinus2 = timingContext.getRequestArrivedNs();
+                      final long tMinus1 = timingContext.getRequestReceivedNs();
                       final long t0 = timingContext.getRequestParsedNs();
+                      final long t0_5 = timingContext.getRequestDeserializedNs();
                       final long t1 = timingContext.getHandlerStartNs();
-                      final double t0t1Ms = (t1 - t0) / 1_000_000.0;
+
+                      // Calculate timing breakdown
+                      final double receiveMsVal =
+                          (tMinus2 > 0 && tMinus1 > 0) ? (tMinus1 - tMinus2) / 1_000_000.0 : 0;
+                      final double parseMsVal = tMinus1 > 0 ? (t0 - tMinus1) / 1_000_000.0 : 0;
+                      final double deserMsVal = t0_5 > 0 ? (t0_5 - t0) / 1_000_000.0 : 0;
+                      final double routeMsVal =
+                          t0_5 > 0 ? (t1 - t0_5) / 1_000_000.0 : (t1 - t0) / 1_000_000.0;
                       final double t1t2Ms = (t2 - t1) / 1_000_000.0;
 
                       final String metadataStr =
@@ -139,16 +149,39 @@ public class JsonResponseStreamer extends OutputStream {
                               ? " | " + timingContext.getMetadata()
                               : "";
 
+                      // Build timing string with receive/parse/deser if available
+                      final StringBuilder timingStr = new StringBuilder();
+                      if (tMinus2 > 0 && tMinus1 > 0) {
+                        timingStr.append(String.format("receive=%.2fms ", receiveMsVal));
+                      }
+                      if (tMinus1 > 0) {
+                        timingStr.append(String.format("parse=%.2fms ", parseMsVal));
+                      }
+                      if (t0_5 > 0) {
+                        timingStr.append(String.format("deser=%.2fms ", deserMsVal));
+                        timingStr.append(String.format("route=%.2fms ", routeMsVal));
+                      } else {
+                        timingStr.append(String.format("queue=%.2fms ", routeMsVal));
+                      }
+                      timingStr.append(String.format("exec=%.2fms ", t1t2Ms));
+                      timingStr.append(String.format("jackson=%.2fms ", t2t2_5Ms));
+                      timingStr.append(String.format("flush=%.2fms", t2_5t3Ms));
+
+                      // Calculate total from earliest available timestamp
+                      final double totalMs =
+                          tMinus2 > 0
+                              ? (t3 - tMinus2) / 1_000_000.0
+                              : tMinus1 > 0
+                                  ? (t3 - tMinus1) / 1_000_000.0
+                                  : timingContext.getTotalMs(t3);
+
                       LOG.info(
-                          "[{}] [id={}]{} TIMING: queue={}ms exec={}ms jackson={}ms flush={}ms TOTAL={}ms | writes={} bytes={}",
+                          "[{}] [id={}]{} TIMING: {} TOTAL={}ms | writes={} bytes={}",
                           timingContext.getMethod(),
                           timingContext.getRequestId(),
                           metadataStr,
-                          String.format("%.2f", t0t1Ms),
-                          String.format("%.2f", t1t2Ms),
-                          String.format("%.2f", t2t2_5Ms),
-                          String.format("%.2f", t2_5t3Ms),
-                          String.format("%.2f", timingContext.getTotalMs(t3)),
+                          timingStr,
+                          String.format("%.2f", totalMs),
                           writeCount,
                           totalBytesWritten);
                     }
