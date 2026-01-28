@@ -1013,7 +1013,7 @@ public class DefaultBlockchain implements MutableBlockchain {
   @Override
   public synchronized void unsafeImportSyncBodyAndReceipts(
       final List<SyncBlockWithReceipts> blocksAndReceipts, final boolean indexTransactions) {
-    final BlockchainStorage.Updater updater = blockchainStorage.updater();
+    final BlockchainStorage.Updater updater = blockchainStorage.writeBatch();
     for (final SyncBlockWithReceipts blockAndReceipts : blocksAndReceipts) {
       final SyncBlock block = blockAndReceipts.getBlock();
       final Hash blockHash = block.getHash();
