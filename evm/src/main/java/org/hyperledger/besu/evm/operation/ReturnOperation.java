@@ -46,7 +46,7 @@ public class ReturnOperation extends AbstractOperation {
       return new OperationResult(cost, ExceptionalHaltReason.INSUFFICIENT_GAS);
     }
 
-    frame.setOutputData(frame.readMemory(from, length));
+    frame.setOutputData(frame.readMemoryView(from, length));
     frame.setState(MessageFrame.State.CODE_SUCCESS);
     return new OperationResult(cost, null);
   }

@@ -44,7 +44,7 @@ class RevertOperationTest {
     when(messageFrame.popStackItem())
         .thenReturn(UInt256.fromHexString("0x00"))
         .thenReturn(UInt256.fromHexString("0x0e"));
-    when(messageFrame.readMemory(0, 14)).thenReturn(revertReasonBytes);
+    when(messageFrame.readMemoryView(0, 14)).thenReturn(revertReasonBytes);
     when(messageFrame.memoryWordSize()).thenReturn(0);
     when(messageFrame.calculateMemoryExpansion(anyLong(), anyLong())).thenReturn(14L);
     when(messageFrame.getRemainingGas()).thenReturn(10_000L);

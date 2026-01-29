@@ -576,6 +576,18 @@ public class MessageFrame {
   }
 
   /**
+   * Read bytes in memory as an immutable view WITHOUT copying. Only safe when the frame is about to
+   * terminate (e.g., RETURN/REVERT) and the memory won't be modified after this call.
+   *
+   * @param offset The offset in memory
+   * @param length The length of the bytes to read
+   * @return An immutable view of the bytes in the specified range
+   */
+  public Bytes readMemoryView(final long offset, final long length) {
+    return memory.getBytesView(offset, length);
+  }
+
+  /**
    * Read bytes in memory. Contents should not be considered stable outside the scope of the current
    * operation.
    *

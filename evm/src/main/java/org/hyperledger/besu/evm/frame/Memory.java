@@ -181,6 +181,26 @@ public class Memory {
   }
 
   /**
+   * Returns an immutable view of bytes from memory WITHOUT copying. The returned view references
+   * the internal memory array directly. Only safe when the memory won't be modified after this
+   * call, such as in RETURN/REVERT operations where the frame is terminating.
+   *
+   * @param location The location in memory to start with.
+   * @param numBytes The number of bytes to get.
+   * @return An immutable view of the bytes from memory starting at {@code location} and extending
+   *     {@code numBytes}.
+   */
+  public Bytes getBytesView(final long location, final long numBytes) {
+    final int length = asByteLength(numBytes);
+    if (length == 0) {
+      return Bytes.EMPTY;
+    }
+    final int start = asByteIndex(location);
+    ensureCapacityForBytes(start, length);
+    return Bytes.wrap(memBytes, start, length);
+  }
+
+  /**
    * Returns a copy of bytes from memory.
    *
    * @param location The location in memory to start with.
