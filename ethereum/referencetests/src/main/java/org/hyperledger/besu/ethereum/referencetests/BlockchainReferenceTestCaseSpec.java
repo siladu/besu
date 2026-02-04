@@ -32,6 +32,7 @@ import org.hyperledger.besu.ethereum.core.ConsensusContextFixture;
 import org.hyperledger.besu.ethereum.core.Difficulty;
 import org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider;
 import org.hyperledger.besu.ethereum.core.MutableWorldState;
+import org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueStorageProvider;
 import org.hyperledger.besu.ethereum.core.ParsedExtraData;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.Withdrawal;
@@ -76,14 +77,14 @@ public class BlockchainReferenceTestCaseSpec {
   private final String sealEngine;
 
   private WorldStateArchive buildWorldStateArchive(
-      final long cacheSize, final Blockchain blockchain) {
+      final long cacheSize,
+      final Blockchain blockchain,
+      final KeyValueStorageProvider storageProvider) {
 
-    final InMemoryKeyValueStorageProvider inMemoryKeyValueStorageProvider =
-        new InMemoryKeyValueStorageProvider();
     final WorldStateArchive worldStateArchive =
         new BonsaiWorldStateProvider(
             (BonsaiWorldStateKeyValueStorage)
-                inMemoryKeyValueStorageProvider.createWorldStateStorage(
+                storageProvider.createWorldStateStorage(
                     DataStorageConfiguration.DEFAULT_BONSAI_CONFIG),
             blockchain,
             ImmutablePathBasedExtraStorageConfiguration.builder()
@@ -154,12 +155,18 @@ public class BlockchainReferenceTestCaseSpec {
   }
 
   public ProtocolContext buildProtocolContext(final MutableBlockchain blockchain) {
+    return buildProtocolContext(blockchain, new InMemoryKeyValueStorageProvider());
+  }
+
+  public ProtocolContext buildProtocolContext(
+      final MutableBlockchain blockchain, final KeyValueStorageProvider storageProvider) {
     return new ProtocolContext.Builder()
         .withBlockchain(blockchain)
         .withWorldStateArchive(
             buildWorldStateArchive(
                 Stream.of(candidateBlocks).filter(CandidateBlock::isExecutable).count(),
-                blockchain))
+                blockchain,
+                storageProvider))
         .withConsensusContext(new ConsensusContextFixture())
         .build();
   }

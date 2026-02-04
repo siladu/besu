@@ -267,7 +267,7 @@ public class EvmToolCommand implements Runnable {
   }
 
   static final Joiner STORAGE_JOINER = Joiner.on(",\n");
-  private final EvmToolCommandOptionsModule daggerOptions = new EvmToolCommandOptionsModule();
+  final EvmToolCommandOptionsModule daggerOptions = new EvmToolCommandOptionsModule();
   PrintWriter out;
   InputStream in;
 

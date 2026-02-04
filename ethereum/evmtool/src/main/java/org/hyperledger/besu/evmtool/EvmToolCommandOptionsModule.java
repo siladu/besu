@@ -18,6 +18,7 @@ import static org.hyperledger.besu.cli.DefaultCommandValues.getDefaultBesuDataPa
 
 import org.hyperledger.besu.controller.BesuController;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.BlockParameter;
+import org.hyperledger.besu.ethereum.worldstate.DataStorageConfiguration;
 import org.hyperledger.besu.evm.internal.EvmConfiguration;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.services.BesuConfigurationImpl;
@@ -96,7 +97,10 @@ public class EvmToolCommandOptionsModule {
   @Singleton
   BesuConfiguration provideBesuConfiguration() {
     final var besuConfiguration = new BesuConfigurationImpl();
-    besuConfiguration.init(dataPath, dataPath.resolve(BesuController.DATABASE_PATH), null);
+    besuConfiguration.init(
+        dataPath,
+        dataPath.resolve(BesuController.DATABASE_PATH),
+        DataStorageConfiguration.DEFAULT_BONSAI_CONFIG);
     return besuConfiguration;
   }
 

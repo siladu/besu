@@ -34,6 +34,8 @@ import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
 import org.hyperledger.besu.ethereum.referencetests.BlockchainReferenceTestCaseSpec;
 import org.hyperledger.besu.ethereum.referencetests.ReferenceTestProtocolSchedules;
 import org.hyperledger.besu.ethereum.rlp.RLPException;
+import org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueStorageProvider;
+import org.hyperledger.besu.metrics.MetricsSystemModule;
 import org.hyperledger.besu.ethereum.trie.pathbased.common.provider.WorldStateQueryParams;
 import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.EvmSpecVersion;
@@ -172,6 +174,16 @@ public class BlockchainTestSubCommand implements Runnable {
     final ObjectMapper blockchainTestMapper = JsonUtils.createObjectMapper();
     final TestResults results = new TestResults();
 
+    // Build Dagger component to get storage provider based on --key-value-storage option
+    final EvmToolComponent component =
+        DaggerEvmToolComponent.builder()
+            .dataStoreModule(new DataStoreModule())
+            .genesisFileModule(GenesisFileModule.createGenesisModule())
+            .evmToolCommandOptionsModule(parentCommand.daggerOptions)
+            .metricsSystemModule(new MetricsSystemModule())
+            .build();
+    final KeyValueStorageProvider storageProvider = component.getKeyValueStorageProvider();
+
     final JavaType javaType =
         blockchainTestMapper
             .getTypeFactory()
@@ -192,7 +204,7 @@ public class BlockchainTestSubCommand implements Runnable {
           if (file.isFile()) {
             final Map<String, BlockchainReferenceTestCaseSpec> blockchainTests =
                 blockchainTestMapper.readValue(file, javaType);
-            executeBlockchainTest(blockchainTests, results);
+            executeBlockchainTest(blockchainTests, results, storageProvider);
           } else {
             parentCommand.out.println("File not found: " + fileName);
           }
@@ -205,7 +217,7 @@ public class BlockchainTestSubCommand implements Runnable {
           } else {
             blockchainTests = blockchainTestMapper.readValue(blockchainTestFile.toFile(), javaType);
           }
-          executeBlockchainTest(blockchainTests, results);
+          executeBlockchainTest(blockchainTests, results, storageProvider);
         }
       }
     } catch (final JsonProcessingException jpe) {
@@ -223,7 +235,8 @@ public class BlockchainTestSubCommand implements Runnable {
 
   private void executeBlockchainTest(
       final Map<String, BlockchainReferenceTestCaseSpec> blockchainTests,
-      final TestResults results) {
+      final TestResults results,
+      final KeyValueStorageProvider storageProvider) {
     final Map<String, BlockchainReferenceTestCaseSpec> filteredTests =
         blockchainTests.entrySet().stream()
             .filter(
@@ -242,7 +255,8 @@ public class BlockchainTestSubCommand implements Runnable {
       boolean isLastIteration = (i == repeatCount - 1);
       parentCommand.out.println("Running iteration " + i);
       filteredTests.forEach(
-          (testName, spec) -> traceTestSpecs(testName, spec, results, isLastIteration));
+          (testName, spec) ->
+              traceTestSpecs(testName, spec, results, isLastIteration, storageProvider));
     }
   }
 
@@ -250,12 +264,13 @@ public class BlockchainTestSubCommand implements Runnable {
       final String test,
       final BlockchainReferenceTestCaseSpec spec,
       final TestResults results,
-      final boolean isLastIteration) {
+      final boolean isLastIteration,
+      final KeyValueStorageProvider storageProvider) {
     if (isLastIteration) {
       parentCommand.out.println("Running " + test);
     }
     final MutableBlockchain blockchain = spec.buildBlockchain();
-    final ProtocolContext context = spec.buildProtocolContext(blockchain);
+    final ProtocolContext context = spec.buildProtocolContext(blockchain, storageProvider);
 
     final BlockHeader genesisBlockHeader = spec.getGenesisBlockHeader();
     final MutableWorldState worldState =

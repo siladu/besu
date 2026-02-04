@@ -43,6 +43,7 @@ dependencies {
   implementation project(':datatypes')
   implementation project(':ethereum:api')
   implementation project(':ethereum:core')
+  implementation project(path: ':ethereum:core', configuration: 'testSupportArtifacts')
   implementation project(':ethereum:referencetests')
   implementation project(':ethereum:rlp')
   implementation project(':evm')

@@ -16,6 +16,7 @@ package org.hyperledger.besu.plugin.services.storage.rocksdb.segmented;
 
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.exception.StorageException;
+import org.hyperledger.besu.plugin.services.metrics.OperationTimer;
 import org.hyperledger.besu.plugin.services.storage.SegmentIdentifier;
 import org.hyperledger.besu.plugin.services.storage.SegmentedKeyValueStorageTransaction;
 import org.hyperledger.besu.plugin.services.storage.SnappableKeyValueStorage;
@@ -24,17 +25,30 @@ import org.hyperledger.besu.plugin.services.storage.rocksdb.RocksDBTransaction;
 import org.hyperledger.besu.plugin.services.storage.rocksdb.configuration.RocksDBConfiguration;
 import org.hyperledger.besu.services.kvstore.SegmentedKeyValueStorageTransactionValidatorDecorator;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 import org.rocksdb.OptimisticTransactionDB;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.WriteOptions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Optimistic RocksDB Columnar key value storage */
 public class OptimisticRocksDBColumnarKeyValueStorage extends RocksDBColumnarKeyValueStorage
     implements SnappableKeyValueStorage {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(OptimisticRocksDBColumnarKeyValueStorage.class);
+
+  /** System property to enable RocksDB secondary instance for reads */
+  public static final String USE_SECONDARY_PROPERTY = "besu.rocksdb.useSecondary";
+
   private final OptimisticTransactionDB db;
+  private volatile RocksDBSecondaryInstance secondaryInstance;
+  private volatile long lastSyncTime = 0;
+  private static final long SYNC_INTERVAL_MS = 100; // Sync at most every 100ms
 
   /**
    * Instantiates a new Rocks db columnar key value optimistic storage.
@@ -62,14 +76,111 @@ public class OptimisticRocksDBColumnarKeyValueStorage extends RocksDBColumnarKey
       initMetrics();
       initColumnHandles();
 
+      // Initialize secondary instance if enabled via system property
+      if (Boolean.getBoolean(USE_SECONDARY_PROPERTY)) {
+        initializeSecondaryInstance(configuration, trimmedSegments);
+      }
+
     } catch (final RocksDBException e) {
       throw parseRocksDBException(e, segments, ignorableSegments);
+    }
+  }
+
+  private void initializeSecondaryInstance(
+      final RocksDBConfiguration configuration, final List<SegmentIdentifier> segments) {
+    try {
+      LOG.info("Initializing RocksDB secondary instance for read optimization");
+      secondaryInstance =
+          new RocksDBSecondaryInstance(
+              configuration.getDatabaseDir(),
+              configuration.getDatabaseDir().resolve("secondary"),
+              columnDescriptors,
+              segments);
+      LOG.info("RocksDB secondary instance initialized successfully");
+    } catch (final StorageException e) {
+      LOG.warn(
+          "Failed to initialize RocksDB secondary instance, falling back to primary for reads", e);
+      secondaryInstance = null;
     }
   }
 
   @Override
   RocksDB getDB() {
     return db;
+  }
+
+  /**
+   * Reads a value from storage, using the secondary instance if available for improved read
+   * performance.
+   *
+   * @param segment the segment to read from
+   * @param key the key to look up
+   * @return the value if present, or empty if not found
+   * @throws StorageException if the read fails
+   */
+  @Override
+  public Optional<byte[]> get(final SegmentIdentifier segment, final byte[] key)
+      throws StorageException {
+    throwIfClosed();
+
+    try (final OperationTimer.TimingContext ignored = metrics.getReadLatency().startTimer()) {
+      if (secondaryInstance != null) {
+        // Sync secondary with primary periodically to balance freshness vs performance
+        final long now = System.currentTimeMillis();
+        if (now - lastSyncTime > SYNC_INTERVAL_MS) {
+          secondaryInstance.tryCatchUpWithPrimary();
+          lastSyncTime = now;
+        }
+        // Route reads to secondary instance
+        return secondaryInstance.get(segment, key);
+      }
+      // Fall back to primary
+      return super.get(segment, key);
+    }
+  }
+
+  /**
+   * Synchronizes the secondary instance with the primary. Call this between blocks to ensure reads
+   * see the latest committed data.
+   */
+  public void syncSecondaryWithPrimary() {
+    if (secondaryInstance != null) {
+      try {
+        secondaryInstance.tryCatchUpWithPrimary();
+      } catch (final StorageException e) {
+        LOG.warn("Failed to sync secondary instance with primary", e);
+      }
+    }
+  }
+
+  /**
+   * Checks if a secondary instance is active for reads.
+   *
+   * @return true if reads are being routed to a secondary instance
+   */
+  public boolean isSecondaryInstanceActive() {
+    return secondaryInstance != null;
+  }
+
+  @Override
+  public void close() {
+    if (closed.compareAndSet(false, true)) {
+      // Close secondary instance first
+      if (secondaryInstance != null) {
+        try {
+          secondaryInstance.close();
+        } catch (final IOException e) {
+          LOG.warn("Failed to close secondary instance", e);
+        }
+      }
+      // Then close parent resources
+      txOptions.close();
+      options.close();
+      columnHandlesBySegmentIdentifier.values().stream()
+          .map(org.hyperledger.besu.plugin.services.storage.rocksdb.RocksDbSegmentIdentifier::get)
+          .forEach(org.rocksdb.ColumnFamilyHandle::close);
+      getDB().close();
+    }
   }
 
   /**

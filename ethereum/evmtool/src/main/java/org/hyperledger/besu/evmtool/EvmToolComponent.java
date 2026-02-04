@@ -17,6 +17,7 @@ package org.hyperledger.besu.evmtool;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.core.MutableWorldState;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
+import org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueStorageProvider;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.cache.CodeCacheModule;
 import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.worldstate.WorldUpdater;
@@ -97,4 +98,12 @@ public interface EvmToolComponent {
    * @return The Blockchain instance.
    */
   Blockchain getBlockchain();
+
+  /**
+   * Retrieves the KeyValueStorageProvider instance. KeyValueStorageProvider is used to create world
+   * state storage for Bonsai or Forest mode.
+   *
+   * @return The KeyValueStorageProvider instance.
+   */
+  KeyValueStorageProvider getKeyValueStorageProvider();
 }

@@ -16,9 +16,12 @@ package org.hyperledger.besu.evmtool;
 
 import org.hyperledger.besu.ethereum.chain.BlockchainStorage;
 import org.hyperledger.besu.ethereum.core.BlockHeaderFunctions;
+import org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider;
 import org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueSegmentIdentifier;
 import org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueStoragePrefixedKeyBlockchainStorage;
+import org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueStorageProvider;
 import org.hyperledger.besu.ethereum.storage.keyvalue.VariablesKeyValueStorage;
+import org.hyperledger.besu.metrics.ObservableMetricsSystem;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.storage.KeyValueStorage;
@@ -156,5 +159,20 @@ public class DataStoreModule {
         new VariablesKeyValueStorage(variablesKeyValueStorage),
         blockHashFunction,
         false);
+  }
+
+  @Provides
+  @Singleton
+  KeyValueStorageProvider provideKeyValueStorageProvider(
+      @Named("KeyValueStorageName") final String keyValueStorageName,
+      final BesuConfiguration commonConfiguration,
+      final MetricsSystem metricsSystem) {
+    if ("rocksdb".equals(keyValueStorageName)) {
+      return new KeyValueStorageProvider(
+          segments -> rocksDBFactory.get().create(segments, commonConfiguration, metricsSystem),
+          new LimitedInMemoryKeyValueStorage(5000),
+          (ObservableMetricsSystem) metricsSystem);
+    }
+    return new InMemoryKeyValueStorageProvider();
   }
 }
