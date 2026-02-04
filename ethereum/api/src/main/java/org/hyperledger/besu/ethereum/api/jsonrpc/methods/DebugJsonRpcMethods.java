@@ -30,6 +30,7 @@ import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.DebugResyncWor
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.DebugSetHead;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.DebugStandardTraceBadBlockToFile;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.DebugStandardTraceBlockToFile;
+import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.DebugStateSize;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.DebugStorageRangeAt;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.DebugTraceBlock;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.DebugTraceBlockByHash;
@@ -106,6 +107,7 @@ public class DebugJsonRpcMethods extends ApiGroupJsonRpcMethods {
         new DebugResyncWorldstate(protocolContext, synchronizer),
         new DebugTraceBlock(protocolSchedule, blockchainQueries, metricsSystem, ethScheduler),
         new DebugSetHead(blockchainQueries, protocolContext),
+        new DebugStateSize(blockchainQueries, dataDir),
         new DebugReplayBlock(blockchainQueries, protocolContext, protocolSchedule),
         new DebugTraceBlockByNumber(
             protocolSchedule, blockchainQueries, metricsSystem, ethScheduler),
