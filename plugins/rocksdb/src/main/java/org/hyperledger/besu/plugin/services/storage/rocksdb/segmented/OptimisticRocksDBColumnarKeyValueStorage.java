@@ -46,7 +46,9 @@ public class OptimisticRocksDBColumnarKeyValueStorage extends RocksDBColumnarKey
   public static final String USE_SECONDARY_PROPERTY = "besu.rocksdb.useSecondary";
 
   private final OptimisticTransactionDB db;
+  private final boolean useSecondary;
   private volatile RocksDBSecondaryInstance secondaryInstance;
+  private volatile boolean secondaryInitAttempted = false;
   private volatile long lastSyncTime = 0;
   private static final long SYNC_INTERVAL_MS = 100; // Sync at most every 100ms
 
@@ -68,6 +70,8 @@ public class OptimisticRocksDBColumnarKeyValueStorage extends RocksDBColumnarKey
       final RocksDBMetricsFactory rocksDBMetricsFactory)
       throws StorageException {
     super(configuration, segments, ignorableSegments, metricsSystem, rocksDBMetricsFactory);
+    // Store the flag but don't initialize yet - lazy init avoids race with primary's WAL recovery
+    this.useSecondary = Boolean.getBoolean(USE_SECONDARY_PROPERTY);
     try {
 
       db =
@@ -76,9 +80,9 @@ public class OptimisticRocksDBColumnarKeyValueStorage extends RocksDBColumnarKey
       initMetrics();
       initColumnHandles();
 
-      // Initialize secondary instance if enabled via system property
-      if (Boolean.getBoolean(USE_SECONDARY_PROPERTY)) {
-        initializeSecondaryInstance(configuration, trimmedSegments);
+      if (useSecondary) {
+        LOG.info(
+            "RocksDB secondary instance enabled via system property, will initialize lazily on first read");
       }
 
     } catch (final RocksDBException e) {
@@ -124,6 +128,16 @@ public class OptimisticRocksDBColumnarKeyValueStorage extends RocksDBColumnarKey
     throwIfClosed();
 
     try (final OperationTimer.TimingContext ignored = metrics.getReadLatency().startTimer()) {
+      // Lazy initialization of secondary instance to avoid race with primary's WAL recovery
+      if (useSecondary && !secondaryInitAttempted) {
+        synchronized (this) {
+          if (!secondaryInitAttempted) {
+            secondaryInitAttempted = true;
+            initializeSecondaryInstance(configuration, trimmedSegments);
+          }
+        }
+      }
+
       if (secondaryInstance != null) {
         // Sync secondary with primary periodically to balance freshness vs performance
         final long now = System.currentTimeMillis();

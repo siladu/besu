@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -57,6 +56,7 @@ public class RocksDBSecondaryInstance implements Closeable {
   private final Map<SegmentIdentifier, ColumnFamilyHandle> columnHandlesBySegment;
   private final List<ColumnFamilyHandle> columnHandles;
   private final ReadOptions readOptions;
+  private final DBOptions dbOptions;
   private final Path secondaryPath;
 
   /**
@@ -84,8 +84,12 @@ public class RocksDBSecondaryInstance implements Closeable {
 
       // Configure options for secondary instance
       // Note: max_open_files must be -1 for secondary instances
-      final DBOptions dbOptions =
-          new DBOptions().setCreateIfMissing(false).setMaxOpenFiles(-1).setInfoLogLevel(org.rocksdb.InfoLogLevel.WARN_LEVEL);
+      // Store as instance field to prevent GC while DB is open
+      this.dbOptions =
+          new DBOptions()
+              .setCreateIfMissing(false)
+              .setMaxOpenFiles(-1)
+              .setInfoLogLevel(org.rocksdb.InfoLogLevel.WARN_LEVEL);
 
       LOG.info(
           "Opening RocksDB secondary instance at {} for primary at {}",
@@ -116,8 +120,9 @@ public class RocksDBSecondaryInstance implements Closeable {
                             "Column handle not found for segment " + segment.getName());
                       }));
 
-      // Initial catch up with primary
-      tryCatchUpWithPrimary();
+      // Don't call tryCatchUpWithPrimary() here - let the periodic sync in get() handle it.
+      // Calling it immediately in the constructor can race with the primary's WAL recovery
+      // and cause SIGSEGV crashes.
 
       LOG.info("RocksDB secondary instance opened successfully");
 
@@ -190,5 +195,6 @@ public class RocksDBSecondaryInstance implements Closeable {
     readOptions.close();
     columnHandles.forEach(ColumnFamilyHandle::close);
     secondaryDb.close();
+    dbOptions.close();
   }
 }
