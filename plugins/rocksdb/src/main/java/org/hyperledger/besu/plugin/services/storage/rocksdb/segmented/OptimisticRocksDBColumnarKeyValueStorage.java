@@ -103,10 +103,27 @@ public class OptimisticRocksDBColumnarKeyValueStorage extends RocksDBColumnarKey
     try {
       LOG.info("Initializing RocksDB secondary instance for read optimization");
 
+      // Filter out BlobDB segments - only include standard SST-based segments
+      // BlobDB segments (containsStaticData=true) may cause SIGSEGV on Linux
+      final List<SegmentIdentifier> nonBlobSegments =
+          segments.stream()
+              .filter(segment -> !segment.containsStaticData())
+              .collect(Collectors.toList());
+
+      if (nonBlobSegments.isEmpty()) {
+        LOG.warn("No non-BlobDB segments available for secondary instance");
+        return;
+      }
+
+      LOG.info(
+          "Secondary instance will include {} segments (excluding {} BlobDB segments)",
+          nonBlobSegments.size(),
+          segments.size() - nonBlobSegments.size());
+
       // Create minimal column descriptors for secondary with default options
       // Using simple options avoids potential issues with complex configurations
       final List<ColumnFamilyDescriptor> secondaryDescriptors =
-          segments.stream()
+          nonBlobSegments.stream()
               .map(segment -> new ColumnFamilyDescriptor(segment.getId()))
               .collect(Collectors.toList());
 
@@ -115,7 +132,7 @@ public class OptimisticRocksDBColumnarKeyValueStorage extends RocksDBColumnarKey
               configuration.getDatabaseDir(),
               configuration.getDatabaseDir().resolve("secondary"),
               secondaryDescriptors,
-              segments);
+              nonBlobSegments);
       LOG.info("RocksDB secondary instance initialized successfully");
     } catch (final StorageException e) {
       LOG.warn(
@@ -155,21 +172,26 @@ public class OptimisticRocksDBColumnarKeyValueStorage extends RocksDBColumnarKey
       }
 
       if (secondaryInstance != null) {
-        // Try to sync and read from secondary, fall back to primary on any failure
-        try {
-          secondaryInstance.tryCatchUpWithPrimary();
-          final Optional<byte[]> result = secondaryInstance.get(segment, key);
-          secondaryReadCount++;
-          maybeLogStats();
-          return result;
-        } catch (final StorageException e) {
-          // Sync or read failed - fall back to primary for this read
-          LOG.trace("Secondary instance read failed, falling back to primary: {}", e.getMessage());
-          fallbackReadCount++;
-          maybeLogStats();
+        // Only use secondary for non-BlobDB segments
+        // BlobDB segments (containsStaticData=true) are not included in secondary instance
+        if (!segment.containsStaticData()) {
+          // Try to sync and read from secondary, fall back to primary on any failure
+          try {
+            secondaryInstance.tryCatchUpWithPrimary();
+            final Optional<byte[]> result = secondaryInstance.get(segment, key);
+            secondaryReadCount++;
+            maybeLogStats();
+            return result;
+          } catch (final StorageException e) {
+            // Sync or read failed - fall back to primary for this read
+            LOG.trace(
+                "Secondary instance read failed, falling back to primary: {}", e.getMessage());
+            fallbackReadCount++;
+            maybeLogStats();
+          }
         }
+        // BlobDB segments always go to primary
       }
-      // Fall back to primary
       return super.get(segment, key);
     }
   }
