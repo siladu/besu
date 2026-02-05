@@ -55,6 +55,7 @@ public class RocksDBSecondaryInstance implements Closeable {
   private final RocksDB secondaryDb;
   private final Map<SegmentIdentifier, ColumnFamilyHandle> columnHandlesBySegment;
   private final List<ColumnFamilyHandle> columnHandles;
+  private final List<ColumnFamilyDescriptor> columnDescriptors;
   private final ReadOptions readOptions;
   private final DBOptions dbOptions;
   private final Path secondaryPath;
@@ -76,6 +77,8 @@ public class RocksDBSecondaryInstance implements Closeable {
       throws StorageException {
     this.secondaryPath = secondaryPath;
     this.columnHandles = new ArrayList<>(columnDescriptors.size());
+    // Store column descriptors to prevent GC of ColumnFamilyOptions while DB is open
+    this.columnDescriptors = columnDescriptors;
     this.readOptions = new ReadOptions().setVerifyChecksums(false);
 
     try {
@@ -196,5 +199,7 @@ public class RocksDBSecondaryInstance implements Closeable {
     columnHandles.forEach(ColumnFamilyHandle::close);
     secondaryDb.close();
     dbOptions.close();
+    // Close column family options from descriptors
+    columnDescriptors.forEach(descriptor -> descriptor.getOptions().close());
   }
 }
