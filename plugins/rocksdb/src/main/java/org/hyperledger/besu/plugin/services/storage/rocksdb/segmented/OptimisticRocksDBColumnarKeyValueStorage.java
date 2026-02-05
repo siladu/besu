@@ -48,12 +48,17 @@ public class OptimisticRocksDBColumnarKeyValueStorage extends RocksDBColumnarKey
   /** System property to enable RocksDB secondary instance for reads */
   public static final String USE_SECONDARY_PROPERTY = "besu.rocksdb.useSecondary";
 
+  private static final long STATS_LOG_INTERVAL_MS = 12_000;
+
   private final OptimisticTransactionDB db;
   private final boolean useSecondary;
   private volatile RocksDBSecondaryInstance secondaryInstance;
   private volatile boolean secondaryInitAttempted = false;
-  private volatile long lastSyncTime = 0;
-  private static final long SYNC_INTERVAL_MS = 100; // Sync at most every 100ms
+
+  // Stats tracking for secondary instance usage
+  private long secondaryReadCount = 0;
+  private long fallbackReadCount = 0;
+  private long lastStatsLogTime = 0;
 
   /**
    * Instantiates a new Rocks db columnar key value optimistic storage.
@@ -150,17 +155,37 @@ public class OptimisticRocksDBColumnarKeyValueStorage extends RocksDBColumnarKey
       }
 
       if (secondaryInstance != null) {
-        // Sync secondary with primary periodically to balance freshness vs performance
-        final long now = System.currentTimeMillis();
-        if (now - lastSyncTime > SYNC_INTERVAL_MS) {
+        // Try to sync and read from secondary, fall back to primary on any failure
+        try {
           secondaryInstance.tryCatchUpWithPrimary();
-          lastSyncTime = now;
+          final Optional<byte[]> result = secondaryInstance.get(segment, key);
+          secondaryReadCount++;
+          maybeLogStats();
+          return result;
+        } catch (final StorageException e) {
+          // Sync or read failed - fall back to primary for this read
+          LOG.trace("Secondary instance read failed, falling back to primary: {}", e.getMessage());
+          fallbackReadCount++;
+          maybeLogStats();
         }
-        // Route reads to secondary instance
-        return secondaryInstance.get(segment, key);
       }
       // Fall back to primary
       return super.get(segment, key);
+    }
+  }
+
+  private void maybeLogStats() {
+    final long now = System.currentTimeMillis();
+    if (now - lastStatsLogTime >= STATS_LOG_INTERVAL_MS) {
+      lastStatsLogTime = now;
+      final long total = secondaryReadCount + fallbackReadCount;
+      final double secondaryPct = total > 0 ? (100.0 * secondaryReadCount / total) : 0;
+      LOG.info(
+          "RocksDB secondary read stats: secondary={}, fallback={}, total={}, secondaryPct={}%",
+          secondaryReadCount,
+          fallbackReadCount,
+          total,
+          String.format("%.1f", secondaryPct));
     }
   }
 
