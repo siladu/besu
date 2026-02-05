@@ -28,6 +28,9 @@ import org.hyperledger.besu.services.kvstore.SegmentedKeyValueStorageTransaction
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.rocksdb.ColumnFamilyDescriptor;
 
 import org.rocksdb.OptimisticTransactionDB;
 import org.rocksdb.RocksDB;
@@ -94,11 +97,19 @@ public class OptimisticRocksDBColumnarKeyValueStorage extends RocksDBColumnarKey
       final RocksDBConfiguration configuration, final List<SegmentIdentifier> segments) {
     try {
       LOG.info("Initializing RocksDB secondary instance for read optimization");
+
+      // Create fresh column descriptors for secondary - don't reuse primary's
+      // as RocksDB may modify/take ownership of ColumnFamilyOptions during open
+      final List<ColumnFamilyDescriptor> secondaryDescriptors =
+          segments.stream()
+              .map(segment -> createColumnDescriptor(segment, configuration))
+              .collect(Collectors.toList());
+
       secondaryInstance =
           new RocksDBSecondaryInstance(
               configuration.getDatabaseDir(),
               configuration.getDatabaseDir().resolve("secondary"),
-              columnDescriptors,
+              secondaryDescriptors,
               segments);
       LOG.info("RocksDB secondary instance initialized successfully");
     } catch (final StorageException e) {

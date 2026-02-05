@@ -186,7 +186,7 @@ public abstract class RocksDBColumnarKeyValueStorage implements SegmentedKeyValu
    * @param configuration RocksDB configuration
    * @return a column family descriptor
    */
-  private ColumnFamilyDescriptor createColumnDescriptor(
+  protected ColumnFamilyDescriptor createColumnDescriptor(
       final SegmentIdentifier segment, final RocksDBConfiguration configuration) {
     boolean dynamicLevelBytes = true;
     try {
