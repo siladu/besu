@@ -123,9 +123,11 @@ public class RocksDBSecondaryInstance implements Closeable {
                             "Column handle not found for segment " + segment.getName());
                       }));
 
-      // Don't call tryCatchUpWithPrimary() here - let the periodic sync in get() handle it.
-      // Calling it immediately in the constructor can race with the primary's WAL recovery
-      // and cause SIGSEGV crashes.
+      // Sync with primary immediately after opening to ensure we have valid state
+      // This is required before any reads can be performed
+      LOG.info("Syncing secondary instance with primary...");
+      secondaryDb.tryCatchUpWithPrimary();
+      LOG.info("Secondary instance synced with primary");
 
       LOG.info("RocksDB secondary instance opened successfully");
 
@@ -199,7 +201,12 @@ public class RocksDBSecondaryInstance implements Closeable {
     columnHandles.forEach(ColumnFamilyHandle::close);
     secondaryDb.close();
     dbOptions.close();
-    // Close column family options from descriptors
-    columnDescriptors.forEach(descriptor -> descriptor.getOptions().close());
+    // Close column family options from descriptors (if they have options)
+    columnDescriptors.forEach(
+        descriptor -> {
+          if (descriptor.getOptions() != null) {
+            descriptor.getOptions().close();
+          }
+        });
   }
 }

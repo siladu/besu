@@ -98,11 +98,11 @@ public class OptimisticRocksDBColumnarKeyValueStorage extends RocksDBColumnarKey
     try {
       LOG.info("Initializing RocksDB secondary instance for read optimization");
 
-      // Create fresh column descriptors for secondary - don't reuse primary's
-      // as RocksDB may modify/take ownership of ColumnFamilyOptions during open
+      // Create minimal column descriptors for secondary with default options
+      // Using simple options avoids potential issues with complex configurations
       final List<ColumnFamilyDescriptor> secondaryDescriptors =
           segments.stream()
-              .map(segment -> createColumnDescriptor(segment, configuration))
+              .map(segment -> new ColumnFamilyDescriptor(segment.getId()))
               .collect(Collectors.toList());
 
       secondaryInstance =
