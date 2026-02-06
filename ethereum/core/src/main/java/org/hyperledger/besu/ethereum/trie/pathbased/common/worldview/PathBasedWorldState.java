@@ -270,6 +270,8 @@ public abstract class PathBasedWorldState
         saveTrieLog.run();
         // commit only the composed worldstate, as trielog transaction is already complete:
         stateUpdater.commitComposedOnly();
+        // Sync secondary RocksDB instance with primary after block commit
+        worldStateKeyValueStorage.getComposedWorldStateStorage().syncSecondaryWithPrimary();
         if (!isStorageFrozen) {
           // optionally save the committed worldstate state in the cache
           cacheWorldState.run();

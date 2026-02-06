@@ -28,7 +28,6 @@ import org.hyperledger.besu.services.kvstore.SegmentedKeyValueStorageTransaction
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import org.rocksdb.ColumnFamilyDescriptor;
@@ -60,9 +59,6 @@ public class OptimisticRocksDBColumnarKeyValueStorage extends RocksDBColumnarKey
   private long secondaryReadCount = 0;
   private long fallbackReadCount = 0;
   private long lastStatsLogTime = 0;
-
-  // Lock to ensure only one thread performs catch-up at a time
-  private final ReentrantLock catchUpLock = new ReentrantLock();
 
   /**
    * Instantiates a new Rocks db columnar key value optimistic storage.
@@ -179,27 +175,17 @@ public class OptimisticRocksDBColumnarKeyValueStorage extends RocksDBColumnarKey
         // Only use secondary for non-BlobDB segments
         // BlobDB segments (containsStaticData=true) are not included in secondary instance
         if (!segment.containsStaticData()) {
-          // If another thread is doing catch-up, fall back to primary to avoid blocking
-          // Primary always has fresh data, so this is safe
-          if (!catchUpLock.tryLock()) {
-            fallbackReadCount++;
-            maybeLogStats();
-            return super.get(segment, key);
-          }
           try {
-            secondaryInstance.tryCatchUpWithPrimary();
+            // Read directly from secondary - catch-up happens between blocks
             final Optional<byte[]> result = secondaryInstance.get(segment, key);
             secondaryReadCount++;
             maybeLogStats();
             return result;
           } catch (final StorageException e) {
-            // Sync or read failed - fall back to primary for this read
             LOG.trace(
                 "Secondary instance read failed, falling back to primary: {}", e.getMessage());
             fallbackReadCount++;
             maybeLogStats();
-          } finally {
-            catchUpLock.unlock();
           }
         }
         // BlobDB segments always go to primary
@@ -227,6 +213,7 @@ public class OptimisticRocksDBColumnarKeyValueStorage extends RocksDBColumnarKey
    * Synchronizes the secondary instance with the primary. Call this between blocks to ensure reads
    * see the latest committed data.
    */
+  @Override
   public void syncSecondaryWithPrimary() {
     if (secondaryInstance != null) {
       try {

@@ -179,6 +179,16 @@ public interface SegmentedKeyValueStorage extends Closeable {
   boolean isClosed();
 
   /**
+   * Synchronizes the secondary storage instance with the primary. This is a no-op for storage
+   * implementations that don't support secondary instances. For implementations that use a
+   * secondary/read-only instance (like RocksDB with secondary instance), this method ensures the
+   * secondary instance sees the latest committed data from the primary.
+   */
+  default void syncSecondaryWithPrimary() {
+    // Default no-op implementation for storage backends that don't support secondary instances
+  }
+
+  /**
    * record type used to wrap responses from getNearestTo, includes the matched key and the value.
    *
    * @param key the matched (nearest) key
