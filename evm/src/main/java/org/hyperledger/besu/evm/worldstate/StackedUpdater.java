@@ -20,6 +20,9 @@ import org.hyperledger.besu.evm.internal.EvmConfiguration;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 
 /**
  * The Stacked updater.
@@ -39,6 +42,24 @@ public class StackedUpdater<W extends WorldView, A extends Account>
   public StackedUpdater(
       final AbstractWorldUpdater<W, A> world, final EvmConfiguration evmConfiguration) {
     super(world, evmConfiguration);
+    // StackedUpdater is only used during single-threaded EVM execution,
+    // so plain HashMap/HashSet avoids ConcurrentHashMap volatile reads/CAS overhead.
+    this.updatedAccounts = new HashMap<>();
+    this.deletedAccounts = new HashSet<>(Address.SIZE);
+  }
+
+  @Override
+  public Account get(final Address address) {
+    // Read-only lookup avoids creating UpdateTrackingAccount wrappers
+    // via getForMutation(), which is the mutable path.
+    final Account existing = updatedAccounts.get(address);
+    if (existing != null) {
+      return existing;
+    }
+    if (deletedAccounts.contains(address)) {
+      return null;
+    }
+    return wrappedWorldView().get(address);
   }
 
   @Override
@@ -59,8 +80,12 @@ public class StackedUpdater<W extends WorldView, A extends Account>
     return account == null ? null : new UpdateTrackingAccount<>(account);
   }
 
+  @SuppressWarnings("MixedMutabilityReturnType")
   @Override
   public Collection<? extends Account> getTouchedAccounts() {
+    if (getUpdatedAccounts().isEmpty()) {
+      return Collections.emptyList();
+    }
     return new ArrayList<>(getUpdatedAccounts());
   }
 

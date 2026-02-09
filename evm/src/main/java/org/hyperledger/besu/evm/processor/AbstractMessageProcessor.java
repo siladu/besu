@@ -100,19 +100,27 @@ public abstract class AbstractMessageProcessor {
   protected abstract void codeSuccess(MessageFrame frame, final OperationTracer operationTracer);
 
   private void clearAccumulatedStateBesidesGasAndOutput(final MessageFrame frame) {
-    ArrayList<Address> addresses =
-        frame.getWorldUpdater().getTouchedAccounts().stream()
-            .filter(AccountState::isEmpty)
-            .map(Account::getAddress)
-            .filter(forceDeleteAccountsWhenEmpty::contains)
-            .collect(Collectors.toCollection(ArrayList::new));
+    final var worldUpdater = frame.getWorldUpdater();
+    final var touchedAccounts = worldUpdater.getTouchedAccounts();
 
-    // Clear any pending changes.
-    frame.getWorldUpdater().revert();
+    if (!touchedAccounts.isEmpty() && !forceDeleteAccountsWhenEmpty.isEmpty()) {
+      // Full path: find empty accounts that need force-deletion
+      ArrayList<Address> addresses =
+          touchedAccounts.stream()
+              .filter(AccountState::isEmpty)
+              .map(Account::getAddress)
+              .filter(forceDeleteAccountsWhenEmpty::contains)
+              .collect(Collectors.toCollection(ArrayList::new));
 
-    // Force delete any requested accounts and commit the changes.
-    ((Collection<Address>) addresses).forEach(h -> frame.getWorldUpdater().deleteAccount(h));
-    frame.getWorldUpdater().commit();
+      worldUpdater.revert();
+      addresses.forEach(worldUpdater::deleteAccount);
+      worldUpdater.commit();
+    } else if (!touchedAccounts.isEmpty()) {
+      // Touched accounts but no force-delete targets: just revert and commit
+      worldUpdater.revert();
+      worldUpdater.commit();
+    }
+    // else: no touched accounts — skip revert/commit entirely
 
     frame.clearLogs();
     frame.clearGasRefund();
