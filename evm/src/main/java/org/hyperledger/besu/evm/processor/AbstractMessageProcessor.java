@@ -108,23 +108,18 @@ public abstract class AbstractMessageProcessor {
       worldUpdater.commit();
     } else {
       // Full path: find empty accounts that need force-deletion
-      ArrayList<Address> addresses = new ArrayList<>();
-      for (final Account account : touchedAccounts) {
-        if (account.isEmpty()) {
-          Address address = account.getAddress();
-          if (forceDeleteAccountsWhenEmpty.contains(address)) {
-            addresses.add(address);
-          }
-        }
-      }
+      ArrayList<Address> addresses =
+          touchedAccounts.stream()
+              .filter(AccountState::isEmpty)
+              .map(Account::getAddress)
+              .filter(forceDeleteAccountsWhenEmpty::contains)
+              .collect(Collectors.toCollection(ArrayList::new));
 
       // Clear any pending changes.
       worldUpdater.revert();
 
       // Force delete any requested accounts and commit the changes.
-      for (final Address address : addresses) {
-        worldUpdater.deleteAccount(address);
-      }
+      addresses.forEach(worldUpdater::deleteAccount);
       worldUpdater.commit();
     }
 
