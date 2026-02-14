@@ -179,12 +179,12 @@ public final class PartialBlockAccessView {
     }
 
     public PartialBlockAccessView build() {
-      List<AccountChanges> accountChanges =
-          accountBuilders.values().stream()
-              .map(AccountChangesBuilder::build)
-              .sorted(
-                  Comparator.comparing(ac -> ac.getAddress().getBytes().toUnprefixedHexString()))
-              .toList();
+      final List<AccountChanges> accountChanges = new ArrayList<>(accountBuilders.size());
+      for (final AccountChangesBuilder builder : accountBuilders.values()) {
+        accountChanges.add(builder.build());
+      }
+      accountChanges.sort(
+          Comparator.comparing(ac -> ac.getAddress().getBytes().toUnprefixedHexString()));
       return new PartialBlockAccessView(accountChanges, txIndex);
     }
   }

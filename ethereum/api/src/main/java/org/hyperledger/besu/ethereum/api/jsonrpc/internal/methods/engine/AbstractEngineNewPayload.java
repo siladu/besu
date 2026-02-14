@@ -14,7 +14,6 @@
  */
 package org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.engine;
 
-import static java.util.stream.Collectors.toList;
 import static org.hyperledger.besu.datatypes.HardforkId.MainnetHardforkId.AMSTERDAM;
 import static org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.ExecutionEngineJsonRpcMethod.EngineStatus.ACCEPTED;
 import static org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.ExecutionEngineJsonRpcMethod.EngineStatus.INVALID;
@@ -72,7 +71,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.vertx.core.Vertx;
@@ -196,9 +194,19 @@ public abstract class AbstractEngineNewPayload extends ExecutionEngineJsonRpcMet
         .addArgument(() -> Json.encodePrettily(blockParam))
         .log();
 
-    final Optional<List<Withdrawal>> maybeWithdrawals =
-        Optional.ofNullable(blockParam.getWithdrawals())
-            .map(ws -> ws.stream().map(WithdrawalParameter::toWithdrawal).collect(toList()));
+    final Optional<List<Withdrawal>> maybeWithdrawals;
+    {
+      final List<WithdrawalParameter> wps = blockParam.getWithdrawals();
+      if (wps == null) {
+        maybeWithdrawals = Optional.empty();
+      } else {
+        final List<Withdrawal> withdrawals = new ArrayList<>(wps.size());
+        for (final WithdrawalParameter wp : wps) {
+          withdrawals.add(wp.toWithdrawal());
+        }
+        maybeWithdrawals = Optional.of(withdrawals);
+      }
+    }
 
     if (!getWithdrawalsValidator(
             protocolSchedule.get(), blockParam.getTimestamp(), blockParam.getBlockNumber())
@@ -245,11 +253,13 @@ public abstract class AbstractEngineNewPayload extends ExecutionEngineJsonRpcMet
 
     final List<Transaction> transactions;
     try {
-      transactions =
-          blockParam.getTransactions().stream()
-              .map(Bytes::fromHexString)
-              .map(in -> TransactionDecoder.decodeOpaqueBytes(in, EncodingContext.BLOCK_BODY))
-              .toList();
+      final List<String> rawTransactions = blockParam.getTransactions();
+      transactions = new ArrayList<>(rawTransactions.size());
+      for (final String raw : rawTransactions) {
+        transactions.add(
+            TransactionDecoder.decodeOpaqueBytes(
+                Bytes.fromHexString(raw), EncodingContext.BLOCK_BODY));
+      }
       precomputeSenders(transactions);
     } catch (final RLPException | IllegalArgumentException e) {
       return respondWithInvalid(
@@ -309,8 +319,12 @@ public abstract class AbstractEngineNewPayload extends ExecutionEngineJsonRpcMet
       return respondWithInvalid(reqId, blockParam, null, getInvalidBlockHashStatus(), errorMessage);
     }
 
-    final var blobTransactions =
-        transactions.stream().filter(transaction -> transaction.getType().supportsBlob()).toList();
+    final List<Transaction> blobTransactions = new ArrayList<>();
+    for (final Transaction transaction : transactions) {
+      if (transaction.getType().supportsBlob()) {
+        blobTransactions.add(transaction);
+      }
+    }
 
     ValidationResult<RpcErrorType> blobValidationResult =
         validateBlobs(
@@ -380,15 +394,15 @@ public abstract class AbstractEngineNewPayload extends ExecutionEngineJsonRpcMet
         mergeCoordinator.rememberBlock(block, maybeBlockAccessList);
     if (executionResult.isSuccessful()) {
       lastExecutionTimeInNs = System.nanoTime() - startTimeNs;
+      int blobCount = 0;
+      for (final Transaction t : blobTransactions) {
+        final Optional<List<VersionedHash>> vhs = t.getVersionedHashes();
+        if (vhs.isPresent()) {
+          blobCount += vhs.get().size();
+        }
+      }
       logImportedBlockInfo(
-          block,
-          blobTransactions.stream()
-              .map(Transaction::getVersionedHashes)
-              .flatMap(Optional::stream)
-              .mapToInt(List::size)
-              .sum(),
-          lastExecutionTimeInNs,
-          executionResult.getNbParallelizedTransactions());
+          block, blobCount, lastExecutionTimeInNs, executionResult.getNbParallelizedTransactions());
       return respondWith(reqId, blockParam, newBlockHeader.getHash(), VALID);
     } else {
       if (executionResult.causedBy().isPresent()) {
@@ -410,24 +424,23 @@ public abstract class AbstractEngineNewPayload extends ExecutionEngineJsonRpcMet
   }
 
   private void precomputeSenders(final List<Transaction> transactions) {
-    transactions.forEach(
-        transaction -> {
-          mergeCoordinator
-              .getEthScheduler()
-              .scheduleComputationTask(
-                  () -> {
-                    final var sender = transaction.getSender();
-                    LOG.atTrace()
-                        .setMessage("The sender for transaction {} is calculated : {}")
-                        .addArgument(transaction::getHash)
-                        .addArgument(sender)
-                        .log();
-                    return sender;
-                  });
-          if (transaction.getType().supportsDelegateCode()) {
-            precomputeAuthorities(transaction);
-          }
-        });
+    for (final Transaction transaction : transactions) {
+      mergeCoordinator
+          .getEthScheduler()
+          .scheduleComputationTask(
+              () -> {
+                final var sender = transaction.getSender();
+                LOG.atTrace()
+                    .setMessage("The sender for transaction {} is calculated : {}")
+                    .addArgument(transaction::getHash)
+                    .addArgument(sender)
+                    .log();
+                return sender;
+              });
+      if (transaction.getType().supportsDelegateCode()) {
+        precomputeAuthorities(transaction);
+      }
+    }
   }
 
   private void precomputeAuthorities(final Transaction transaction) {
@@ -658,38 +671,36 @@ public abstract class AbstractEngineNewPayload extends ExecutionEngineJsonRpcMet
 
   private Optional<List<VersionedHash>> extractVersionedHashes(
       final Optional<List<String>> maybeVersionedHashParam) {
-    return maybeVersionedHashParam.map(
-        versionedHashes ->
-            versionedHashes.stream()
-                .map(Bytes32::fromHexString)
-                .map(
-                    hash -> {
-                      try {
-                        return new VersionedHash(hash);
-                      } catch (InvalidParameterException e) {
-                        throw new RuntimeException(e);
-                      }
-                    })
-                .collect(Collectors.toList()));
+    if (maybeVersionedHashParam.isEmpty()) {
+      return Optional.empty();
+    }
+    final List<String> versionedHashes = maybeVersionedHashParam.get();
+    final List<VersionedHash> result = new ArrayList<>(versionedHashes.size());
+    for (final String hashStr : versionedHashes) {
+      try {
+        result.add(new VersionedHash(Bytes32.fromHexString(hashStr)));
+      } catch (InvalidParameterException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    return Optional.of(result);
   }
 
   private Optional<List<Request>> extractRequests(final Optional<List<String>> maybeRequestsParam) {
     if (maybeRequestsParam.isEmpty()) {
       return Optional.empty();
     }
-    return maybeRequestsParam.map(
-        requests ->
-            requests.stream()
-                .map(
-                    s -> {
-                      final Bytes request = Bytes.fromHexString(s);
-                      final Bytes requestData = request.slice(1);
-                      if (requestData.isEmpty()) {
-                        throw new IllegalArgumentException("Request data cannot be empty");
-                      }
-                      return new Request(RequestType.of(request.get(0)), requestData);
-                    })
-                .collect(Collectors.toList()));
+    final List<String> requests = maybeRequestsParam.get();
+    final List<Request> result = new ArrayList<>(requests.size());
+    for (final String s : requests) {
+      final Bytes request = Bytes.fromHexString(s);
+      final Bytes requestData = request.slice(1);
+      if (requestData.isEmpty()) {
+        throw new IllegalArgumentException("Request data cannot be empty");
+      }
+      result.add(new Request(RequestType.of(request.get(0)), requestData));
+    }
+    return Optional.of(result);
   }
 
   private void logImportedBlockInfo(

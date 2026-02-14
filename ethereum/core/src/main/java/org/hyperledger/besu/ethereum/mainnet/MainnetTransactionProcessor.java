@@ -46,6 +46,7 @@ import org.hyperledger.besu.evm.tracing.OperationTracer;
 import org.hyperledger.besu.evm.worldstate.CodeDelegationHelper;
 import org.hyperledger.besu.evm.worldstate.WorldUpdater;
 
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
@@ -342,7 +343,7 @@ public class MainnetTransactionProcessor {
 
       if (transaction.getVersionedHashes().isPresent()) {
         commonMessageFrameBuilder.versionedHashes(
-            Optional.of(transaction.getVersionedHashes().get().stream().toList()));
+            Optional.of(new ArrayList<>(transaction.getVersionedHashes().get())));
       } else {
         commonMessageFrameBuilder.versionedHashes(Optional.empty());
       }
@@ -489,7 +490,9 @@ public class MainnetTransactionProcessor {
           initialFrame.getSelfDestructs(),
           0L);
 
-      initialFrame.getSelfDestructs().forEach(worldState::deleteAccount);
+      for (final Address selfDestruct : initialFrame.getSelfDestructs()) {
+        worldState.deleteAccount(selfDestruct);
+      }
 
       if (clearEmptyAccounts) {
         worldState.clearAccountsThatAreEmpty();

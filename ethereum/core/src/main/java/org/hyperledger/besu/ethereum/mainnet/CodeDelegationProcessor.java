@@ -73,12 +73,9 @@ public class CodeDelegationProcessor {
       final Optional<AccessLocationTracker> eip7928AccessList) {
     final CodeDelegationResult result = new CodeDelegationResult();
 
-    transaction
-        .getCodeDelegationList()
-        .get()
-        .forEach(
-            codeDelegation ->
-                processCodeDelegation(worldUpdater, codeDelegation, result, eip7928AccessList));
+    for (final CodeDelegation codeDelegation : transaction.getCodeDelegationList().get()) {
+      processCodeDelegation(worldUpdater, codeDelegation, result, eip7928AccessList);
+    }
 
     return result;
   }

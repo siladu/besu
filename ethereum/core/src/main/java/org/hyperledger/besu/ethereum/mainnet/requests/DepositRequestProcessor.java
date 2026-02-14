@@ -55,13 +55,20 @@ public class DepositRequestProcessor implements RequestProcessor {
 
   @VisibleForTesting
   Optional<Bytes> getDepositRequestData(final List<TransactionReceipt> transactionReceipts) {
-    return depositContractAddress.flatMap(
-        address ->
-            transactionReceipts.stream()
-                .flatMap(receipt -> receipt.getLogsList().stream())
-                .filter(log -> isDepositEvent(address, log))
-                .map(DepositLogDecoder::decodeFromLog)
-                .reduce(Bytes::concatenate));
+    if (depositContractAddress.isEmpty()) {
+      return Optional.empty();
+    }
+    final Address address = depositContractAddress.get();
+    Bytes result = null;
+    for (final TransactionReceipt receipt : transactionReceipts) {
+      for (final Log log : receipt.getLogsList()) {
+        if (isDepositEvent(address, log)) {
+          final Bytes decoded = DepositLogDecoder.decodeFromLog(log);
+          result = (result == null) ? decoded : Bytes.concatenate(result, decoded);
+        }
+      }
+    }
+    return Optional.ofNullable(result);
   }
 
   private boolean isDepositEvent(final Address depositContractAddress, final Log log) {

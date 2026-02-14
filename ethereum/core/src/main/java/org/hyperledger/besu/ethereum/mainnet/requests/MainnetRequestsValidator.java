@@ -17,6 +17,7 @@ package org.hyperledger.besu.ethereum.mainnet.requests;
 import org.hyperledger.besu.datatypes.RequestType;
 import org.hyperledger.besu.ethereum.core.Request;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -62,11 +63,19 @@ public class MainnetRequestsValidator implements RequestsValidator {
   }
 
   private static boolean areRequestTypesUniqueAndOrderValid(final List<Request> requests) {
-    final List<RequestType> requestTypes = requests.stream().map(Request::type).toList();
+    final List<RequestType> requestTypes = new ArrayList<>(requests.size());
+    for (final Request request : requests) {
+      requestTypes.add(request.type());
+    }
     return Comparators.isInStrictOrder(requestTypes, Comparator.naturalOrder());
   }
 
   private static boolean containsRequestWithEmptyData(final List<Request> requests) {
-    return requests.stream().anyMatch(request -> request.getData().isEmpty());
+    for (final Request request : requests) {
+      if (request.getData().isEmpty()) {
+        return true;
+      }
+    }
+    return false;
   }
 }

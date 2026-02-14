@@ -100,12 +100,15 @@ public class AccessLocationTracker implements Eip7928AccessList {
 
       final AccountChangesBuilder accountBuilder = builder.getOrCreateAccountBuilder(address);
 
+      boolean addressFoundInUpdatedAccounts = false;
+      for (final UpdateTrackingAccount<?> updatedAccount : stackedUpdater.getUpdatedAccounts()) {
+        if (updatedAccount.getAddress().equals(address)) {
+          addressFoundInUpdatedAccounts = true;
+          break;
+        }
+      }
       if (stackedUpdater.getDeletedAccountAddresses().contains(address)
-          || stackedUpdater.getUpdatedAccounts().stream()
-              .map(UpdateTrackingAccount::getAddress)
-              .filter(a -> a.equals(address))
-              .findAny()
-              .isEmpty()) {
+          || !addressFoundInUpdatedAccounts) {
         for (UInt256 slot : accountAccessListEntry.getValue().getSlots()) {
           final StorageSlotKey slotKeyObj = new StorageSlotKey(slot);
           accountBuilder.addStorageRead(slotKeyObj);

@@ -188,11 +188,14 @@ public class ContractCreationProcessor extends AbstractMessageProcessor {
         frame.setState(MessageFrame.State.COMPLETED_SUCCESS);
       }
     } else {
-      final var invalidReason =
-          contractValidationRules.stream()
-              .map(rule -> rule.validate(contractCode, frame, evm))
-              .filter(Optional::isPresent)
-              .findFirst();
+      Optional<Optional<ExceptionalHaltReason>> invalidReason = Optional.empty();
+      for (final ContractValidationRule rule : contractValidationRules) {
+        final Optional<ExceptionalHaltReason> result = rule.validate(contractCode, frame, evm);
+        if (result.isPresent()) {
+          invalidReason = Optional.of(result);
+          break;
+        }
+      }
       if (invalidReason.isEmpty()) {
         frame.decrementRemainingGas(depositFee);
 

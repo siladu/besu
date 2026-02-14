@@ -97,7 +97,9 @@ public class JournaledUpdater<W extends WorldView> implements WorldUpdater {
    * Remove all changes done by this layer. Rollback to the state prior to the updater's changes.
    */
   protected void reset() {
-    accounts.values().forEach(a -> a.undo(undoMark));
+    for (final JournaledAccount a : accounts.values()) {
+      a.undo(undoMark);
+    }
     accounts.undo(undoMark);
     deleted.undo(undoMark);
   }
@@ -110,8 +112,12 @@ public class JournaledUpdater<W extends WorldView> implements WorldUpdater {
   @Override
   public void commit() {
     if (!(parentWorld instanceof JournaledUpdater<?>)) {
-      accounts.values().forEach(JournaledAccount::commit);
-      deleted.forEach(parentWorld::deleteAccount);
+      for (final JournaledAccount a : accounts.values()) {
+        a.commit();
+      }
+      for (final Address addr : deleted) {
+        parentWorld.deleteAccount(addr);
+      }
     }
   }
 
@@ -123,7 +129,9 @@ public class JournaledUpdater<W extends WorldView> implements WorldUpdater {
   /** Mark transaction boundary. */
   @Override
   public void markTransactionBoundary() {
-    accounts.values().forEach(JournaledAccount::markTransactionBoundary);
+    for (final JournaledAccount a : accounts.values()) {
+      a.markTransactionBoundary();
+    }
   }
 
   @Override
