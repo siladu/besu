@@ -372,6 +372,8 @@ public abstract class CommandTestAbstract {
     when(mockRunnerBuilder.enodeDnsConfiguration(any())).thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.allowedSubnets(any())).thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.poaDiscoveryRetryBootnodes(anyBoolean())).thenReturn(mockRunnerBuilder);
+    when(mockRunnerBuilder.rlpxRejectInboundWhenFullEnabled(anyBoolean()))
+        .thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.build()).thenReturn(mockRunner);
     when(mockBesuComponent.getMetricsSystem()).thenReturn(new NoOpMetricsSystem());
 

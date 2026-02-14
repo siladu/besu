@@ -37,6 +37,7 @@ public class DefaultRlpxAgentFactory implements RlpxAgentFactory {
   private final Supplier<Stream<PeerConnection>> allConnectionsSupplier;
   private final Supplier<Stream<PeerConnection>> allActiveConnectionsSupplier;
   private final int maxPeers;
+  private final boolean rlpxRejectInboundWhenFullEnabled;
 
   private DefaultRlpxAgentFactory(
       final NodeKey nodeKey,
@@ -45,7 +46,8 @@ public class DefaultRlpxAgentFactory implements RlpxAgentFactory {
       final MetricsSystem metricsSystem,
       final Supplier<Stream<PeerConnection>> allConnectionsSupplier,
       final Supplier<Stream<PeerConnection>> allActiveConnectionsSupplier,
-      final int maxPeers) {
+      final int maxPeers,
+      final boolean rlpxRejectInboundWhenFullEnabled) {
     this.nodeKey = nodeKey;
     this.config = config;
     this.peerPermissions = peerPermissions;
@@ -53,6 +55,7 @@ public class DefaultRlpxAgentFactory implements RlpxAgentFactory {
     this.allConnectionsSupplier = allConnectionsSupplier;
     this.allActiveConnectionsSupplier = allActiveConnectionsSupplier;
     this.maxPeers = maxPeers;
+    this.rlpxRejectInboundWhenFullEnabled = rlpxRejectInboundWhenFullEnabled;
   }
 
   @Override
@@ -70,6 +73,7 @@ public class DefaultRlpxAgentFactory implements RlpxAgentFactory {
         .allActiveConnectionsSupplier(allActiveConnectionsSupplier)
         .peerLookup(peerLookup)
         .maxPeers(maxPeers)
+        .rlpxRejectInboundWhenFullEnabled(rlpxRejectInboundWhenFullEnabled)
         .build();
   }
 
@@ -86,6 +90,7 @@ public class DefaultRlpxAgentFactory implements RlpxAgentFactory {
     private Supplier<Stream<PeerConnection>> allConnectionsSupplier;
     private Supplier<Stream<PeerConnection>> allActiveConnectionsSupplier;
     private Integer maxPeers;
+    private boolean rlpxRejectInboundWhenFullEnabled = true;
 
     private Builder() {}
 
@@ -126,6 +131,12 @@ public class DefaultRlpxAgentFactory implements RlpxAgentFactory {
       return this;
     }
 
+    public Builder rlpxRejectInboundWhenFullEnabled(
+        final boolean rlpxRejectInboundWhenFullEnabled) {
+      this.rlpxRejectInboundWhenFullEnabled = rlpxRejectInboundWhenFullEnabled;
+      return this;
+    }
+
     public DefaultRlpxAgentFactory build() {
       validate();
       return new DefaultRlpxAgentFactory(
@@ -135,7 +146,8 @@ public class DefaultRlpxAgentFactory implements RlpxAgentFactory {
           metricsSystem,
           allConnectionsSupplier,
           allActiveConnectionsSupplier,
-          maxPeers);
+          maxPeers,
+          rlpxRejectInboundWhenFullEnabled);
     }
 
     private void validate() {

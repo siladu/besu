@@ -32,6 +32,7 @@ import org.hyperledger.besu.ethereum.p2p.rlpx.handshake.ecies.ECIESHandshaker;
 import org.hyperledger.besu.metrics.BesuMetricCategory;
 import org.hyperledger.besu.plugin.data.EnodeURL;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
+import org.hyperledger.besu.plugin.services.metrics.Counter;
 import org.hyperledger.besu.util.Subscribers;
 
 import java.io.IOException;
@@ -40,6 +41,7 @@ import java.security.GeneralSecurityException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
 import java.util.stream.StreamSupport;
 
@@ -56,10 +58,13 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import jakarta.validation.constraints.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class NettyConnectionInitializer
     implements ConnectionInitializer, HandshakerProvider, FramerProvider {
 
+  private static final Logger LOG = LoggerFactory.getLogger(NettyConnectionInitializer.class);
   private static final int TIMEOUT_SECONDS = 10;
 
   private final NodeKey nodeKey;
@@ -69,6 +74,8 @@ public class NettyConnectionInitializer
   private final MetricsSystem metricsSystem;
   private final Subscribers<ConnectCallback> connectSubscribers = Subscribers.create();
   private final PeerLookup peerLookup;
+  private final BooleanSupplier shouldAcceptInboundConnection;
+  private final Counter inboundRejectedBeforeHandshake;
 
   private ChannelFuture server;
   private final EventLoopGroup boss = new NioEventLoopGroup(1);
@@ -83,12 +90,30 @@ public class NettyConnectionInitializer
       final PeerConnectionEventDispatcher eventDispatcher,
       final MetricsSystem metricsSystem,
       final PeerLookup peerLookup) {
+    this(nodeKey, config, localNode, eventDispatcher, metricsSystem, peerLookup, () -> true);
+  }
+
+  public NettyConnectionInitializer(
+      final NodeKey nodeKey,
+      final RlpxConfiguration config,
+      final LocalNode localNode,
+      final PeerConnectionEventDispatcher eventDispatcher,
+      final MetricsSystem metricsSystem,
+      final PeerLookup peerLookup,
+      final BooleanSupplier shouldAcceptInboundConnection) {
     this.nodeKey = nodeKey;
     this.config = config;
     this.localNode = localNode;
     this.eventDispatcher = eventDispatcher;
     this.metricsSystem = metricsSystem;
     this.peerLookup = peerLookup;
+    this.shouldAcceptInboundConnection = shouldAcceptInboundConnection;
+
+    this.inboundRejectedBeforeHandshake =
+        metricsSystem.createCounter(
+            BesuMetricCategory.NETWORK,
+            "rlpx_inbound_rejected_before_handshake",
+            "Total number of inbound connections rejected before RLPx handshake due to peer capacity");
 
     metricsSystem.createIntegerGauge(
         BesuMetricCategory.NETWORK,
@@ -219,6 +244,12 @@ public class NettyConnectionInitializer
     return new ChannelInitializer<SocketChannel>() {
       @Override
       protected void initChannel(final SocketChannel ch) throws Exception {
+        if (!shouldAcceptInboundConnection.getAsBoolean()) {
+          LOG.debug("Rejecting inbound connection before handshake - at peer capacity");
+          inboundRejectedBeforeHandshake.inc();
+          ch.close();
+          return;
+        }
         final CompletableFuture<PeerConnection> connectionFuture = new CompletableFuture<>();
         connectionFuture.thenAccept(
             connection -> connectSubscribers.forEach(c -> c.onConnect(connection)));

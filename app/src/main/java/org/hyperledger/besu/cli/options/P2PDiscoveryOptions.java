@@ -175,6 +175,13 @@ public class P2PDiscoveryOptions implements CLIOptions<P2PDiscoveryConfiguration
     }
   }
 
+  /** Boolean option to reject inbound RLPx connections before handshake when at peer capacity. */
+  @CommandLine.Option(
+      names = {"--rlpx-reject-inbound-when-full-enabled"},
+      description =
+          "Whether to reject inbound RLPx connections before the handshake when the node is at peer capacity. (default: ${DEFAULT-VALUE})")
+  public final Boolean rlpxRejectInboundWhenFullEnabled = true;
+
   // Boolean option to set that in a PoA network the bootnodes should always be queried during
   // peer table refresh. If this flag is disabled bootnodes are only sent FINDN requests on first
   // startup, meaning that an offline bootnode or network outage at the client can prevent it
@@ -229,7 +236,8 @@ public class P2PDiscoveryOptions implements CLIOptions<P2PDiscoveryConfiguration
         allowedSubnets,
         poaDiscoveryRetryBootnodes,
         bootNodes,
-        discoveryDnsUrl);
+        discoveryDnsUrl,
+        rlpxRejectInboundWhenFullEnabled);
   }
 
   /**

@@ -2448,6 +2448,7 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
             .enodeDnsConfiguration(getEnodeDnsConfiguration())
             .allowedSubnets(p2PDiscoveryConfig.allowedSubnets())
             .poaDiscoveryRetryBootnodes(p2PDiscoveryConfig.poaDiscoveryRetryBootnodes())
+            .rlpxRejectInboundWhenFullEnabled(p2PDiscoveryConfig.rlpxRejectInboundWhenFullEnabled())
             .transactionValidatorService(transactionValidatorServiceImpl)
             .build();
 

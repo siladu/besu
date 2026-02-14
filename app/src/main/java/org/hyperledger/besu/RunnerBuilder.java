@@ -193,6 +193,7 @@ public class RunnerBuilder {
   private Optional<EnodeDnsConfiguration> enodeDnsConfiguration;
   private List<SubnetInfo> allowedSubnets = new ArrayList<>();
   private boolean poaDiscoveryRetryBootnodes = true;
+  private boolean rlpxRejectInboundWhenFullEnabled = true;
   private TransactionValidatorServiceImpl transactionValidatorService;
 
   /** Instantiates a new Runner builder. */
@@ -602,6 +603,18 @@ public class RunnerBuilder {
   }
 
   /**
+   * Flag to reject inbound RLPx connections before handshake when at peer capacity.
+   *
+   * @param rlpxRejectInboundWhenFullEnabled whether to reject inbound connections when full
+   * @return the runner builder
+   */
+  public RunnerBuilder rlpxRejectInboundWhenFullEnabled(
+      final boolean rlpxRejectInboundWhenFullEnabled) {
+    this.rlpxRejectInboundWhenFullEnabled = rlpxRejectInboundWhenFullEnabled;
+    return this;
+  }
+
+  /**
    * Set the transaction validator service.
    *
    * @param transactionValidatorService the transaction validator service
@@ -730,6 +743,7 @@ public class RunnerBuilder {
             .allConnectionsSupplier(ethPeers::streamAllConnections)
             .allActiveConnectionsSupplier(ethPeers::streamAllActiveConnections)
             .maxPeers(ethPeers.getMaxPeers())
+            .rlpxRejectInboundWhenFullEnabled(rlpxRejectInboundWhenFullEnabled)
             .build();
 
     final NetworkBuilder activeNetwork =

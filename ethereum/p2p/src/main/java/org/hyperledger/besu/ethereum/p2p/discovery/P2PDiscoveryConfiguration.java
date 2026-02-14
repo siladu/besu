@@ -36,4 +36,5 @@ public record P2PDiscoveryConfiguration(
     List<SubnetUtils.SubnetInfo> allowedSubnets,
     Boolean poaDiscoveryRetryBootnodes,
     List<String> bootNodes,
-    String discoveryDnsUrl) {}
+    String discoveryDnsUrl,
+    Boolean rlpxRejectInboundWhenFullEnabled) {}

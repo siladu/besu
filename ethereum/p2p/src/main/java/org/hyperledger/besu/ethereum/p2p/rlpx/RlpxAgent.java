@@ -373,6 +373,9 @@ public class RlpxAgent {
     private Supplier<Stream<PeerConnection>> allActiveConnectionsSupplier;
     private int maxPeers;
     private PeerLookup peerLookup;
+    private boolean rlpxRejectInboundWhenFullEnabled = true;
+
+    private static final int INBOUND_BUFFER = 5;
 
     private Builder() {}
 
@@ -386,7 +389,15 @@ public class RlpxAgent {
         LOG.debug("Using default NettyConnectionInitializer");
         connectionInitializer =
             new NettyConnectionInitializer(
-                nodeKey, config, localNode, connectionEvents, metricsSystem, peerLookup);
+                nodeKey,
+                config,
+                localNode,
+                connectionEvents,
+                metricsSystem,
+                peerLookup,
+                rlpxRejectInboundWhenFullEnabled
+                    ? () -> allActiveConnectionsSupplier.get().count() < maxPeers + INBOUND_BUFFER
+                    : () -> true);
       }
 
       final PeerRlpxPermissions rlpxPermissions =
@@ -478,6 +489,12 @@ public class RlpxAgent {
 
     public Builder peerLookup(final PeerLookup peerLookup) {
       this.peerLookup = peerLookup;
+      return this;
+    }
+
+    public Builder rlpxRejectInboundWhenFullEnabled(
+        final boolean rlpxRejectInboundWhenFullEnabled) {
+      this.rlpxRejectInboundWhenFullEnabled = rlpxRejectInboundWhenFullEnabled;
       return this;
     }
   }
