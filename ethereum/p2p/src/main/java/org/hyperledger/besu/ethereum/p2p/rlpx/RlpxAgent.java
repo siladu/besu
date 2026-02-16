@@ -375,7 +375,7 @@ public class RlpxAgent {
     private PeerLookup peerLookup;
     private boolean rlpxRejectInboundWhenFullEnabled = true;
 
-    private static final int INBOUND_BUFFER = 5;
+    private static final int INBOUND_BUFFER = 0;
 
     private Builder() {}
 
