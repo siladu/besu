@@ -467,6 +467,26 @@ public class MessageFrame {
   }
 
   /**
+   * Pops 2 items from the stack and pushes a single result. Net effect: stack shrinks by 1.
+   *
+   * @param value The value to push onto the stack.
+   */
+  public void popTwoAndPushStackItem(final Bytes value) {
+    stack.set(1, value);
+    stack.pop();
+  }
+
+  /**
+   * Pops 3 items from the stack and pushes a single result. Net effect: stack shrinks by 2.
+   *
+   * @param value The value to push onto the stack.
+   */
+  public void popThreeAndPushStackItem(final Bytes value) {
+    stack.set(2, value);
+    stack.bulkPop(2);
+  }
+
+  /**
    * Return the current stack size.
    *
    * @return The current stack size

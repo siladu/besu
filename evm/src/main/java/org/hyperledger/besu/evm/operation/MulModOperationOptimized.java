@@ -18,6 +18,7 @@ import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.UInt256;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
+import org.hyperledger.besu.evm.internal.Words;
 
 import org.apache.tuweni.bytes.Bytes;
 
@@ -48,16 +49,45 @@ public class MulModOperationOptimized extends AbstractFixedCostOperation {
    * @return the operation result
    */
   public static OperationResult staticOperation(final MessageFrame frame) {
-    final Bytes value0 = frame.popStackItem();
-    final Bytes value1 = frame.popStackItem();
-    final Bytes value2 = frame.popStackItem();
+    final Bytes value0 = frame.getStackItem(0); // peek a
+    final Bytes value1 = frame.getStackItem(1); // peek b
+    final Bytes value2 = frame.getStackItem(2); // peek modulus
 
-    UInt256 b0 = UInt256.fromBytesBE(value0.toArrayUnsafe());
-    UInt256 b1 = UInt256.fromBytesBE(value1.toArrayUnsafe());
-    UInt256 b2 = UInt256.fromBytesBE(value2.toArrayUnsafe());
-    Bytes resultBytes = Bytes.wrap(b0.mulMod(b1, b2).toBytesBE());
+    // Fast path: modulus is zero → result is 0 (EVM spec)
+    if (value2.isZero()) {
+      frame.popThreeAndPushStackItem(Bytes.EMPTY);
+      return mulModSuccess;
+    }
+    // Fast path: either multiplicand is zero
+    if (value0.isZero() || value1.isZero()) {
+      frame.popThreeAndPushStackItem(Bytes.EMPTY);
+      return mulModSuccess;
+    }
 
-    frame.pushStackItem(resultBytes);
+    final UInt256 b0 = UInt256.fromBytesBE(value0.toArrayUnsafe());
+    final UInt256 b1 = UInt256.fromBytesBE(value1.toArrayUnsafe());
+    final UInt256 b2 = UInt256.fromBytesBE(value2.toArrayUnsafe());
+
+    // Fast path: all three fit in 64 bits → hardware multiply + mod
+    if (b0.isUInt64() && b1.isUInt64() && b2.isUInt64()) {
+      final long hi = Math.unsignedMultiplyHigh(b0.longValue(), b1.longValue());
+      if (hi == 0) {
+        final long result = Long.remainderUnsigned(b0.longValue() * b1.longValue(), b2.longValue());
+        frame.popThreeAndPushStackItem(result == 0L ? Bytes.EMPTY : Words.longBytes(result));
+        return mulModSuccess;
+      }
+      // hi != 0: 128-bit product, fall through to general case
+    }
+
+    // General case
+    final UInt256 result = b0.mulMod(b1, b2);
+    if (result.isZero()) {
+      frame.popThreeAndPushStackItem(Bytes.EMPTY);
+    } else if (result.isUInt64()) {
+      frame.popThreeAndPushStackItem(Words.longBytes(result.longValue()));
+    } else {
+      frame.popThreeAndPushStackItem(Bytes.wrap(result.toBytesBE()));
+    }
     return mulModSuccess;
   }
 }

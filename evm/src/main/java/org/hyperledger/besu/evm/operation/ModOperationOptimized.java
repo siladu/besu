@@ -18,6 +18,7 @@ import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.UInt256;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
+import org.hyperledger.besu.evm.internal.Words;
 
 import org.apache.tuweni.bytes.Bytes;
 
@@ -48,14 +49,50 @@ public class ModOperationOptimized extends AbstractFixedCostOperation {
    * @return the operation result
    */
   public static OperationResult staticOperation(final MessageFrame frame) {
-    final Bytes value0 = frame.popStackItem();
-    final Bytes value1 = frame.popStackItem();
+    final Bytes value0 = frame.getStackItem(0); // peek dividend
+    final Bytes value1 = frame.getStackItem(1); // peek divisor
 
-    UInt256 b0 = UInt256.fromBytesBE(value0.toArrayUnsafe());
-    UInt256 b1 = UInt256.fromBytesBE(value1.toArrayUnsafe());
-    Bytes resultBytes = Bytes.wrap(b0.mod(b1).toBytesBE());
+    // Fast path: divisor is zero → result is 0 (EVM spec)
+    if (value1.isZero()) {
+      frame.popTwoAndPushStackItem(Bytes.EMPTY);
+      return modSuccess;
+    }
+    // Fast path: dividend is zero
+    if (value0.isZero()) {
+      frame.popTwoAndPushStackItem(Bytes.EMPTY);
+      return modSuccess;
+    }
 
-    frame.pushStackItem(resultBytes);
+    final UInt256 b0 = UInt256.fromBytesBE(value0.toArrayUnsafe());
+    final UInt256 b1 = UInt256.fromBytesBE(value1.toArrayUnsafe());
+
+    // Fast path: both fit in 64 bits → hardware division
+    if (b0.isUInt64() && b1.isUInt64()) {
+      final long result = Long.remainderUnsigned(b0.longValue(), b1.longValue());
+      frame.popTwoAndPushStackItem(result == 0L ? Bytes.EMPTY : Words.longBytes(result));
+      return modSuccess;
+    }
+
+    // Fast path: dividend < divisor → result is dividend itself
+    final int cmp = UInt256.compare(b0, b1);
+    if (cmp < 0) {
+      frame.popTwoAndPushStackItem(value0);
+      return modSuccess;
+    }
+    if (cmp == 0) {
+      frame.popTwoAndPushStackItem(Bytes.EMPTY);
+      return modSuccess;
+    }
+
+    // General case
+    final UInt256 result = b0.mod(b1);
+    if (result.isZero()) {
+      frame.popTwoAndPushStackItem(Bytes.EMPTY);
+    } else if (result.isUInt64()) {
+      frame.popTwoAndPushStackItem(Words.longBytes(result.longValue()));
+    } else {
+      frame.popTwoAndPushStackItem(Bytes.wrap(result.toBytesBE()));
+    }
     return modSuccess;
   }
 }

@@ -446,11 +446,13 @@ public record UInt256(long u3, long u2, long u1, long u0) {
    * @return The remainder.
    */
   public UInt256 mod(final UInt256 modulus) {
-    if (isZero()) return ZERO;
+    if (isZero() || modulus.isZeroOrOne()) return ZERO;
+    final int cmp = compare(this, modulus);
+    if (cmp < 0) return this;
+    if (cmp == 0) return ZERO;
     if (modulus.u3 != 0) return modulus.asModulus256().reduce(this);
     if (modulus.u2 != 0) return modulus.asModulus192().reduce(this);
     if (modulus.u1 != 0) return modulus.asModulus128().reduce(this);
-    if ((modulus.u0 == 0) || (modulus.u0 == 1)) return ZERO;
     return modulus.asModulus64().reduce(this);
   }
 
