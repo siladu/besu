@@ -106,6 +106,35 @@ public class FlexStack<T> {
   }
 
   /**
+   * Replaces the top two elements with a single value. For binary operations that consume 2 and
+   * produce 1.
+   *
+   * @param value the replacement value
+   */
+  public void popThenSet(final T value) {
+    if (top < 1) {
+      throw new UnderflowException();
+    }
+    entries[top--] = null;
+    entries[top] = value;
+  }
+
+  /**
+   * Replaces the top three elements with a single value. For ternary operations that consume 3 and
+   * produce 1.
+   *
+   * @param value the replacement value
+   */
+  public void popTwoThenSet(final T value) {
+    if (top < 2) {
+      throw new UnderflowException();
+    }
+    entries[top--] = null;
+    entries[top--] = null;
+    entries[top] = value;
+  }
+
+  /**
    * Peek and return type T.
    *
    * @return the T entry

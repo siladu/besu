@@ -456,6 +456,26 @@ public class MessageFrame {
   }
 
   /**
+   * Replaces the top two stack items with a single result. For binary operations (consume 2,
+   * produce 1).
+   *
+   * @param value the result to place on the stack
+   */
+  public void popTwoAndPushStackItem(final Bytes value) {
+    stack.popThenSet(value);
+  }
+
+  /**
+   * Replaces the top three stack items with a single result. For ternary operations (consume 3,
+   * produce 1).
+   *
+   * @param value the result to place on the stack
+   */
+  public void popThreeAndPushStackItem(final Bytes value) {
+    stack.popTwoThenSet(value);
+  }
+
+  /**
    * Sets the stack item at the specified offset from the top of the stack to the value
    *
    * @param offset The item's position relative to the top of the stack
