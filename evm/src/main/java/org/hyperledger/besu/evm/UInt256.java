@@ -1768,17 +1768,12 @@ public record UInt256(long u3, long u2, long u1, long u0) {
         if (cmp > 0) return prod;
         return reduce(prod);
       }
-      // reduce-multiply-reduce
-      int shift = Long.numberOfLeadingZeros(u1);
-      Modulus128 m = shiftLeft(shift);
-      long inv = reciprocal(m.u1);
-      UInt256 x = (a.isUInt128()) ? a : m.reduceNormalised(a, shift, inv);
-      UInt256 y = (b.isUInt128()) ? b : m.reduceNormalised(b, shift, inv);
-      UInt256 prod = x.mul128(y);
+      // multiply-reduce
+      UInt512 prod = a.mul256(b);
       int cmp = compareTo(prod);
       if (cmp == 0) return ZERO;
-      if (cmp > 0) return prod;
-      return m.reduceNormalised(prod, shift, inv);
+      if (cmp > 0) return prod.UInt256Value();
+      return reduce(prod);
     }
 
     private UInt128 reduceStep(final long v2, final long v1, final long v0, final long inv) {
@@ -1981,17 +1976,12 @@ public record UInt256(long u3, long u2, long u1, long u0) {
         if (cmp > 0) return prod.UInt256Value();
         return reduce(prod);
       }
-      // reduce-multiply-reduce
-      int shift = Long.numberOfLeadingZeros(u2);
-      Modulus192 m = shiftLeft(shift);
-      long inv = reciprocal(m.u2);
-      UInt256 x = (a.isUInt192()) ? a : m.reduceNormalised(a, shift, inv);
-      UInt256 y = (b.isUInt192()) ? b : m.reduceNormalised(b, shift, inv);
-      UInt512 prod = x.mul192(y);
+      // multiply-reduce
+      UInt512 prod = a.mul256(b);
       int cmp = compareTo(prod);
       if (cmp == 0) return ZERO;
       if (cmp > 0) return prod.UInt256Value();
-      return m.reduceNormalised(prod, shift, inv);
+      return reduce(prod);
     }
 
     private UInt192 reduceStep(
