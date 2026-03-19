@@ -64,7 +64,6 @@ import org.hyperledger.besu.evm.blockhash.BlockHashLookup;
 import org.hyperledger.besu.evm.tracing.EVMExecutionMetricsTracer;
 import org.hyperledger.besu.evm.tracing.EthTransferLogOperationTracer;
 import org.hyperledger.besu.evm.tracing.OperationTracer;
-import org.hyperledger.besu.evm.tracing.TracerAggregator;
 import org.hyperledger.besu.evm.worldstate.WorldUpdater;
 import org.hyperledger.besu.plugin.data.BlockOverrides;
 
@@ -373,31 +372,46 @@ public class BlockSimulator {
       final WorldUpdater transactionUpdater = blockUpdater.updater();
       final CallParameter callParameter = blockStateCall.getCalls().get(transactionLocation);
 
-      // Create separate EVMExecutionMetricsTracer for each transaction (thread-safe)
-      EVMExecutionMetricsTracer transactionMetricsTracer = null;
-      if (collectExecutionMetrics) {
-        transactionMetricsTracer = new EVMExecutionMetricsTracer();
-        transactionMetricsTracers.add(transactionMetricsTracer);
+      // TODO SLD port commented out TracerAggregator code to delegate pattern
+      // Custom tracer and EthTraceTransfers are mutually exclusive
+      OperationTracer finalOperationTracer = operationTracer;
+      if (isTraceTransfers) {
+        if (finalOperationTracer == OperationTracer.NO_TRACING) {
+          finalOperationTracer = new EthTransferLogOperationTracer();
+        } else {
+          // this shouldn't happen, and isTraceTransfers will go away with Glamsterdam
+          throw new IllegalArgumentException(
+              "A custom tracer and traceTransfers cannot be used together."
+                  + " Disable traceTransfers or omit the custom tracer.");
+        }
       }
 
-      // Compose operation tracers using TracerAggregator, starting with the provided
-      // operationTracer
-      final TracerAggregator finalOperationTracer;
-      if (isTraceTransfers && transactionMetricsTracer != null) {
-        // Compose all three tracers: operationTracer + EthTransferLogOperationTracer +
-        // EVMExecutionMetricsTracer
-        finalOperationTracer =
-            TracerAggregator.combining(
-                operationTracer, new EthTransferLogOperationTracer(), transactionMetricsTracer);
-      } else if (isTraceTransfers) {
-        finalOperationTracer =
-            TracerAggregator.combining(operationTracer, new EthTransferLogOperationTracer());
-      } else if (transactionMetricsTracer != null) {
-        finalOperationTracer =
-            TracerAggregator.combining(operationTracer, transactionMetricsTracer);
-      } else {
-        finalOperationTracer = TracerAggregator.combining(operationTracer);
-      }
+      // TODO SLD
+//      // Create separate EVMExecutionMetricsTracer for each transaction (thread-safe)
+//      EVMExecutionMetricsTracer transactionMetricsTracer = null;
+//      if (collectExecutionMetrics) {
+//          transactionMetricsTracer = new EVMExecutionMetricsTracer();
+//          transactionMetricsTracers.add(transactionMetricsTracer);
+//      }
+//
+//      // Compose operation tracers using TracerAggregator, starting with the provided
+//      // operationTracer
+//      final TracerAggregator finalOperationTracer;
+//      if (isTraceTransfers && transactionMetricsTracer != null) {
+//          // Compose all three tracers: operationTracer + EthTransferLogOperationTracer +
+//          // EVMExecutionMetricsTracer
+//          finalOperationTracer =
+//                  TracerAggregator.combining(
+//                          operationTracer, new EthTransferLogOperationTracer(), transactionMetricsTracer);
+//      } else if (isTraceTransfers) {
+//          finalOperationTracer =
+//                  TracerAggregator.combining(operationTracer, new EthTransferLogOperationTracer());
+//      } else if (transactionMetricsTracer != null) {
+//          finalOperationTracer =
+//                  TracerAggregator.combining(operationTracer, transactionMetricsTracer);
+//      } else {
+//          finalOperationTracer = TracerAggregator.combining(operationTracer);
+//      }
 
       long gasLimit =
           transactionSimulator.calculateSimulationGasCap(
