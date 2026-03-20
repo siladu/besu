@@ -212,15 +212,15 @@ class ExchangeOperationTest {
     final MessageFrame frame = builder.build();
 
     // Before: stack[9]=10, stack[16]=17
-    assertThat(frame.getStackItem(9)).isEqualTo(Bytes.of(10));
-    assertThat(frame.getStackItem(16)).isEqualTo(Bytes.of(17));
+    assertThat(frame.getStackItem(9).toInt()).isEqualTo(10);
+    assertThat(frame.getStackItem(16).toInt()).isEqualTo(17);
 
     final OperationResult result = operation.execute(frame, null);
 
     assertThat(result.getHaltReason()).isNull();
     // Verify swap: stack[9] and stack[16] swapped
-    assertThat(frame.getStackItem(9)).isEqualTo(Bytes.of(17));
-    assertThat(frame.getStackItem(16)).isEqualTo(Bytes.of(10));
+    assertThat(frame.getStackItem(9).toInt()).isEqualTo(17);
+    assertThat(frame.getStackItem(16).toInt()).isEqualTo(10);
   }
 
   @Test

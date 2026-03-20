@@ -50,6 +50,7 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.units.bigints.UInt256;
 import org.junit.jupiter.api.Test;
 
 class AbstractCreateOperationTest {
@@ -248,9 +249,9 @@ class AbstractCreateOperationTest {
             .build();
 
     // Push CREATE args: value=0, offset=0xFF, size=5 (SIMPLE_CREATE)
-    frame.pushStackItem(Bytes.ofUnsignedLong(SIMPLE_CREATE.size()));
-    frame.pushStackItem(memoryOffset);
-    frame.pushStackItem(Bytes.EMPTY); // value = 0
+    frame.pushStackBytes(Bytes.ofUnsignedLong(SIMPLE_CREATE.size()));
+    frame.pushStackBytes(memoryOffset);
+    frame.pushStackBytes(Bytes.EMPTY); // value = 0
     frame.expandMemory(0, 500);
     frame.writeMemory(memoryOffset.trimLeadingZeros().toInt(), SIMPLE_CREATE.size(), SIMPLE_CREATE);
 

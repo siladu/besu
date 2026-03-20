@@ -35,6 +35,7 @@ import org.hyperledger.besu.evm.worldstate.WorldUpdater;
 
 import java.util.List;
 
+import org.apache.tuweni.units.bigints.UInt256;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -119,8 +120,8 @@ class SStoreOperationTest {
     worldStateUpdater.commit();
 
     // key=1, newValue=42 (0 -> nonzero triggers state gas)
-    frame.pushStackItem(UInt256.valueOf(42));
-    frame.pushStackItem(UInt256.ONE);
+    frame.pushStackBytes(UInt256.valueOf(42));
+    frame.pushStackBytes(UInt256.ONE);
 
     final OperationResult result = operation.execute(frame, null);
     assertThat(result.getHaltReason()).isNull();
@@ -165,8 +166,8 @@ class SStoreOperationTest {
             .build();
 
     // key=1, newValue=42 (nonzero -> nonzero, no state gas)
-    frame.pushStackItem(UInt256.valueOf(42));
-    frame.pushStackItem(UInt256.ONE);
+    frame.pushStackBytes(UInt256.valueOf(42));
+    frame.pushStackBytes(UInt256.ONE);
 
     final OperationResult result = operation.execute(frame, null);
     assertThat(result.getHaltReason()).isNull();
@@ -208,8 +209,8 @@ class SStoreOperationTest {
     frame.setStateGasReservoir(100_000L);
 
     // First SSTORE: key=1, value=42 (0 -> nonzero, triggers state gas)
-    frame.pushStackItem(UInt256.valueOf(42));
-    frame.pushStackItem(UInt256.ONE);
+    frame.pushStackBytes(UInt256.valueOf(42));
+    frame.pushStackBytes(UInt256.ONE);
     final OperationResult result1 = operation.execute(frame, null);
     assertThat(result1.getHaltReason()).isNull();
 
@@ -218,8 +219,8 @@ class SStoreOperationTest {
     assertThat(frame.getStateGasUsed()).isEqualTo(expectedStateGas); // 37,568
 
     // Second SSTORE: key=1, value=0 (nonzero -> 0, original=0 triggers state gas refund)
-    frame.pushStackItem(UInt256.ZERO);
-    frame.pushStackItem(UInt256.ONE);
+    frame.pushStackBytes(UInt256.ZERO);
+    frame.pushStackBytes(UInt256.ONE);
     final OperationResult result2 = operation.execute(frame, null);
     assertThat(result2.getHaltReason()).isNull();
 
@@ -263,8 +264,8 @@ class SStoreOperationTest {
             .build();
 
     // SSTORE key=1, value=0 (nonzero -> 0, original nonzero — no state gas)
-    frame.pushStackItem(UInt256.ZERO);
-    frame.pushStackItem(UInt256.ONE);
+    frame.pushStackBytes(UInt256.ZERO);
+    frame.pushStackBytes(UInt256.ONE);
     final OperationResult result = operation.execute(frame, null);
     assertThat(result.getHaltReason()).isNull();
 
@@ -310,8 +311,8 @@ class SStoreOperationTest {
     final long gasBeforeSstore = frame.getRemainingGas();
 
     // SSTORE 0 -> nonzero: needs 37,568 state gas but only 10k in reservoir
-    frame.pushStackItem(UInt256.valueOf(42));
-    frame.pushStackItem(UInt256.ONE);
+    frame.pushStackBytes(UInt256.valueOf(42));
+    frame.pushStackBytes(UInt256.ONE);
     final OperationResult result = operation.execute(frame, null);
     assertThat(result.getHaltReason()).isNull();
 

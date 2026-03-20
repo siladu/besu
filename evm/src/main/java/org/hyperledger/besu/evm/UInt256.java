@@ -204,6 +204,15 @@ public record UInt256(long u3, long u2, long u1, long u0) {
   }
 
   /**
+   * Convert to int (alias for intValue()).
+   *
+   * @return Value truncated to an int, possibly lossy.
+   */
+  public int toInt() {
+    return (int) u0;
+  }
+
+  /**
    * Convert to long.
    *
    * @return Value truncated to a long, possibly lossy.
