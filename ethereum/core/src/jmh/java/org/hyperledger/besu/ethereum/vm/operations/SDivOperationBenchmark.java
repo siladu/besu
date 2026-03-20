@@ -16,7 +16,6 @@ package org.hyperledger.besu.ethereum.vm.operations;
 
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.operation.Operation;
-import org.hyperledger.besu.evm.operation.SDivOperationOptimized;
 
 import java.math.BigInteger;
 import java.util.Arrays;

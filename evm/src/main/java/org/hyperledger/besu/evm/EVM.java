@@ -32,7 +32,6 @@ import org.hyperledger.besu.evm.operation.ByteOperation;
 import org.hyperledger.besu.evm.operation.ChainIdOperation;
 import org.hyperledger.besu.evm.operation.CountLeadingZerosOperation;
 import org.hyperledger.besu.evm.operation.DivOperation;
-import org.hyperledger.besu.evm.operation.DivOperationOptimized;
 import org.hyperledger.besu.evm.operation.DupNOperation;
 import org.hyperledger.besu.evm.operation.DupOperation;
 import org.hyperledger.besu.evm.operation.ExchangeOperation;
@@ -56,7 +55,6 @@ import org.hyperledger.besu.evm.operation.PopOperation;
 import org.hyperledger.besu.evm.operation.Push0Operation;
 import org.hyperledger.besu.evm.operation.PushOperation;
 import org.hyperledger.besu.evm.operation.SDivOperation;
-import org.hyperledger.besu.evm.operation.SDivOperationOptimized;
 import org.hyperledger.besu.evm.operation.SGtOperation;
 import org.hyperledger.besu.evm.operation.SLtOperation;
 import org.hyperledger.besu.evm.operation.SModOperation;
@@ -73,7 +71,6 @@ import org.hyperledger.besu.evm.operation.XorOperation;
 import org.hyperledger.besu.evm.tracing.OperationTracer;
 
 import java.util.Optional;
-import java.util.function.Function;
 
 import org.apache.tuweni.bytes.Bytes;
 import org.slf4j.Logger;
@@ -385,15 +382,6 @@ public class EVM {
    */
   public Operation[] getOperationsUnsafe() {
     return operations.getOperations();
-  }
-
-  private OperationResult shiftOperation(
-      final MessageFrame frame,
-      final Function<MessageFrame, OperationResult> standard,
-      final Function<MessageFrame, OperationResult> optimized) {
-    return evmConfiguration.enableOptimizedOpcodes()
-        ? optimized.apply(frame)
-        : standard.apply(frame);
   }
 
   /**

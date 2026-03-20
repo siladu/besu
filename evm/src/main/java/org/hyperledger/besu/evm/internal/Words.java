@@ -132,6 +132,12 @@ public interface Words {
     return (int) uint.u0();
   }
 
+  /**
+   * Returns the value as a long, clamped to Long.MAX_VALUE if it doesn't fit.
+   *
+   * @param uint the bytes to convert
+   * @return the long value, or Long.MAX_VALUE if it doesn't fit
+   */
   static long clampedToLong(final Bytes uint) {
     if (uint.size() <= 8) {
       final long result = uint.toLong();

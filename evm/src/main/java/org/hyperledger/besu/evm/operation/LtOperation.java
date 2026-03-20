@@ -44,6 +44,7 @@ public class LtOperation extends AbstractFixedCostOperation {
    * Performs LT operation.
    *
    * @param frame the frame
+   * @param s the stack data array
    * @return the operation result
    */
   public static OperationResult staticOperation(final MessageFrame frame, final long[] s) {

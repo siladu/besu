@@ -73,7 +73,7 @@ public class ExpOperation extends AbstractOperation {
     // Pop 2, push 1: net effect is top - 1
     final int newTop = top - 1;
     frame.setTop(newTop);
-    StackMath.putAt(s, newTop, 0, UInt256.fromBigInteger(result));
+    StackMath.putAt(s, newTop, 0, UInt256.fromBytesBE(result.toByteArray()));
 
     return new OperationResult(cost, null);
   }

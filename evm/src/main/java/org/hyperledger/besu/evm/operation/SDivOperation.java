@@ -43,6 +43,7 @@ public class SDivOperation extends AbstractFixedCostOperation {
    * Performs SDiv operation.
    *
    * @param frame the frame
+   * @param s the stack data array
    * @return the operation result
    */
   public static OperationResult staticOperation(final MessageFrame frame, final long[] s) {

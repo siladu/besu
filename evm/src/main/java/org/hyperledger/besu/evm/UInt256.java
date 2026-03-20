@@ -160,6 +160,35 @@ public record UInt256(long u3, long u2, long u1, long u0) {
     return new UInt256(z3, z2, z1, z0);
   }
 
+  /**
+   * Converts a Tuweni UInt256 to a native UInt256.
+   *
+   * @param tuweni the Tuweni UInt256 value
+   * @return the native UInt256 equivalent
+   */
+  public static UInt256 fromTuweni(final org.apache.tuweni.units.bigints.UInt256 tuweni) {
+    return fromBytesBE(tuweni.toArrayUnsafe());
+  }
+
+  /**
+   * Converts this native UInt256 to a Tuweni UInt256.
+   *
+   * @return the Tuweni UInt256 equivalent
+   */
+  public org.apache.tuweni.units.bigints.UInt256 toTuweni() {
+    return org.apache.tuweni.units.bigints.UInt256.fromBytes(
+        org.apache.tuweni.bytes.Bytes32.wrap(toBytesBE()));
+  }
+
+  /**
+   * Converts this native UInt256 to a Tuweni Bytes32.
+   *
+   * @return the Tuweni Bytes32 equivalent
+   */
+  public org.apache.tuweni.bytes.Bytes32 toBytes32() {
+    return org.apache.tuweni.bytes.Bytes32.wrap(toBytesBE());
+  }
+
   // --------------------------------------------------------------------------
   // endregion
 
