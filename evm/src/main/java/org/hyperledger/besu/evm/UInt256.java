@@ -1374,7 +1374,16 @@ public record UInt256(long u3, long u2, long u1, long u0) {
         if (cmp > 0) return prod;
         return modReduce(prod);
       }
-      // reduce-multiply-reduce
+      // Both exceed 128 bits: full multiply then single reduce.
+      // Product >= 2^256 >> modulus (< 2^128), so reduction is always needed.
+      if (!a.isUInt128() && !b.isUInt128()) {
+        UInt512 prod = a.mul256(b);
+        int shift = Long.numberOfLeadingZeros(u1);
+        UInt128 m = shiftLeft(shift);
+        long inv = reciprocal(m.u1);
+        return m.modReduceNormalised(prod, shift, inv);
+      }
+      // Mixed: one fits in 128 bits, one doesn't — reduce only the large one
       int shift = Long.numberOfLeadingZeros(u1);
       UInt128 m = shiftLeft(shift);
       long inv = reciprocal(m.u1);
@@ -1478,6 +1487,47 @@ public record UInt256(long u3, long u2, long u1, long u0) {
       QR128 qr;
       if (Long.compareUnsigned(v.u4, u1) >= 0) {
         qr = reduceStep(0, v.u4, v.u3, inv);
+        qr = reduceStep(qr.r.u1, qr.r.u0, v.u2, inv);
+        qr = reduceStep(qr.r.u1, qr.r.u0, v.u1, inv);
+        qr = reduceStep(qr.r.u1, qr.r.u0, v.u0, inv);
+      } else {
+        qr = reduceStep(v.u4, v.u3, v.u2, inv);
+        qr = reduceStep(qr.r.u1, qr.r.u0, v.u1, inv);
+        qr = reduceStep(qr.r.u1, qr.r.u0, v.u0, inv);
+      }
+      return new UInt256(0, 0, qr.r.u1, qr.r.u0).shiftRight(shift);
+    }
+
+    private UInt256 modReduceNormalised(final UInt512 that, final int shift, final long inv) {
+      UInt576 v = that.shiftLeftWide(shift);
+      return modReduceNormalisedSlowPath(v, shift, inv);
+    }
+
+    private UInt256 modReduceNormalisedSlowPath(final UInt576 v, final int shift, final long inv) {
+      QR128 qr;
+      if (v.u8 != 0 || Long.compareUnsigned(v.u7, u1) >= 0) {
+        qr = reduceStep(v.u8, v.u7, v.u6, inv);
+        qr = reduceStep(qr.r.u1, qr.r.u0, v.u5, inv);
+        qr = reduceStep(qr.r.u1, qr.r.u0, v.u4, inv);
+        qr = reduceStep(qr.r.u1, qr.r.u0, v.u3, inv);
+        qr = reduceStep(qr.r.u1, qr.r.u0, v.u2, inv);
+        qr = reduceStep(qr.r.u1, qr.r.u0, v.u1, inv);
+        qr = reduceStep(qr.r.u1, qr.r.u0, v.u0, inv);
+      } else if (v.u7 != 0 || Long.compareUnsigned(v.u6, u1) >= 0) {
+        qr = reduceStep(v.u7, v.u6, v.u5, inv);
+        qr = reduceStep(qr.r.u1, qr.r.u0, v.u4, inv);
+        qr = reduceStep(qr.r.u1, qr.r.u0, v.u3, inv);
+        qr = reduceStep(qr.r.u1, qr.r.u0, v.u2, inv);
+        qr = reduceStep(qr.r.u1, qr.r.u0, v.u1, inv);
+        qr = reduceStep(qr.r.u1, qr.r.u0, v.u0, inv);
+      } else if (v.u6 != 0 || Long.compareUnsigned(v.u5, u1) >= 0) {
+        qr = reduceStep(v.u6, v.u5, v.u4, inv);
+        qr = reduceStep(qr.r.u1, qr.r.u0, v.u3, inv);
+        qr = reduceStep(qr.r.u1, qr.r.u0, v.u2, inv);
+        qr = reduceStep(qr.r.u1, qr.r.u0, v.u1, inv);
+        qr = reduceStep(qr.r.u1, qr.r.u0, v.u0, inv);
+      } else if (v.u5 != 0 || Long.compareUnsigned(v.u4, u1) >= 0) {
+        qr = reduceStep(v.u5, v.u4, v.u3, inv);
         qr = reduceStep(qr.r.u1, qr.r.u0, v.u2, inv);
         qr = reduceStep(qr.r.u1, qr.r.u0, v.u1, inv);
         qr = reduceStep(qr.r.u1, qr.r.u0, v.u0, inv);
