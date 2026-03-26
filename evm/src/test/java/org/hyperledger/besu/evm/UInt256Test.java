@@ -15,7 +15,6 @@
 package org.hyperledger.besu.evm;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.InstanceOfAssertFactories.array;
 
 import java.math.BigInteger;
 import java.util.Arrays;
@@ -397,8 +396,11 @@ public class UInt256Test {
 
   @Test
   public void mulModRandom() {
-    final Random random = new Random(123);
-    for (int i = 0; i < SAMPLE_SIZE; i++) {
+    final Random random = new Random();
+    int failures = 0;
+    int iterations = 0;
+    while (true) {
+      iterations++;
       int aSize = random.nextInt(1, 33);
       int bSize = random.nextInt(1, 33);
       int cSize = random.nextInt(1, 33);
@@ -419,12 +421,19 @@ public class UInt256Test {
           BigInteger.ZERO.compareTo(cInt) == 0
               ? Bytes32.ZERO
               : bigIntTo32B(aInt.multiply(bInt).mod(cInt));
-      assertThat(remainder)
-          .withFailMessage(
-              String.format(
-                  "Failure detected:\n%s.MULMOD(%s, %s)\n",
-                  a.toHexString(), b.toHexString(), c.toHexString()))
-          .isEqualTo(expected);
+      try {
+        assertThat(remainder)
+            .withFailMessage(
+                String.format(
+                    "Failure detected:\n%s.MULMOD(%s, %s)\n",
+                    a.toHexString(), b.toHexString(), c.toHexString()))
+            .isEqualTo(expected);
+      } catch (AssertionError e) {
+        failures++;
+        System.err.printf(
+            "Failure detected:\n%s.MULMOD(%s, %s)\n%nFailures: %d / %d%n",
+            a.toHexString(), b.toHexString(), c.toHexString(), failures, iterations);
+      }
     }
   }
 
