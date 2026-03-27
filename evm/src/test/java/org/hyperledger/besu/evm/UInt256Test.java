@@ -522,8 +522,11 @@ public class UInt256Test {
     // Generates 128-bit or 192-bit moduli with a 256-bit first operand (always exceeds modulus
     // width) and a varying-width second operand to exercise different branches of
     // modReduceNormalisedSlowPath(UInt576).
-    final Random random = new Random(456789);
-    for (int i = 0; i < SAMPLE_SIZE; i++) {
+    final Random random = new Random();
+    int failures = 0;
+    int iterations = 0;
+    while (true) {
+      iterations++;
       // Generate modulus of 128-bit or 192-bit width
       int modWidth = random.nextBoolean() ? 16 : 24;
       final byte[] modArray = new byte[modWidth];
@@ -551,12 +554,19 @@ public class UInt256Test {
           BigInteger.ZERO.compareTo(mInt) == 0
               ? Bytes32.ZERO
               : bigIntTo32B(aInt.multiply(bInt).mod(mInt));
+      try {
       assertThat(remainder)
           .withFailMessage(
               String.format(
                   "Failure detected:\n%s.MULMOD(%s, %s)\n",
                   a.toHexString(), b.toHexString(), m.toHexString()))
           .isEqualTo(expected);
+      } catch (AssertionError e) {
+        failures++;
+        System.err.printf(
+                "Failure detected:\n%s.MULMOD(%s, %s)\n%nFailures: %d / %d%n",
+                a.toHexString(), b.toHexString(), m.toHexString(), failures, iterations);
+      }
     }
   }
 
