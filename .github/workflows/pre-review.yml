@@ -86,7 +86,7 @@ jobs:
   unitTests:
     env:
         GRADLEW_UNIT_TEST_ARGS: ${{matrix.gradle_args}}
-    runs-on: besu-research-ubuntu-16 # more cores
+    runs-on: besu-research-ubuntu-8 # more cores
     needs: [spotless-checkLicense, gradle-wrapper, repolint]
     permissions:
       checks: write
