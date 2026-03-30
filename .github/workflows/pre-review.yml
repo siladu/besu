@@ -144,6 +144,8 @@ jobs:
         with:
           name: testList-${{ matrix.runner_index }}.txt
           path: testList.txt
+      - name: Print available processors
+        run: echo "availableProcessors=$(nproc)"
       - name: run unit tests
         run: cat testList.txt | xargs -P 1 ./gradlew -Dorg.gradle.parallel=true -Dorg.gradle.caching=true
       - name: Remove downloaded test results
