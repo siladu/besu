@@ -15,7 +15,6 @@
 package org.hyperledger.besu.ethereum.eth.sync.fullsync;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 import static org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider.createInMemoryBlockchain;
 
 import org.hyperledger.besu.ethereum.ProtocolContext;
@@ -59,7 +58,6 @@ import java.util.stream.Stream;
 
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -363,7 +361,6 @@ public class FullSyncChainDownloaderTest {
     assertThat(syncState.syncTarget().get().peer()).isEqualTo(peerB.getEthPeer());
   }
 
-  @Disabled // flakey in CI
   @ParameterizedTest
   @ArgumentsSource(FullSyncChainDownloaderTestArguments.class)
   public void requestsCheckpointsFromSyncTarget(final DataStorageFormat storageFormat) {
@@ -400,14 +397,7 @@ public class FullSyncChainDownloaderTest {
 
     downloader.start();
 
-    // Process through sync target selection
-    await()
-        .atMost(10, TimeUnit.SECONDS)
-        .untilAsserted(
-            () -> {
-              bestPeer.respond(bestResponder);
-              assertThat(syncState.syncTarget()).isNotEmpty();
-            });
+    bestPeer.respondWhileOtherThreadsWork(bestResponder, () -> syncState.syncTarget().isEmpty());
 
     assertThat(syncState.syncTarget()).isPresent();
     assertThat(syncState.syncTarget().get().peer()).isEqualTo(bestPeer.getEthPeer());
