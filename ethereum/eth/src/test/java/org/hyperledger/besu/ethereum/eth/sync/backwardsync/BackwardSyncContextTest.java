@@ -307,7 +307,7 @@ public class BackwardSyncContextTest {
               respondUntilFutureIsDone(future);
               assertThat(future).isDone();
             });
-    
+
     future.get();
     assertThat(localBlockchain.getChainHeadBlock()).isEqualTo(remoteBlockchain.getChainHeadBlock());
   }
