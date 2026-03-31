@@ -199,7 +199,7 @@ public class BackwardSyncContextTest {
             new BackwardSyncContext(
                 protocolContext,
                 protocolSchedule,
-                SynchronizerConfiguration.builder().build(),
+                SynchronizerConfiguration.builder().isPeerTaskSystemEnabled(true).build(),
                 metricsSystem,
                 ethContext,
                 syncState,

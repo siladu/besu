@@ -15,7 +15,6 @@
 package org.hyperledger.besu.ethereum.eth.sync.fullsync;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 import static org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider.createInMemoryBlockchain;
 
 import org.hyperledger.besu.ethereum.ProtocolContext;
@@ -398,14 +397,7 @@ public class FullSyncChainDownloaderTest {
 
     downloader.start();
 
-    // Process through sync target selection
-    await()
-        .atMost(10, TimeUnit.SECONDS)
-        .untilAsserted(
-            () -> {
-              bestPeer.respond(bestResponder);
-              assertThat(syncState.syncTarget()).isNotEmpty();
-            });
+    bestPeer.respondWhileOtherThreadsWork(bestResponder, () -> syncState.syncTarget().isEmpty());
 
     assertThat(syncState.syncTarget()).isPresent();
     assertThat(syncState.syncTarget().get().peer()).isEqualTo(bestPeer.getEthPeer());
