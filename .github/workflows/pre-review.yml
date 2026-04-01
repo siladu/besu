@@ -83,7 +83,7 @@ jobs:
       - name: Gradle Compile
         run: ./gradlew build -x test -x spotlessCheck
   unitTests:
-    runs-on: besu-research-ubuntu-16 # more cores
+    runs-on: besu-research-ubuntu-8 # more cores
     needs: [spotless-checkLicense, gradle-wrapper, repolint]
     permissions:
       checks: write
@@ -112,7 +112,7 @@ jobs:
       - name: run unit tests
         env:
           # reducing JVM forks to increase reuse of setup code such as SignatureAlgorithm
-          GRADLE_MAX_TEST_FORKS: 1 # besu-research-ubuntu-16 will use 8 by default
+          GRADLE_MAX_TEST_FORKS: 2 # besu-research-ubuntu-8 will use 4 by default
         run: ./gradlew -Dorg.gradle.parallel=true -Dorg.gradle.caching=true test
       - name: Remove downloaded test results
         run: rm -rf tmp/junit-xml-reports-downloaded
