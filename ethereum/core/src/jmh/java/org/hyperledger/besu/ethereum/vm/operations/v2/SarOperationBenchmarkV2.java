@@ -18,7 +18,7 @@ import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.operation.Operation;
 import org.hyperledger.besu.evm.v2.operation.SarOperationV2;
 
-public class SarOperationBenchmarkV2 extends BinaryOperationBenchmarkV2 {
+public class SarOperationBenchmarkV2 extends AbstractSarOperationBenchmarkV2 {
 
   @Override
   protected Operation.OperationResult invoke(final MessageFrame frame) {

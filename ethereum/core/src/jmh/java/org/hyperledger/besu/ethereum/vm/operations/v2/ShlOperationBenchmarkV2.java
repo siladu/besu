@@ -18,7 +18,7 @@ import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.operation.Operation;
 import org.hyperledger.besu.evm.v2.operation.ShlOperationV2;
 
-public class ShlOperationBenchmarkV2 extends BinaryOperationBenchmarkV2 {
+public class ShlOperationBenchmarkV2 extends AbstractShiftOperationBenchmarkV2 {
 
   @Override
   protected Operation.OperationResult invoke(final MessageFrame frame) {
