@@ -47,9 +47,9 @@ public class SarOperationV2 extends AbstractFixedCostOperationV2 {
    * @param frame the frame
    * @return the operation result
    */
-  public static OperationResult staticOperation(final MessageFrame frame, final long[] s) {
+  public static OperationResult staticOperation(final MessageFrame frame, final long[] stack) {
     if (!frame.stackHasItems(2)) return UNDERFLOW_RESPONSE;
-    frame.setTopV2(StackArithmetic.sar(s, frame.stackTopV2()));
+    frame.setTopV2(StackArithmetic.sar(stack, frame.stackTopV2()));
     return sarSuccess;
   }
 }
