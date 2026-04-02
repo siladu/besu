@@ -45,11 +45,12 @@ public class ShlOperationV2 extends AbstractFixedCostOperationV2 {
    * Performs Shift Left operation.
    *
    * @param frame the frame
+   * @param stack the v2 operand stack ({@code long[]} in big-endian limb order)
    * @return the operation result
    */
-  public static OperationResult staticOperation(final MessageFrame frame, final long[] s) {
+  public static OperationResult staticOperation(final MessageFrame frame, final long[] stack) {
     if (!frame.stackHasItems(2)) return UNDERFLOW_RESPONSE;
-    frame.setTopV2(StackArithmetic.shl(s, frame.stackTopV2()));
+    frame.setTopV2(StackArithmetic.shl(stack, frame.stackTopV2()));
     return shlSuccess;
   }
 }
