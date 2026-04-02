@@ -20,19 +20,13 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.datatypes.Hash;
-import org.hyperledger.besu.datatypes.Wei;
-import org.hyperledger.besu.evm.Code;
 import org.hyperledger.besu.evm.UInt256;
-import org.hyperledger.besu.evm.frame.BlockValues;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.operation.Operation;
 import org.hyperledger.besu.evm.operation.SarOperation;
 import org.hyperledger.besu.evm.operation.ShlOperation;
 import org.hyperledger.besu.evm.operation.ShrOperation;
 import org.hyperledger.besu.evm.v2.StackArithmetic;
-import org.hyperledger.besu.evm.worldstate.WorldUpdater;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
