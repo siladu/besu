@@ -14,33 +14,41 @@
  */
 package org.hyperledger.besu.evm.v2.operation;
 
-import static org.hyperledger.besu.evm.v2.operation.StackUtil.pushBytes32;
-
 import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.operation.Operation;
 
-/** The Prev randao operation. */
-public class PrevRanDaoOperationV2 extends AbstractFixedCostOperationV2 {
+/** EVM v2 JUMPDEST operation. A marker opcode that is a no-op at runtime. */
+public class JumpDestOperationV2 extends AbstractFixedCostOperationV2 {
+
+  /** The constant OPCODE. */
+  public static final int OPCODE = 0x5B;
+
+  private static final OperationResult JUMPDEST_SUCCESS = new OperationResult(1L, null);
 
   /**
-   * Instantiates a new Prev randao operation.
+   * Instantiates a new Jump dest operation.
    *
    * @param gasCalculator the gas calculator
    */
-  public PrevRanDaoOperationV2(final GasCalculator gasCalculator) {
-    super(0x44, "PREVRANDAO", 0, 1, gasCalculator, gasCalculator.getBaseTierGasCost());
+  public JumpDestOperationV2(final GasCalculator gasCalculator) {
+    super(OPCODE, "JUMPDEST", 0, 0, gasCalculator, gasCalculator.getJumpDestOperationGasCost());
   }
 
   @Override
   public Operation.OperationResult executeFixedCostOperation(
-          final MessageFrame frame, final EVM evm) {
-    if (!frame.stackHasSpaceV2(1)) return OVERFLOW_RESPONSE;
-    final long[] stack = frame.stackDataV2();
-    final int top = frame.stackTopV2();
-    pushBytes32(frame.getBlockValues().getMixHashOrPrevRandao(), stack, top);
-    frame.setTopV2(top + 1);
-    return successResponse;
+      final MessageFrame frame, final EVM evm) {
+    return staticOperation(frame);
+  }
+
+  /**
+   * Performs JUMPDEST operation (no-op marker).
+   *
+   * @param frame the frame
+   * @return the operation result
+   */
+  public static OperationResult staticOperation(final MessageFrame frame) {
+    return JUMPDEST_SUCCESS;
   }
 }

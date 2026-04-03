@@ -14,33 +14,33 @@
  */
 package org.hyperledger.besu.evm.v2.operation;
 
-import static org.hyperledger.besu.evm.v2.operation.StackUtil.pushBytes32;
-
 import org.hyperledger.besu.evm.EVM;
+import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
-import org.hyperledger.besu.evm.operation.Operation;
+import org.hyperledger.besu.evm.operation.AbstractOperation;
 
-/** The Prev randao operation. */
-public class PrevRanDaoOperationV2 extends AbstractFixedCostOperationV2 {
+/** EVM v2 INVALID operation. Always halts with INVALID_OPERATION. */
+public class InvalidOperationV2 extends AbstractOperation {
+
+  /** The constant OPCODE. */
+  public static final int OPCODE = 0xFE;
+
+  /** The constant INVALID_RESULT. */
+  public static final OperationResult INVALID_RESULT =
+      new OperationResult(0, ExceptionalHaltReason.INVALID_OPERATION);
 
   /**
-   * Instantiates a new Prev randao operation.
+   * Instantiates a new Invalid operation.
    *
    * @param gasCalculator the gas calculator
    */
-  public PrevRanDaoOperationV2(final GasCalculator gasCalculator) {
-    super(0x44, "PREVRANDAO", 0, 1, gasCalculator, gasCalculator.getBaseTierGasCost());
+  public InvalidOperationV2(final GasCalculator gasCalculator) {
+    super(OPCODE, "INVALID", -1, -1, gasCalculator);
   }
 
   @Override
-  public Operation.OperationResult executeFixedCostOperation(
-          final MessageFrame frame, final EVM evm) {
-    if (!frame.stackHasSpaceV2(1)) return OVERFLOW_RESPONSE;
-    final long[] stack = frame.stackDataV2();
-    final int top = frame.stackTopV2();
-    pushBytes32(frame.getBlockValues().getMixHashOrPrevRandao(), stack, top);
-    frame.setTopV2(top + 1);
-    return successResponse;
+  public OperationResult execute(final MessageFrame frame, final EVM evm) {
+    return INVALID_RESULT;
   }
 }

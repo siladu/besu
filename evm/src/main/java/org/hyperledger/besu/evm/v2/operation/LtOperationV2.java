@@ -14,33 +14,43 @@
  */
 package org.hyperledger.besu.evm.v2.operation;
 
-import static org.hyperledger.besu.evm.v2.operation.StackUtil.pushBytes32;
-
 import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.operation.Operation;
+import org.hyperledger.besu.evm.v2.StackArithmetic;
 
-/** The Prev randao operation. */
-public class PrevRanDaoOperationV2 extends AbstractFixedCostOperationV2 {
+/** The Lt operation. */
+public class LtOperationV2 extends AbstractFixedCostOperationV2 {
+
+  /** The Lt operation success result. */
+  static final OperationResult ltSuccess = new OperationResult(3, null);
 
   /**
-   * Instantiates a new Prev randao operation.
+   * Instantiates a new Lt operation.
    *
    * @param gasCalculator the gas calculator
    */
-  public PrevRanDaoOperationV2(final GasCalculator gasCalculator) {
-    super(0x44, "PREVRANDAO", 0, 1, gasCalculator, gasCalculator.getBaseTierGasCost());
+  public LtOperationV2(final GasCalculator gasCalculator) {
+    super(0x10, "LT", 2, 1, gasCalculator, gasCalculator.getVeryLowTierGasCost());
   }
 
   @Override
   public Operation.OperationResult executeFixedCostOperation(
-          final MessageFrame frame, final EVM evm) {
-    if (!frame.stackHasSpaceV2(1)) return OVERFLOW_RESPONSE;
-    final long[] stack = frame.stackDataV2();
-    final int top = frame.stackTopV2();
-    pushBytes32(frame.getBlockValues().getMixHashOrPrevRandao(), stack, top);
-    frame.setTopV2(top + 1);
-    return successResponse;
+      final MessageFrame frame, final EVM evm) {
+    return staticOperation(frame, frame.stackDataV2());
+  }
+
+  /**
+   * Performs lt operation.
+   *
+   * @param frame the frame
+   * @param stack the v2 operand stack ({@code long[]} in big-endian limb order)
+   * @return the operation result
+   */
+  public static OperationResult staticOperation(final MessageFrame frame, final long[] stack) {
+    if (!frame.stackHasItems(2)) return UNDERFLOW_RESPONSE;
+    frame.setTopV2(StackArithmetic.lt(stack, frame.stackTopV2()));
+    return ltSuccess;
   }
 }

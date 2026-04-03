@@ -14,33 +14,42 @@
  */
 package org.hyperledger.besu.evm.v2.operation;
 
-import static org.hyperledger.besu.evm.v2.operation.StackUtil.pushBytes32;
-
 import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.operation.Operation;
+import org.hyperledger.besu.evm.v2.StackArithmetic;
 
-/** The Prev randao operation. */
-public class PrevRanDaoOperationV2 extends AbstractFixedCostOperationV2 {
+/** EVM v2 PC operation — pushes the current program counter onto the stack. */
+public class PcOperationV2 extends AbstractFixedCostOperationV2 {
+
+  private static final OperationResult pcSuccess = new OperationResult(2, null);
 
   /**
-   * Instantiates a new Prev randao operation.
+   * Instantiates a new PC operation.
    *
    * @param gasCalculator the gas calculator
    */
-  public PrevRanDaoOperationV2(final GasCalculator gasCalculator) {
-    super(0x44, "PREVRANDAO", 0, 1, gasCalculator, gasCalculator.getBaseTierGasCost());
+  public PcOperationV2(final GasCalculator gasCalculator) {
+    super(0x58, "PC", 0, 1, gasCalculator, gasCalculator.getBaseTierGasCost());
   }
 
   @Override
   public Operation.OperationResult executeFixedCostOperation(
-          final MessageFrame frame, final EVM evm) {
-    if (!frame.stackHasSpaceV2(1)) return OVERFLOW_RESPONSE;
-    final long[] stack = frame.stackDataV2();
-    final int top = frame.stackTopV2();
-    pushBytes32(frame.getBlockValues().getMixHashOrPrevRandao(), stack, top);
-    frame.setTopV2(top + 1);
-    return successResponse;
+      final MessageFrame frame, final EVM evm) {
+    return staticOperation(frame, frame.stackDataV2());
+  }
+
+  /**
+   * Performs the PC operation.
+   *
+   * @param frame the message frame
+   * @param stack the v2 long[] stack
+   * @return the operation result
+   */
+  public static OperationResult staticOperation(final MessageFrame frame, final long[] stack) {
+    if (!frame.stackHasSpace(1)) return OVERFLOW_RESPONSE;
+    frame.setTopV2(StackArithmetic.pushLong(stack, frame.stackTopV2(), frame.getPC()));
+    return pcSuccess;
   }
 }
