@@ -20,19 +20,19 @@ import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.operation.Operation;
 import org.hyperledger.besu.evm.v2.StackArithmetic;
 
-/** The Add operation. */
-public class AddOperationV2 extends AbstractFixedCostOperationV2 {
+/** The Clz (Count Leading Zeros) operation. Introduced in Osaka. */
+public class ClzOperationV2 extends AbstractFixedCostOperationV2 {
 
-  /** The Add operation success result. */
-  static final OperationResult addSuccess = new OperationResult(3, null);
+  /** The Clz operation success result. */
+  static final OperationResult clzSuccess = new OperationResult(5, null);
 
   /**
-   * Instantiates a new Add operation.
+   * Instantiates a new Clz operation.
    *
    * @param gasCalculator the gas calculator
    */
-  public AddOperationV2(final GasCalculator gasCalculator) {
-    super(0x01, "ADD", 2, 1, gasCalculator, gasCalculator.getVeryLowTierGasCost());
+  public ClzOperationV2(final GasCalculator gasCalculator) {
+    super(0x1e, "CLZ", 1, 1, gasCalculator, gasCalculator.getLowTierGasCost());
   }
 
   @Override
@@ -42,15 +42,15 @@ public class AddOperationV2 extends AbstractFixedCostOperationV2 {
   }
 
   /**
-   * Performs add operation.
+   * Performs clz operation.
    *
    * @param frame the frame
    * @param stack the v2 operand stack ({@code long[]} in big-endian limb order)
    * @return the operation result
    */
   public static OperationResult staticOperation(final MessageFrame frame, final long[] stack) {
-    if (!frame.stackHasItems(2)) return UNDERFLOW_RESPONSE;
-    frame.setTopV2(StackArithmetic.add(stack, frame.stackTopV2()));
-    return addSuccess;
+    if (!frame.stackHasItems(1)) return UNDERFLOW_RESPONSE;
+    frame.setTopV2(StackArithmetic.clz(stack, frame.stackTopV2()));
+    return clzSuccess;
   }
 }

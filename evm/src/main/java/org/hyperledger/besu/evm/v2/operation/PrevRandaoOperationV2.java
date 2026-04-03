@@ -20,19 +20,21 @@ import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.operation.Operation;
 import org.hyperledger.besu.evm.v2.StackArithmetic;
 
-/** The Add operation. */
-public class AddOperationV2 extends AbstractFixedCostOperationV2 {
+/**
+ * EVM v2 PREVRANDAO (DIFFICULTY) operation — pushes the mix hash / prev randao value onto the
+ * stack.
+ */
+public class PrevRandaoOperationV2 extends AbstractFixedCostOperationV2 {
 
-  /** The Add operation success result. */
-  static final OperationResult addSuccess = new OperationResult(3, null);
+  private static final OperationResult prevRandaoSuccess = new OperationResult(2, null);
 
   /**
-   * Instantiates a new Add operation.
+   * Instantiates a new PrevRandao operation.
    *
    * @param gasCalculator the gas calculator
    */
-  public AddOperationV2(final GasCalculator gasCalculator) {
-    super(0x01, "ADD", 2, 1, gasCalculator, gasCalculator.getVeryLowTierGasCost());
+  public PrevRandaoOperationV2(final GasCalculator gasCalculator) {
+    super(0x44, "PREVRANDAO", 0, 1, gasCalculator, gasCalculator.getBaseTierGasCost());
   }
 
   @Override
@@ -42,15 +44,16 @@ public class AddOperationV2 extends AbstractFixedCostOperationV2 {
   }
 
   /**
-   * Performs add operation.
+   * Performs the PREVRANDAO operation.
    *
-   * @param frame the frame
-   * @param stack the v2 operand stack ({@code long[]} in big-endian limb order)
+   * @param frame the message frame
+   * @param stack the v2 long[] stack
    * @return the operation result
    */
   public static OperationResult staticOperation(final MessageFrame frame, final long[] stack) {
-    if (!frame.stackHasItems(2)) return UNDERFLOW_RESPONSE;
-    frame.setTopV2(StackArithmetic.add(stack, frame.stackTopV2()));
-    return addSuccess;
+    if (!frame.stackHasSpace(1)) return OVERFLOW_RESPONSE;
+    final byte[] randao = frame.getBlockValues().getMixHashOrPrevRandao().toArrayUnsafe();
+    frame.setTopV2(StackArithmetic.pushFromBytes(stack, frame.stackTopV2(), randao, 0, 32));
+    return prevRandaoSuccess;
   }
 }

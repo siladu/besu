@@ -14,25 +14,30 @@
  */
 package org.hyperledger.besu.evm.v2.operation;
 
+import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.evm.EVM;
+import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.operation.Operation;
 import org.hyperledger.besu.evm.v2.StackArithmetic;
 
-/** The Add operation. */
-public class AddOperationV2 extends AbstractFixedCostOperationV2 {
+import java.util.Optional;
 
-  /** The Add operation success result. */
-  static final OperationResult addSuccess = new OperationResult(3, null);
+/** EVM v2 BASEFEE operation — pushes the block base fee onto the stack (London+). */
+public class BaseFeeOperationV2 extends AbstractFixedCostOperationV2 {
+
+  private static final OperationResult baseFeeSuccess = new OperationResult(2, null);
+  private static final OperationResult INVALID_OPERATION_RESPONSE =
+      new OperationResult(2, ExceptionalHaltReason.INVALID_OPERATION);
 
   /**
-   * Instantiates a new Add operation.
+   * Instantiates a new Base fee operation.
    *
    * @param gasCalculator the gas calculator
    */
-  public AddOperationV2(final GasCalculator gasCalculator) {
-    super(0x01, "ADD", 2, 1, gasCalculator, gasCalculator.getVeryLowTierGasCost());
+  public BaseFeeOperationV2(final GasCalculator gasCalculator) {
+    super(0x48, "BASEFEE", 0, 1, gasCalculator, gasCalculator.getBaseTierGasCost());
   }
 
   @Override
@@ -42,15 +47,19 @@ public class AddOperationV2 extends AbstractFixedCostOperationV2 {
   }
 
   /**
-   * Performs add operation.
+   * Performs the BASEFEE operation.
    *
-   * @param frame the frame
-   * @param stack the v2 operand stack ({@code long[]} in big-endian limb order)
+   * @param frame the message frame
+   * @param stack the v2 long[] stack
    * @return the operation result
    */
   public static OperationResult staticOperation(final MessageFrame frame, final long[] stack) {
-    if (!frame.stackHasItems(2)) return UNDERFLOW_RESPONSE;
-    frame.setTopV2(StackArithmetic.add(stack, frame.stackTopV2()));
-    return addSuccess;
+    if (!frame.stackHasSpace(1)) return OVERFLOW_RESPONSE;
+    final Optional<Wei> maybeBaseFee = frame.getBlockValues().getBaseFee();
+    if (maybeBaseFee.isEmpty()) {
+      return INVALID_OPERATION_RESPONSE;
+    }
+    frame.setTopV2(StackArithmetic.pushWei(stack, frame.stackTopV2(), maybeBaseFee.get()));
+    return baseFeeSuccess;
   }
 }

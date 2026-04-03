@@ -15,24 +15,26 @@
 package org.hyperledger.besu.evm.v2.operation;
 
 import org.hyperledger.besu.evm.EVM;
+import org.hyperledger.besu.evm.account.Account;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.operation.Operation;
 import org.hyperledger.besu.evm.v2.StackArithmetic;
 
-/** The Add operation. */
-public class AddOperationV2 extends AbstractFixedCostOperationV2 {
-
-  /** The Add operation success result. */
-  static final OperationResult addSuccess = new OperationResult(3, null);
+/**
+ * EVM v2 SELFBALANCE operation (0x47, Istanbul+).
+ *
+ * <p>Pushes the balance of the currently executing contract onto the stack. Fixed cost (low tier).
+ */
+public class SelfBalanceOperationV2 extends AbstractFixedCostOperationV2 {
 
   /**
-   * Instantiates a new Add operation.
+   * Instantiates a new SelfBalance operation.
    *
    * @param gasCalculator the gas calculator
    */
-  public AddOperationV2(final GasCalculator gasCalculator) {
-    super(0x01, "ADD", 2, 1, gasCalculator, gasCalculator.getVeryLowTierGasCost());
+  public SelfBalanceOperationV2(final GasCalculator gasCalculator) {
+    super(0x47, "SELFBALANCE", 0, 1, gasCalculator, gasCalculator.getLowTierGasCost());
   }
 
   @Override
@@ -42,15 +44,22 @@ public class AddOperationV2 extends AbstractFixedCostOperationV2 {
   }
 
   /**
-   * Performs add operation.
+   * Execute SELFBALANCE on the v2 long[] stack.
    *
-   * @param frame the frame
-   * @param stack the v2 operand stack ({@code long[]} in big-endian limb order)
+   * @param frame the message frame
+   * @param s the stack data
    * @return the operation result
    */
-  public static OperationResult staticOperation(final MessageFrame frame, final long[] stack) {
-    if (!frame.stackHasItems(2)) return UNDERFLOW_RESPONSE;
-    frame.setTopV2(StackArithmetic.add(stack, frame.stackTopV2()));
-    return addSuccess;
+  public static Operation.OperationResult staticOperation(
+      final MessageFrame frame, final long[] s) {
+    if (!frame.stackHasSpace(1)) return OVERFLOW_RESPONSE;
+    final int top = frame.stackTopV2();
+    final Account account = frame.getWorldUpdater().getAccount(frame.getRecipientAddress());
+    if (account == null) {
+      frame.setTopV2(StackArithmetic.pushZero(s, top));
+    } else {
+      frame.setTopV2(StackArithmetic.pushWei(s, top, account.getBalance()));
+    }
+    return new Operation.OperationResult(5, null);
   }
 }

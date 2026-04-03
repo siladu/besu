@@ -20,19 +20,18 @@ import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.operation.Operation;
 import org.hyperledger.besu.evm.v2.StackArithmetic;
 
-/** The Add operation. */
-public class AddOperationV2 extends AbstractFixedCostOperationV2 {
+/** EVM v2 ORIGIN operation — pushes the originator address onto the stack. */
+public class OriginOperationV2 extends AbstractFixedCostOperationV2 {
 
-  /** The Add operation success result. */
-  static final OperationResult addSuccess = new OperationResult(3, null);
+  private static final OperationResult originSuccess = new OperationResult(2, null);
 
   /**
-   * Instantiates a new Add operation.
+   * Instantiates a new Origin operation.
    *
    * @param gasCalculator the gas calculator
    */
-  public AddOperationV2(final GasCalculator gasCalculator) {
-    super(0x01, "ADD", 2, 1, gasCalculator, gasCalculator.getVeryLowTierGasCost());
+  public OriginOperationV2(final GasCalculator gasCalculator) {
+    super(0x32, "ORIGIN", 0, 1, gasCalculator, gasCalculator.getBaseTierGasCost());
   }
 
   @Override
@@ -42,15 +41,16 @@ public class AddOperationV2 extends AbstractFixedCostOperationV2 {
   }
 
   /**
-   * Performs add operation.
+   * Performs the ORIGIN operation.
    *
-   * @param frame the frame
-   * @param stack the v2 operand stack ({@code long[]} in big-endian limb order)
+   * @param frame the message frame
+   * @param stack the v2 long[] stack
    * @return the operation result
    */
   public static OperationResult staticOperation(final MessageFrame frame, final long[] stack) {
-    if (!frame.stackHasItems(2)) return UNDERFLOW_RESPONSE;
-    frame.setTopV2(StackArithmetic.add(stack, frame.stackTopV2()));
-    return addSuccess;
+    if (!frame.stackHasSpace(1)) return OVERFLOW_RESPONSE;
+    frame.setTopV2(
+        StackArithmetic.pushAddress(stack, frame.stackTopV2(), frame.getOriginatorAddress()));
+    return originSuccess;
   }
 }

@@ -18,39 +18,38 @@ import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.operation.Operation;
-import org.hyperledger.besu.evm.v2.StackArithmetic;
 
-/** The Add operation. */
-public class AddOperationV2 extends AbstractFixedCostOperationV2 {
+import org.apache.tuweni.bytes.Bytes;
 
-  /** The Add operation success result. */
-  static final OperationResult addSuccess = new OperationResult(3, null);
+/** EVM v2 STOP operation. Sets frame state to CODE_SUCCESS with empty output. */
+public class StopOperationV2 extends AbstractFixedCostOperationV2 {
+
+  private static final OperationResult STOP_SUCCESS = new OperationResult(0, null);
 
   /**
-   * Instantiates a new Add operation.
+   * Instantiates a new Stop operation.
    *
    * @param gasCalculator the gas calculator
    */
-  public AddOperationV2(final GasCalculator gasCalculator) {
-    super(0x01, "ADD", 2, 1, gasCalculator, gasCalculator.getVeryLowTierGasCost());
+  public StopOperationV2(final GasCalculator gasCalculator) {
+    super(0x00, "STOP", 0, 0, gasCalculator, gasCalculator.getZeroTierGasCost());
   }
 
   @Override
   public Operation.OperationResult executeFixedCostOperation(
       final MessageFrame frame, final EVM evm) {
-    return staticOperation(frame, frame.stackDataV2());
+    return staticOperation(frame);
   }
 
   /**
-   * Performs add operation.
+   * Performs Stop operation.
    *
    * @param frame the frame
-   * @param stack the v2 operand stack ({@code long[]} in big-endian limb order)
    * @return the operation result
    */
-  public static OperationResult staticOperation(final MessageFrame frame, final long[] stack) {
-    if (!frame.stackHasItems(2)) return UNDERFLOW_RESPONSE;
-    frame.setTopV2(StackArithmetic.add(stack, frame.stackTopV2()));
-    return addSuccess;
+  public static OperationResult staticOperation(final MessageFrame frame) {
+    frame.setState(MessageFrame.State.CODE_SUCCESS);
+    frame.setOutputData(Bytes.EMPTY);
+    return STOP_SUCCESS;
   }
 }

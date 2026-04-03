@@ -18,39 +18,37 @@ import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.operation.Operation;
-import org.hyperledger.besu.evm.v2.StackArithmetic;
 
-/** The Add operation. */
-public class AddOperationV2 extends AbstractFixedCostOperationV2 {
+/** EVM v2 JUMPDEST operation. A marker opcode that is a no-op at runtime. */
+public class JumpDestOperationV2 extends AbstractFixedCostOperationV2 {
 
-  /** The Add operation success result. */
-  static final OperationResult addSuccess = new OperationResult(3, null);
+  /** The constant OPCODE. */
+  public static final int OPCODE = 0x5B;
+
+  private static final OperationResult JUMPDEST_SUCCESS = new OperationResult(1L, null);
 
   /**
-   * Instantiates a new Add operation.
+   * Instantiates a new Jump dest operation.
    *
    * @param gasCalculator the gas calculator
    */
-  public AddOperationV2(final GasCalculator gasCalculator) {
-    super(0x01, "ADD", 2, 1, gasCalculator, gasCalculator.getVeryLowTierGasCost());
+  public JumpDestOperationV2(final GasCalculator gasCalculator) {
+    super(OPCODE, "JUMPDEST", 0, 0, gasCalculator, gasCalculator.getJumpDestOperationGasCost());
   }
 
   @Override
   public Operation.OperationResult executeFixedCostOperation(
       final MessageFrame frame, final EVM evm) {
-    return staticOperation(frame, frame.stackDataV2());
+    return staticOperation(frame);
   }
 
   /**
-   * Performs add operation.
+   * Performs JUMPDEST operation (no-op marker).
    *
    * @param frame the frame
-   * @param stack the v2 operand stack ({@code long[]} in big-endian limb order)
    * @return the operation result
    */
-  public static OperationResult staticOperation(final MessageFrame frame, final long[] stack) {
-    if (!frame.stackHasItems(2)) return UNDERFLOW_RESPONSE;
-    frame.setTopV2(StackArithmetic.add(stack, frame.stackTopV2()));
-    return addSuccess;
+  public static OperationResult staticOperation(final MessageFrame frame) {
+    return JUMPDEST_SUCCESS;
   }
 }
