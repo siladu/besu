@@ -518,6 +518,16 @@ public class MessageFrame {
     return stackTopV2 >= n;
   }
 
+  /**
+   * Returns true if the stack has space for at least {@code n} more items.
+   *
+   * @param n the number of items to push
+   * @return true if the stack has enough capacity
+   */
+  public boolean stackHasSpace(final int n) {
+    return stackTopV2 + n <= txValues.maxStackSize();
+  }
+
   // ---------------------------------------------------------------------------
   // endregion
 
