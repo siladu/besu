@@ -44,6 +44,7 @@ public class MulModOperationV2 extends AbstractFixedCostOperationV2 {
    * Performs MulMod operation.
    *
    * @param frame the frame
+   * @param s the stack array
    * @return the operation result
    */
   public static OperationResult staticOperation(final MessageFrame frame, final long[] s) {
