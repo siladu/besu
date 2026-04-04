@@ -324,6 +324,7 @@ public class EVM {
   // Please benchmark before refactoring.
   public void runToHalt(final MessageFrame frame, final OperationTracer tracing) {
     if (evmConfiguration.enableEvmV2()) {
+      frame.ensureV2Stack();
       runToHaltV2(frame, tracing);
       return;
     }
