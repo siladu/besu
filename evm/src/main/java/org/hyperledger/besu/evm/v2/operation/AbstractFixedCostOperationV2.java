@@ -20,10 +20,9 @@ import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.internal.OverflowException;
 import org.hyperledger.besu.evm.internal.UnderflowException;
-import org.hyperledger.besu.evm.operation.AbstractOperation;
 
 /** The Abstract fixed cost operation. */
-abstract class AbstractFixedCostOperationV2 extends AbstractOperation {
+abstract class AbstractFixedCostOperationV2 extends AbstractOperationV2 {
 
   /** Shared underflow response for static operation methods. */
   static final OperationResult UNDERFLOW_RESPONSE =

@@ -17,10 +17,10 @@ package org.hyperledger.besu.evm.v2.operation;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.UInt256;
+import org.hyperledger.besu.evm.account.Account;
 import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
-import org.hyperledger.besu.evm.operation.AbstractOperation;
 import org.hyperledger.besu.evm.v2.StackArithmetic;
 
 /**
@@ -29,7 +29,7 @@ import org.hyperledger.besu.evm.v2.StackArithmetic;
  * <p>Pops an address from the stack and replaces it with the account's balance in Wei. Applies
  * warm/cold account access cost.
  */
-public class BalanceOperationV2 extends AbstractOperation {
+public class BalanceOperationV2 extends AbstractOperationV2 {
 
   /**
    * Instantiates a new Balance operation.
@@ -83,8 +83,7 @@ public class BalanceOperationV2 extends AbstractOperation {
     if (frame.getRemainingGas() < cost) {
       return new OperationResult(cost, ExceptionalHaltReason.INSUFFICIENT_GAS);
     }
-    final org.hyperledger.besu.evm.account.MutableAccount account =
-        frame.getWorldUpdater().getAccount(address);
+    final Account account = getAccount(address, frame);
     // Overwrite in place (pop 1, push 1)
     if (account == null) {
       StackArithmetic.putAt(s, top, 0, UInt256.ZERO);
