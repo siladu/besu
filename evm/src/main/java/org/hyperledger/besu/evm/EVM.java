@@ -92,11 +92,13 @@ import org.hyperledger.besu.evm.tracing.OperationTracer;
 import org.hyperledger.besu.evm.v2.operation.AddModOperationV2;
 import org.hyperledger.besu.evm.v2.operation.AddOperationV2;
 import org.hyperledger.besu.evm.v2.operation.AddressOperationV2;
+import org.hyperledger.besu.evm.v2.operation.AndOperationV2;
 import org.hyperledger.besu.evm.v2.operation.BalanceOperationV2;
 import org.hyperledger.besu.evm.v2.operation.BaseFeeOperationV2;
 import org.hyperledger.besu.evm.v2.operation.BlobBaseFeeOperationV2;
 import org.hyperledger.besu.evm.v2.operation.BlobHashOperationV2;
 import org.hyperledger.besu.evm.v2.operation.BlockHashOperationV2;
+import org.hyperledger.besu.evm.v2.operation.ByteOperationV2;
 import org.hyperledger.besu.evm.v2.operation.CallCodeOperationV2;
 import org.hyperledger.besu.evm.v2.operation.CallDataCopyOperationV2;
 import org.hyperledger.besu.evm.v2.operation.CallDataLoadOperationV2;
@@ -143,6 +145,7 @@ import org.hyperledger.besu.evm.v2.operation.MulModOperationV2;
 import org.hyperledger.besu.evm.v2.operation.MulOperationV2;
 import org.hyperledger.besu.evm.v2.operation.NotOperationV2;
 import org.hyperledger.besu.evm.v2.operation.NumberOperationV2;
+import org.hyperledger.besu.evm.v2.operation.OrOperationV2;
 import org.hyperledger.besu.evm.v2.operation.OriginOperationV2;
 import org.hyperledger.besu.evm.v2.operation.PayOperationV2;
 import org.hyperledger.besu.evm.v2.operation.PcOperationV2;
@@ -164,6 +167,7 @@ import org.hyperledger.besu.evm.v2.operation.SelfDestructOperationV2;
 import org.hyperledger.besu.evm.v2.operation.SgtOperationV2;
 import org.hyperledger.besu.evm.v2.operation.ShlOperationV2;
 import org.hyperledger.besu.evm.v2.operation.ShrOperationV2;
+import org.hyperledger.besu.evm.v2.operation.SignExtendOperationV2;
 import org.hyperledger.besu.evm.v2.operation.SlotNumOperationV2;
 import org.hyperledger.besu.evm.v2.operation.SltOperationV2;
 import org.hyperledger.besu.evm.v2.operation.StaticCallOperationV2;
@@ -174,6 +178,7 @@ import org.hyperledger.besu.evm.v2.operation.SwapOperationV2;
 import org.hyperledger.besu.evm.v2.operation.TLoadOperationV2;
 import org.hyperledger.besu.evm.v2.operation.TStoreOperationV2;
 import org.hyperledger.besu.evm.v2.operation.TimestampOperationV2;
+import org.hyperledger.besu.evm.v2.operation.XorOperationV2;
 
 import java.util.Optional;
 import java.util.function.Function;
@@ -600,13 +605,18 @@ public class EVM {
               case 0x09 -> MulModOperationV2.staticOperation(frame, frame.stackDataV2());
               case 0x0a ->
                   ExpOperationV2.staticOperation(frame, frame.stackDataV2(), gasCalculator);
+              case 0x0b -> SignExtendOperationV2.staticOperation(frame, frame.stackDataV2());
               case 0x10 -> LtOperationV2.staticOperation(frame, frame.stackDataV2());
               case 0x11 -> GtOperationV2.staticOperation(frame, frame.stackDataV2());
               case 0x12 -> SltOperationV2.staticOperation(frame, frame.stackDataV2());
               case 0x13 -> SgtOperationV2.staticOperation(frame, frame.stackDataV2());
               case 0x14 -> EqOperationV2.staticOperation(frame, frame.stackDataV2());
               case 0x15 -> IsZeroOperationV2.staticOperation(frame, frame.stackDataV2());
+              case 0x16 -> AndOperationV2.staticOperation(frame, frame.stackDataV2());
+              case 0x17 -> OrOperationV2.staticOperation(frame, frame.stackDataV2());
+              case 0x18 -> XorOperationV2.staticOperation(frame, frame.stackDataV2());
               case 0x19 -> NotOperationV2.staticOperation(frame, frame.stackDataV2());
+              case 0x1a -> ByteOperationV2.staticOperation(frame, frame.stackDataV2());
               case 0x1b ->
                   enableConstantinople
                       ? ShlOperationV2.staticOperation(frame, frame.stackDataV2())
