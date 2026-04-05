@@ -87,7 +87,6 @@ import org.hyperledger.besu.evm.operation.VirtualOperation;
 import org.hyperledger.besu.evm.operation.XorOperation;
 import org.hyperledger.besu.evm.operation.XorOperationOptimized;
 import org.hyperledger.besu.evm.tracing.OperationTracer;
-import org.hyperledger.besu.evm.v2.operation.AddOperationV2;
 import org.hyperledger.besu.evm.v2.operation.MulModOperationV2;
 import org.hyperledger.besu.evm.v2.operation.SarOperationV2;
 import org.hyperledger.besu.evm.v2.operation.ShlOperationV2;
@@ -468,6 +467,11 @@ public class EVM {
     var operationTracer = tracing == OperationTracer.NO_TRACING ? null : tracing;
     byte[] code = frame.getCode().getBytes().toArrayUnsafe();
     Operation[] operationArray = operations.getOperations();
+    // (1) entry/re-entry sync: V1 is authoritative on entry (initial stack and after
+    // AbstractCallOperation.complete has mutated it while the loop was suspended).
+    // Within the loop V2 is authoritative; V1 is only re-synced around V1 fallback ops
+    // and before tracer callbacks.
+    frame.syncStackV1ToV2();
     while (frame.getState() == MessageFrame.State.CODE_EXECUTING) {
       Operation currentOperation;
       int opcode;
@@ -481,6 +485,7 @@ public class EVM {
       }
       frame.setCurrentOperation(currentOperation);
       if (operationTracer != null) {
+        frame.syncStackV2ToV1(); // tracer reads V1
         operationTracer.tracePreExecution(frame);
       }
 
@@ -488,7 +493,6 @@ public class EVM {
       try {
         result =
             switch (opcode) {
-              case 0x01 -> AddOperationV2.staticOperation(frame, frame.stackDataV2());
               case 0x09 -> MulModOperationV2.staticOperation(frame);
               case 0x1b ->
                   enableConstantinople
@@ -504,8 +508,11 @@ public class EVM {
                       : InvalidOperation.invalidOperationResult(opcode);
               // TODO: implement remaining opcodes in v2; until then fall through to v1
               default -> {
+                frame.syncStackV2ToV1(); // (2) expose V2 state to V1 op
                 frame.setCurrentOperation(currentOperation);
-                yield currentOperation.execute(frame, this);
+                OperationResult r = currentOperation.execute(frame, this);
+                frame.syncStackV1ToV2(); // (3) capture V1 op output back into V2
+                yield r;
               }
             };
       } catch (final OverflowException oe) {
@@ -528,9 +535,11 @@ public class EVM {
         frame.setPC(currentPC + opSize);
       }
       if (operationTracer != null) {
+        frame.syncStackV2ToV1(); // (5) tracer reads V1
         operationTracer.tracePostExecution(frame, result);
       }
     }
+    frame.syncStackV2ToV1(); // (4) exit: V1 is authoritative for external callers
   }
 
   /**
