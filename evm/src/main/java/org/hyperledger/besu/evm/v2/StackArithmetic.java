@@ -33,8 +33,9 @@ public class StackArithmetic {
   /**
    * Performs EVM SHL (shift left) on the two top stack items.
    *
-   * <p>Pops the shift amount (unsigned) and the value, pushes {@code value << shift}. Shifts >= 256
-   * or a zero value produce 0.
+   * <p>Reads the shift amount (unsigned) and the value from the top two stack slots, writes {@code
+   * value << shift} back into the value slot and decrements the top. Shifts >= 256 or a zero value
+   * produce 0.
    *
    * @param stack the flat limb array
    * @param top current stack-top (item count)
@@ -76,7 +77,9 @@ public class StackArithmetic {
         w1 = stack[valueOffset + 1],
         w2 = stack[valueOffset + 2],
         w3 = stack[valueOffset + 3];
+    // Number of whole 64-bit words to shift (shift / 64)
     final int wordShift = shift >>> 6;
+    // Remaining intra-word bit shift (shift % 64)
     final int bitShift = shift & 63;
     switch (wordShift) {
       case 0:
@@ -132,8 +135,9 @@ public class StackArithmetic {
   /**
    * Performs EVM SHR (logical shift right) on the two top stack items.
    *
-   * <p>Pops the shift amount (unsigned) and the value, pushes {@code value >>> shift}. Shifts >=
-   * 256 or a zero value produce 0.
+   * <p>Reads the shift amount (unsigned) and the value from the top two stack slots, writes {@code
+   * value >>> shift} back into the value slot and decrements the top. Shifts >= 256 or a zero value
+   * produce 0.
    *
    * @param stack the flat limb array
    * @param top current stack-top (item count)
@@ -164,17 +168,20 @@ public class StackArithmetic {
   /**
    * Logically right-shifts a 256-bit value in place by 1..255 bits, zero-filling from the left.
    *
-   * @param s the flat limb array
+   * @param stack the flat limb array
    * @param valueOffset index of the value's most-significant limb
    * @param shift number of bits to shift (must be in [1, 255])
    */
-  private static void shiftRightInPlace(final long[] s, final int valueOffset, final int shift) {
+  private static void shiftRightInPlace(
+      final long[] stack, final int valueOffset, final int shift) {
     if (shift == 0) return;
-    long w0 = s[valueOffset],
-        w1 = s[valueOffset + 1],
-        w2 = s[valueOffset + 2],
-        w3 = s[valueOffset + 3];
+    long w0 = stack[valueOffset],
+        w1 = stack[valueOffset + 1],
+        w2 = stack[valueOffset + 2],
+        w3 = stack[valueOffset + 3];
+    // Number of whole 64-bit words to shift (shift / 64)
     final int wordShift = shift >>> 6;
+    // Remaining intra-word bit shift (shift % 64)
     final int bitShift = shift & 63;
     switch (wordShift) {
       case 0:
@@ -202,10 +209,10 @@ public class StackArithmetic {
         w0 = 0;
         break;
     }
-    s[valueOffset] = w0;
-    s[valueOffset + 1] = w1;
-    s[valueOffset + 2] = w2;
-    s[valueOffset + 3] = w3;
+    stack[valueOffset] = w0;
+    stack[valueOffset + 1] = w1;
+    stack[valueOffset + 2] = w2;
+    stack[valueOffset + 3] = w3;
   }
 
   // endregion
@@ -216,8 +223,9 @@ public class StackArithmetic {
   /**
    * Performs EVM SAR (arithmetic shift right) on the two top stack items.
    *
-   * <p>Pops the shift amount (unsigned) and the value (signed), pushes {@code value >> shift}.
-   * Shifts >= 256 produce 0 for positive values and -1 for negative values.
+   * <p>Reads the shift amount (unsigned) and the value (signed) from the top two stack slots,
+   * writes {@code value >> shift} back into the value slot and decrements the top. Shifts >= 256
+   * produce 0 for positive values and -1 for negative values.
    *
    * @param stack the flat limb array
    * @param top current stack-top (item count)
@@ -260,7 +268,9 @@ public class StackArithmetic {
         w2 = stack[valueOffset + 2],
         w3 = stack[valueOffset + 3];
     final long fill = negative ? -1L : 0L;
+    // Number of whole 64-bit words to shift (shift / 64)
     final int wordShift = shift >>> 6;
+    // Remaining intra-word bit shift (shift % 64)
     final int bitShift = shift & 63;
     switch (wordShift) {
       case 0:
@@ -293,11 +303,6 @@ public class StackArithmetic {
     stack[valueOffset + 2] = w2;
     stack[valueOffset + 3] = w3;
   }
-
-  // endregion
-
-  // region Private Helpers
-  // ---------------------------------------------------------------------------
 
   /**
    * Shifts a 64-bit word right and carries in bits from the previous more-significant word.

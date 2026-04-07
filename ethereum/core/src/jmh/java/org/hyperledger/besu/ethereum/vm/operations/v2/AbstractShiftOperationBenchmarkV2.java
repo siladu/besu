@@ -38,7 +38,7 @@ public abstract class AbstractShiftOperationBenchmarkV2 extends BinaryOperationB
     SHIFT_0,
     /** Small shift by 1 bit. */
     SHIFT_1,
-    /** Medium shift by 128 bits (half word). */
+    /** Medium shift by 128 bits. */
     SHIFT_128,
     /** Large shift by 255 bits (max valid). */
     SHIFT_255,
