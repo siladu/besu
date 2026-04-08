@@ -327,21 +327,25 @@ public class StackArithmetic {
   // region Arithmetic Operations
   // --------------------------------------------------------------------------
 
-  /** Performs EVM MULMOD (modular multiplication) on the three top stack items.
+  /**
+   * Performs EVM MULMOD (modular multiplication) on the three top stack items.
+   *
    * @param stack the flat limb array
    * @param top current stack-top (item count)
    * @return the new stack-top after consuming three items and producing one item
-   *
-   * MULMOD: mulmod(a,b,m) = (a * b) mod m
-   * MULMOD: stack[top-3] = (stack[top-1] * stack[top-2]) mod stack[top-3], return top-2.
+   *     <p>MULMOD: mulmod(a,b,m) = (a * b) mod m MULMOD: stack[top-3] = (stack[top-1] *
+   *     stack[top-2]) mod stack[top-3], return top-2.
    */
   public static int mulMod(final long[] stack, final int top) {
     final int aOffset = (top - 1) << 2;
     final int bOffset = (top - 2) << 2;
     final int mOffset = (top - 3) << 2;
-    UInt256 valueA = new UInt256(stack[aOffset], stack[aOffset + 1], stack[aOffset + 2], stack[aOffset + 3]);
-    UInt256 valueB = new UInt256(stack[bOffset], stack[bOffset + 1], stack[bOffset + 2], stack[bOffset + 3]);
-    UInt256 modulus = new UInt256(stack[mOffset], stack[mOffset + 1], stack[mOffset + 2], stack[mOffset + 3]);
+    UInt256 valueA =
+        new UInt256(stack[aOffset], stack[aOffset + 1], stack[aOffset + 2], stack[aOffset + 3]);
+    UInt256 valueB =
+        new UInt256(stack[bOffset], stack[bOffset + 1], stack[bOffset + 2], stack[bOffset + 3]);
+    UInt256 modulus =
+        new UInt256(stack[mOffset], stack[mOffset + 1], stack[mOffset + 2], stack[mOffset + 3]);
     UInt256 r = modulus.isZero() ? UInt256.ZERO : valueA.mulMod(valueB, modulus);
     stack[mOffset] = r.u3();
     stack[mOffset + 1] = r.u2();
