@@ -327,19 +327,25 @@ public class StackArithmetic {
   // region Arithmetic Operations
   // --------------------------------------------------------------------------
 
-  /** MULMOD: s[top-3] = (s[top-1] * s[top-2]) mod s[top-3], return top-2. */
-  public static int mulMod(final long[] s, final int top) {
+  /** Performs EVM MULMOD (modular multiplication) on the three top stack items.
+   * @param stack the flat limb array
+   * @param top current stack-top (item count)
+   * @return the new stack-top after consuming three items and producing one item
+   *
+   * MULMOD: stack[top-3] = (stack[top-1] * stack[top-2]) mod stack[top-3], return top-2.
+   */
+  public static int mulMod(final long[] stack, final int top) {
     final int a = (top - 1) << 2;
     final int b = (top - 2) << 2;
     final int c = (top - 3) << 2;
-    UInt256 va = new UInt256(s[a], s[a + 1], s[a + 2], s[a + 3]);
-    UInt256 vb = new UInt256(s[b], s[b + 1], s[b + 2], s[b + 3]);
-    UInt256 vc = new UInt256(s[c], s[c + 1], s[c + 2], s[c + 3]);
+    UInt256 va = new UInt256(stack[a], stack[a + 1], stack[a + 2], stack[a + 3]);
+    UInt256 vb = new UInt256(stack[b], stack[b + 1], stack[b + 2], stack[b + 3]);
+    UInt256 vc = new UInt256(stack[c], stack[c + 1], stack[c + 2], stack[c + 3]);
     UInt256 r = vc.isZero() ? UInt256.ZERO : va.mulMod(vb, vc);
-    s[c] = r.u3();
-    s[c + 1] = r.u2();
-    s[c + 2] = r.u1();
-    s[c + 3] = r.u0();
+    stack[c] = r.u3();
+    stack[c + 1] = r.u2();
+    stack[c + 2] = r.u1();
+    stack[c + 3] = r.u0();
     return top - 2;
   }
 
