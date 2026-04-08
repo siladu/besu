@@ -27,7 +27,7 @@ import org.openjdk.jmh.annotations.Setup;
 
 public class MulModOperationBenchmarkV2 extends TernaryOperationBenchmarkV2 {
 
-  // Benches for (a + b) % c
+  // Benches for (a * b) % c
 
   // Define available scenarios
   public enum Case {
@@ -40,7 +40,7 @@ public class MulModOperationBenchmarkV2 extends TernaryOperationBenchmarkV2 {
     MULMOD_128_64_64(4, 2, 2),
     MULMOD_128_128_32(4, 4, 1),
     MULMOD_128_128_64(4, 4, 2),
-    MULMOD_128_128_128(4, 4, 3),
+    MULMOD_128_128_128(4, 4, 4),
     MULMOD_192_32_32(6, 1, 1),
     MULMOD_192_64_32(6, 2, 1),
     MULMOD_192_64_64(6, 2, 2),
