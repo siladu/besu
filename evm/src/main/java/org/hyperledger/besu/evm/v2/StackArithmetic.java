@@ -322,6 +322,8 @@ public class StackArithmetic {
     return (value >>> bitShift) | (prevValue << (64 - bitShift));
   }
 
+  // endregion
+
   // region Arithmetic Operations
   // --------------------------------------------------------------------------
 
