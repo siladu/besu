@@ -329,9 +329,11 @@ public class StackArithmetic {
 
   /**
    * Performs EVM MULMOD (modular multiplication) on the three top stack items.
+   *
    * <p>MULMOD: mulmod(a,b,m) = (a * b) mod m
+   *
    * <p>MULMOD: stack[top-3] = (stack[top-1] * stack[top-2]) mod stack[top-3], return top-2.
-   * 
+   *
    * @param stack the flat limb array
    * @param top current stack-top (item count)
    * @return the new stack-top after consuming three items and producing one item
