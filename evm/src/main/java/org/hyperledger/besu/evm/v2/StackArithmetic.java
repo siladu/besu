@@ -342,13 +342,19 @@ public class StackArithmetic {
     final int aOffset = (top - 1) << 2;
     final int bOffset = (top - 2) << 2;
     final int mOffset = (top - 3) << 2;
-    UInt256 valueA =
-        new UInt256(stack[aOffset], stack[aOffset + 1], stack[aOffset + 2], stack[aOffset + 3]);
-    UInt256 valueB =
-        new UInt256(stack[bOffset], stack[bOffset + 1], stack[bOffset + 2], stack[bOffset + 3]);
-    UInt256 modulus =
-        new UInt256(stack[mOffset], stack[mOffset + 1], stack[mOffset + 2], stack[mOffset + 3]);
-    UInt256 r = modulus.isZero() ? UInt256.ZERO : valueA.mulMod(valueB, modulus);
+    final UInt256 r;
+    final UInt256 modulus =
+            new UInt256(stack[mOffset], stack[mOffset + 1], stack[mOffset + 2], stack[mOffset + 3]);
+    if (modulus.isZero()) {
+      r = UInt256.ZERO;
+    } else {
+      final UInt256 valueA =
+              new UInt256(stack[aOffset], stack[aOffset + 1], stack[aOffset + 2], stack[aOffset + 3]);
+      final UInt256 valueB =
+              new UInt256(stack[bOffset], stack[bOffset + 1], stack[bOffset + 2], stack[bOffset + 3]);
+      r = valueA.mulMod(valueB, modulus);
+    }
+
     stack[mOffset] = r.u3();
     stack[mOffset + 1] = r.u2();
     stack[mOffset + 2] = r.u1();

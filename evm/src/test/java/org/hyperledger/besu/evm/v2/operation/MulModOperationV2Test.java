@@ -95,8 +95,10 @@ class MulModOperationV2Test {
   void mulModOperationUnderflowNoItems() {
     final MessageFrame frame = new TestMessageFrameBuilderV2().build();
     assertThat(frame.stackTopV2()).isEqualTo(0);
+
     final Operation.OperationResult result =
         MulModOperationV2.staticOperation(frame, frame.stackDataV2());
+
     assertThat(result.getHaltReason()).isEqualTo(ExceptionalHaltReason.INSUFFICIENT_STACK_ITEMS);
     assertThat(frame.stackTopV2()).isEqualTo(0);
   }
