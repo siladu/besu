@@ -339,22 +339,26 @@ public class StackArithmetic {
    * @return the new stack-top after consuming three items and producing one item
    */
   public static int mulMod(final long[] stack, final int top) {
-    final int aOffset = (top - 1) << 2;
-    final int bOffset = (top - 2) << 2;
+
     final int mOffset = (top - 3) << 2;
-    final UInt256 r;
-    final UInt256 modulus =
-            new UInt256(stack[mOffset], stack[mOffset + 1], stack[mOffset + 2], stack[mOffset + 3]);
-    if (modulus.isZero()) {
-      r = UInt256.ZERO;
-    } else {
-      final UInt256 valueA =
-              new UInt256(stack[aOffset], stack[aOffset + 1], stack[aOffset + 2], stack[aOffset + 3]);
-      final UInt256 valueB =
-              new UInt256(stack[bOffset], stack[bOffset + 1], stack[bOffset + 2], stack[bOffset + 3]);
-      r = valueA.mulMod(valueB, modulus);
+
+    // avoid allocations for zero modulus case
+    if (stack[mOffset] == 0 && stack[mOffset + 1] == 0
+            && stack[mOffset + 2] == 0 && stack[mOffset + 3] == 0) {
+      // already all zeros
+      return top - 2;
     }
 
+    final int aOffset = (top - 1) << 2;
+    final int bOffset = (top - 2) << 2;
+
+    final UInt256 valueA =
+        new UInt256(stack[aOffset], stack[aOffset + 1], stack[aOffset + 2], stack[aOffset + 3]);
+    final UInt256 valueB =
+        new UInt256(stack[bOffset], stack[bOffset + 1], stack[bOffset + 2], stack[bOffset + 3]);
+    final UInt256 modulus =
+        new UInt256(stack[mOffset], stack[mOffset + 1], stack[mOffset + 2], stack[mOffset + 3]);
+    final UInt256 r = modulus.isZero() ? UInt256.ZERO : valueA.mulMod(valueB, modulus);
     stack[mOffset] = r.u3();
     stack[mOffset + 1] = r.u2();
     stack[mOffset + 2] = r.u1();
