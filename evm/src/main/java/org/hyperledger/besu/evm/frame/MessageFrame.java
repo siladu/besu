@@ -29,9 +29,11 @@ import org.hyperledger.besu.evm.internal.OperandStack;
 import org.hyperledger.besu.evm.internal.StorageEntry;
 import org.hyperledger.besu.evm.internal.UnderflowException;
 import org.hyperledger.besu.evm.operation.Operation;
+import org.hyperledger.besu.evm.v2.StackPool;
 import org.hyperledger.besu.evm.worldstate.WorldUpdater;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -276,7 +278,7 @@ public class MessageFrame {
     this.worldUpdater = worldUpdater;
     this.gasRemaining = initialGas;
     this.stack = new OperandStack(txValues.maxStackSize());
-    this.stackDataV2 = enableEvmV2 ? new long[txValues.maxStackSize() * 4] : null;
+    this.stackDataV2 = enableEvmV2 ? StackPool.borrow(txValues.maxStackSize()) : null;
     this.stackTopV2 = 0;
     this.pc = 0;
     this.recipient = recipient;
@@ -536,6 +538,16 @@ public class MessageFrame {
     if (stackDataV2 == null) {
       stackDataV2 = new long[txValues.maxStackSize() * 4];
     }
+  }
+
+  /** Returns this frame's operand stack to the thread-local pool for reuse. */
+  public void returnStackToPool() {
+    if (stackTopV2 > 0) {
+      Arrays.fill(stackDataV2, 0, stackTopV2 << 2, 0L);
+    }
+    stackTopV2 = 0;
+    StackPool.release(stackDataV2, txValues.maxStackSize());
+    stackDataV2 = null;
   }
 
   // ---------------------------------------------------------------------------
