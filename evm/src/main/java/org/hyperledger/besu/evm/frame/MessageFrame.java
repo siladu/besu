@@ -26,6 +26,7 @@ import org.hyperledger.besu.evm.Code;
 import org.hyperledger.besu.evm.blockhash.BlockHashLookup;
 import org.hyperledger.besu.evm.internal.MemoryEntry;
 import org.hyperledger.besu.evm.internal.OperandStack;
+import org.hyperledger.besu.evm.internal.StackPool;
 import org.hyperledger.besu.evm.internal.StorageEntry;
 import org.hyperledger.besu.evm.internal.UnderflowException;
 import org.hyperledger.besu.evm.operation.Operation;
@@ -203,7 +204,7 @@ public class MessageFrame {
   private long gasRemaining;
   private int pc;
   private final Memory memory = new Memory();
-  private final OperandStack stack;
+  private OperandStack stack;
   // EVM v2 stack: 4 longs per 256-bit word (index 0 = most significant, index 3 = least
   // significant)
   private final long[] stackDataV2;
@@ -275,7 +276,7 @@ public class MessageFrame {
     this.type = type;
     this.worldUpdater = worldUpdater;
     this.gasRemaining = initialGas;
-    this.stack = new OperandStack(txValues.maxStackSize());
+    this.stack = StackPool.borrow(txValues.maxStackSize());
     this.stackDataV2 = enableEvmV2 ? new long[txValues.maxStackSize() * 4] : null;
     this.stackTopV2 = 0;
     this.pc = 0;
@@ -476,6 +477,18 @@ public class MessageFrame {
    */
   public int stackSize() {
     return stack.size();
+  }
+
+  /**
+   * Returns this frame's operand stack to the thread-local pool for reuse. Must be called exactly
+   * once when the frame completes (success or failure). After this call the stack field is null.
+   */
+  public void returnStackToPool() {
+    if (stack == null) {
+      return;
+    }
+    StackPool.release(stack, txValues.maxStackSize());
+    stack = null;
   }
 
   // region --- EVM v2 long[] stack operations ---
