@@ -23,7 +23,7 @@ import org.hyperledger.besu.evm.operation.Operation;
 /** The Mul mod operation. */
 public class MulModOperationV2 extends AbstractFixedCostOperationV2 {
 
-  private static final OperationResult mulModSuccess = new OperationResult(8, null);
+  private static final OperationResult MUL_MOD_SUCCESS = new OperationResult(8, null);
 
   /**
    * Instantiates a new Mul mod operation.
@@ -53,7 +53,7 @@ public class MulModOperationV2 extends AbstractFixedCostOperationV2 {
     mulMod(stack, top);
     // consumed three items and produced one item
     frame.setTopV2(top - 2);
-    return mulModSuccess;
+    return MUL_MOD_SUCCESS;
   }
 
   /**

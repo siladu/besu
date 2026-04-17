@@ -15,6 +15,7 @@
 package org.hyperledger.besu.evm.v2.operation;
 
 import org.hyperledger.besu.evm.EVM;
+import org.hyperledger.besu.evm.UInt256;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.operation.Operation;
@@ -28,7 +29,6 @@ import org.hyperledger.besu.evm.operation.Operation;
  */
 public class AddOperationV2 extends AbstractFixedCostOperationV2 {
 
-  @SuppressWarnings("UnusedVariable")
   private static final Operation.OperationResult ADD_SUCCESS =
       new Operation.OperationResult(3, null);
 
@@ -44,19 +44,37 @@ public class AddOperationV2 extends AbstractFixedCostOperationV2 {
   @Override
   public Operation.OperationResult executeFixedCostOperation(
       final MessageFrame frame, final EVM evm) {
-    return staticOperation(frame, frame.stackDataV2());
+    return staticOperation(frame);
   }
 
   /**
    * Execute the ADD opcode on the v2 long[] stack.
    *
    * @param frame the message frame
-   * @param stackData the stack operands as a long[] array
    * @return the operation result
    */
-  @SuppressWarnings("DoNotCallSuggester")
-  public static Operation.OperationResult staticOperation(
-      final MessageFrame frame, final long[] stackData) {
-    throw new UnsupportedOperationException("ADD operation not yet implemented for evm v2");
+  public static Operation.OperationResult staticOperation(final MessageFrame frame) {
+    if (!frame.stackHasItems(2)) return UNDERFLOW_RESPONSE;
+    long[] stack = frame.stackDataV2();
+    int top = frame.stackTopV2();
+    final int aOffset = (--top) << 2;
+    final int bOffset = (--top) << 2;
+
+    add(stack, aOffset, bOffset);
+
+    frame.setTopV2(++top);
+    return ADD_SUCCESS;
+  }
+
+  private static void add(final long[] stack, final int aOffset, final int bOffset) {
+    final UInt256 valueA =
+        new UInt256(stack[aOffset], stack[aOffset + 1], stack[aOffset + 2], stack[aOffset + 3]);
+    final UInt256 valueB =
+        new UInt256(stack[bOffset], stack[bOffset + 1], stack[bOffset + 2], stack[bOffset + 3]);
+    final UInt256 r = valueA.add(valueB);
+    stack[bOffset] = r.u3();
+    stack[bOffset + 1] = r.u2();
+    stack[bOffset + 2] = r.u1();
+    stack[bOffset + 3] = r.u0();
   }
 }
