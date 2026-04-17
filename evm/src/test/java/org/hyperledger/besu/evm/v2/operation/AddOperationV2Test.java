@@ -38,23 +38,29 @@ class AddOperationV2Test {
   private final AddOperationV2 operation = new AddOperationV2(gasCalculator);
 
   /**
-   * Test data for add(a, b) = expected.
+   * Structural test data for add(a, b) = expected. Arithmetic correctness is covered by
+   * UInt256PropertyBasedTest; these cases verify stack arity, limb-level read/write wiring, and
+   * 256-bit wrap handling.
    *
    * <p>Push order when building the frame: b first (deepest), then a (top).
    */
   static Iterable<Arguments> data() {
     return List.of(
         // (a, b, expected)
+        // Happy path: low-limb only.
         Arguments.of("0x02", "0x03", "0x05"),
-        Arguments.of("0x02", "0x00", "0x02"),
+        // Zero identity with operand ordering: confirms b is read from the deeper slot.
         Arguments.of("0x00", "0x03", "0x03"),
+        // 256-bit wrap: all 4 result limbs written as zero.
         Arguments.of(
             "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "0x01", "0x00"),
-        // Cross-limb: (2^128) + (2^128) = ???.
+        // All 4 limbs populated on both inputs and the result (no carries): verifies every limb is
+        // read and written through stackDataV2(). Four distinct limb values catch any
+        // limb-index/offset mistakes.
         Arguments.of(
-            "0x00000000000000000000000000000001" + "00000000000000000000000000000000", // 2^128
-            "0x00000000000000000000000000000001" + "00000000000000000000000000000000", // 2^128
-            "0x00000000000000000000000000000002" + "00000000000000000000000000000000"));
+            "0x1000000000000001200000000000000230000000000000034000000000000004",
+            "0x1000000000000001100000000000000110000000000000011000000000000001",
+            "0x2000000000000002300000000000000340000000000000045000000000000005"));
   }
 
   @ParameterizedTest(name = "{index}: add({0}, {1}) = {2}")
@@ -103,5 +109,39 @@ class AddOperationV2Test {
 
     assertThat(result.getHaltReason()).isEqualTo(ExceptionalHaltReason.INSUFFICIENT_STACK_ITEMS);
     assertThat(frame.stackTopV2()).isEqualTo(1);
+  }
+
+  @Test
+  void addOperationPreservesDeeperStackItems() {
+    // Use a distinctive 4-limb value for the untouched deep slot so any accidental write is
+    // detectable in any limb.
+    final Bytes32 untouched =
+        Bytes32.fromHexString("0xdeadbeefdeadbeefcafebabecafebabe0123456789abcdeff1e2d3c4b5a69788");
+    final MessageFrame frame =
+        new TestMessageFrameBuilderV2()
+            .pushStackItem(untouched) // top-3 (untouched by ADD)
+            .pushStackItem(Bytes32.fromHexStringLenient("0x07")) // top-2 (b)
+            .pushStackItem(Bytes32.fromHexStringLenient("0x05")) // top-1 (a)
+            .build();
+    assertThat(frame.stackTopV2()).isEqualTo(3);
+
+    operation.execute(frame, null);
+
+    assertThat(frame.stackTopV2()).isEqualTo(2);
+    assertThat(getV2StackItem(frame, 0)).isEqualTo(UInt256.fromInt(12)); // 5 + 7
+    assertThat(getV2StackItem(frame, 1)).isEqualTo(UInt256.fromBytesBE(untouched.toArrayUnsafe()));
+  }
+
+  @Test
+  void addOperationGasCostIsVeryLowTier() {
+    final MessageFrame frame =
+        new TestMessageFrameBuilderV2()
+            .pushStackItem(Bytes32.fromHexStringLenient("0x01"))
+            .pushStackItem(Bytes32.fromHexStringLenient("0x02"))
+            .build();
+
+    final Operation.OperationResult result = operation.execute(frame, null);
+
+    assertThat(result.getGasCost()).isEqualTo(gasCalculator.getVeryLowTierGasCost());
   }
 }

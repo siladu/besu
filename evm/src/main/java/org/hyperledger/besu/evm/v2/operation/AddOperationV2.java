@@ -71,7 +71,9 @@ public class AddOperationV2 extends AbstractFixedCostOperationV2 {
         new UInt256(stack[aOffset], stack[aOffset + 1], stack[aOffset + 2], stack[aOffset + 3]);
     final UInt256 valueB =
         new UInt256(stack[bOffset], stack[bOffset + 1], stack[bOffset + 2], stack[bOffset + 3]);
+
     final UInt256 r = valueA.add(valueB);
+
     stack[bOffset] = r.u3();
     stack[bOffset + 1] = r.u2();
     stack[bOffset + 2] = r.u1();
