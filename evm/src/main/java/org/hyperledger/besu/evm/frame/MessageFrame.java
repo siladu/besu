@@ -1919,9 +1919,12 @@ public class MessageFrame {
         parentMessageFrame.warmUpAddress(contract);
       }
 
+      final boolean inheritedEnableEvmV2 =
+          parentMessageFrame != null ? parentMessageFrame.stackDataV2 != null : enableEvmV2;
+
       MessageFrame messageFrame =
           new MessageFrame(
-              enableEvmV2,
+              inheritedEnableEvmV2,
               type,
               updater,
               initialGas,
