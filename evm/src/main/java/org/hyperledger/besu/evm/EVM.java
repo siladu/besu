@@ -87,7 +87,6 @@ import org.hyperledger.besu.evm.operation.VirtualOperation;
 import org.hyperledger.besu.evm.operation.XorOperation;
 import org.hyperledger.besu.evm.operation.XorOperationOptimized;
 import org.hyperledger.besu.evm.tracing.OperationTracer;
-import org.hyperledger.besu.evm.v2.operation.AddOperationV2;
 import org.hyperledger.besu.evm.v2.operation.MulModOperationV2;
 import org.hyperledger.besu.evm.v2.operation.SarOperationV2;
 import org.hyperledger.besu.evm.v2.operation.ShlOperationV2;
@@ -468,9 +467,12 @@ public class EVM {
     var operationTracer = tracing == OperationTracer.NO_TRACING ? null : tracing;
     byte[] code = frame.getCode().getBytes().toArrayUnsafe();
     Operation[] operationArray = operations.getOperations();
+    // (1) entry/re-entry sync: V1 is authoritative on entry (initial stack and after
+    // AbstractCallOperation.complete has mutated it while the loop was suspended).
+    // Within the loop V2 is authoritative; V1 is only re-synced around V1 fallback ops
+    // and before tracer callbacks.
+    frame.syncStackV1ToV2();
     while (frame.getState() == MessageFrame.State.CODE_EXECUTING) {
-      frame.syncStackV1ToV2(); // (1) re-entry sync: propagates V1 changes (e.g.
-      // AbstractCallOperation.complete) into V2
       Operation currentOperation;
       int opcode;
       int pc = frame.getPC();
@@ -483,6 +485,7 @@ public class EVM {
       }
       frame.setCurrentOperation(currentOperation);
       if (operationTracer != null) {
+        frame.syncStackV2ToV1(); // tracer reads V1
         operationTracer.tracePreExecution(frame);
       }
 
@@ -490,7 +493,6 @@ public class EVM {
       try {
         result =
             switch (opcode) {
-              case 0x01 -> AddOperationV2.staticOperation(frame, frame.stackDataV2());
               case 0x09 -> MulModOperationV2.staticOperation(frame);
               case 0x1b ->
                   enableConstantinople
