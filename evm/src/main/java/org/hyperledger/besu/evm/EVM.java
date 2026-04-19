@@ -469,6 +469,8 @@ public class EVM {
     byte[] code = frame.getCode().getBytes().toArrayUnsafe();
     Operation[] operationArray = operations.getOperations();
     while (frame.getState() == MessageFrame.State.CODE_EXECUTING) {
+      frame.syncStackV1ToV2(); // (1) re-entry sync: propagates V1 changes (e.g.
+      // AbstractCallOperation.complete) into V2
       Operation currentOperation;
       int opcode;
       int pc = frame.getPC();
@@ -504,8 +506,11 @@ public class EVM {
                       : InvalidOperation.invalidOperationResult(opcode);
               // TODO: implement remaining opcodes in v2; until then fall through to v1
               default -> {
+                frame.syncStackV2ToV1(); // (2) expose V2 state to V1 op
                 frame.setCurrentOperation(currentOperation);
-                yield currentOperation.execute(frame, this);
+                OperationResult r = currentOperation.execute(frame, this);
+                frame.syncStackV1ToV2(); // (3) capture V1 op output back into V2
+                yield r;
               }
             };
       } catch (final OverflowException oe) {
@@ -528,9 +533,11 @@ public class EVM {
         frame.setPC(currentPC + opSize);
       }
       if (operationTracer != null) {
+        frame.syncStackV2ToV1(); // (5) tracer reads V1
         operationTracer.tracePostExecution(frame, result);
       }
     }
+    frame.syncStackV2ToV1(); // (4) exit: V1 is authoritative for external callers
   }
 
   /**
