@@ -60,13 +60,6 @@ public class AddOperationV2 extends AbstractFixedCostOperationV2 {
     final int aOffset = (--top) << 2;
     final int bOffset = (--top) << 2;
 
-    add(stack, aOffset, bOffset);
-
-    frame.setTopV2(++top);
-    return ADD_SUCCESS;
-  }
-
-  private static void add(final long[] stack, final int aOffset, final int bOffset) {
     final UInt256 valueA =
         new UInt256(stack[aOffset], stack[aOffset + 1], stack[aOffset + 2], stack[aOffset + 3]);
     final UInt256 valueB =
@@ -78,5 +71,8 @@ public class AddOperationV2 extends AbstractFixedCostOperationV2 {
     stack[bOffset + 1] = r.u2();
     stack[bOffset + 2] = r.u1();
     stack[bOffset + 3] = r.u0();
+
+    frame.setTopV2(++top);
+    return ADD_SUCCESS;
   }
 }
