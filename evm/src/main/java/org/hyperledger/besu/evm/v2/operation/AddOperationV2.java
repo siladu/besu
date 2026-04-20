@@ -20,6 +20,8 @@ import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.operation.Operation;
 
+import org.apache.tuweni.bytes.Bytes32;
+
 /**
  * EVM v2 ADD operation using long[] stack representation.
  *
@@ -71,12 +73,15 @@ public class AddOperationV2 extends AbstractFixedCostOperationV2 {
         new UInt256(stack[aOffset], stack[aOffset + 1], stack[aOffset + 2], stack[aOffset + 3]);
     final UInt256 valueB =
         new UInt256(stack[bOffset], stack[bOffset + 1], stack[bOffset + 2], stack[bOffset + 3]);
+    byte[] valueABytes = valueA.toBytesBE();
+    byte[] valueBBytes = valueB.toBytesBE();
 
-    final UInt256 r = valueA.add(valueB);
+    final byte[] r = UInt256.add(valueABytes, valueBBytes);
+    Bytes32 result = Bytes32.wrap(r);
 
-    stack[bOffset] = r.u3();
-    stack[bOffset + 1] = r.u2();
-    stack[bOffset + 2] = r.u1();
-    stack[bOffset + 3] = r.u0();
+    stack[bOffset] = result.getLong(0);
+    stack[bOffset + 1] = result.getLong(8);
+    stack[bOffset + 2] = result.getLong(16);
+    stack[bOffset + 3] = result.getLong(24);
   }
 }
