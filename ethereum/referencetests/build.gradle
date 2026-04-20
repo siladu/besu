@@ -330,7 +330,12 @@ dependencies {
 
 tasks.register('referenceTests', Test) {
   useJUnitPlatform()
-  for (String name : ['test.evm.v2', 'test.ethereum.state.eips', 'test.ethereum.blockchain.eips', 'test.ethereum.include']) {
+  for (String name : [
+      'test.evm.v2',
+      'test.ethereum.state.eips',
+      'test.ethereum.blockchain.eips',
+      'test.ethereum.include'
+    ]) {
     if (System.getProperty(name) != null) {
       systemProperty name, System.getProperty(name)
     }
@@ -347,7 +352,12 @@ tasks.register('referenceTests', Test) {
 
 tasks.register('referenceTestsDevnet', Test) {
   useJUnitPlatform()
-  for (String name : ['test.evm.v2', 'test.ethereum.state.eips', 'test.ethereum.blockchain.eips', 'test.ethereum.include']) {
+  for (String name : [
+      'test.evm.v2',
+      'test.ethereum.state.eips',
+      'test.ethereum.blockchain.eips',
+      'test.ethereum.include'
+    ]) {
     if (System.getProperty(name) != null) {
       systemProperty name, System.getProperty(name)
     }
