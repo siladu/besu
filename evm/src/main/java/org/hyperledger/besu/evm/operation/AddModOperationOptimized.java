@@ -62,4 +62,20 @@ public class AddModOperationOptimized extends AbstractFixedCostOperation {
     frame.pushStackItem(resultBytes);
     return addModSuccess;
   }
+
+  public static OperationResult staticOperationFastPath(final MessageFrame frame) {
+    Bytes resultBytes;
+
+    final Bytes value0 = frame.popStackItem();
+    final Bytes value1 = frame.popStackItem();
+    final Bytes value2 = frame.popStackItem();
+
+    UInt256 b0 = UInt256.fromBytesBE(value0.toArrayUnsafe());
+    UInt256 b1 = UInt256.fromBytesBE(value1.toArrayUnsafe());
+    UInt256 b2 = UInt256.fromBytesBE(value2.toArrayUnsafe());
+    resultBytes = Bytes.wrap(b0.addModFastPath(b1, b2).toBytesBE());
+
+    frame.pushStackItem(resultBytes);
+    return addModSuccess;
+  }
 }

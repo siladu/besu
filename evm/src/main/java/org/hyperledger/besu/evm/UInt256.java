@@ -574,6 +574,16 @@ public record UInt256(long u3, long u2, long u1, long u0) {
     return modulus.asUInt64().sum(this, other);
   }
 
+  public UInt256 addModFastPath(final UInt256 other, final UInt256 modulus) {
+    if (isZero()) return other.mod(modulus);
+    if (other.isZero()) return this.mod(modulus);
+    if (modulus.isZeroOrOne()) return ZERO;
+    if (modulus.u3 != 0) return modulus.sumFastPath(this, other);
+    if (modulus.u2 != 0) return modulus.asUInt192().sumFastPath(this, other);
+    if (modulus.u1 != 0) return modulus.asUInt128().sumFastPath(this, other);
+    return modulus.asUInt64().sum(this, other);
+  }
+
   /**
    * Modular multiplication.
    *
@@ -1125,6 +1135,19 @@ public record UInt256(long u3, long u2, long u1, long u0) {
     return m.modReduceNormalised(sum, shift, inv);
   }
 
+  private UInt256 sumFastPath(final UInt256 a, final UInt256 b) {
+    UInt257 sum = a.adcFastPath(b);
+    if (!sum.carry()) {
+      int cmp = compareTo(sum.UInt256Value());
+      if (cmp == 0) return ZERO;
+      if (cmp > 0) return sum.UInt256Value();
+    }
+    int shift = Long.numberOfLeadingZeros(u3);
+    UInt256 m = shiftLeft(shift);
+    long inv = reciprocal(m.u3);
+    return m.modReduceNormalised(sum, shift, inv);
+  }
+
   private UInt256 mul(final UInt256 a, final UInt256 b) {
     // multiply-reduce
     UInt512 prod = a.mul256(b);
@@ -1571,6 +1594,17 @@ public record UInt256(long u3, long u2, long u1, long u0) {
       return m.modReduceNormalised(sum, shift, inv);
     }
 
+    UInt256 sumFastPath(final UInt256 a, final UInt256 b) {
+      UInt257 sum = a.adcFastPath(b);
+      int cmp = sum.isUInt256() ? compareTo(sum.UInt256Value()) : -1;
+      if (cmp == 0) return ZERO;
+      if (cmp > 0) return sum.UInt256Value();
+      int shift = Long.numberOfLeadingZeros(u1);
+      UInt128 m = shiftLeft(shift);
+      long inv = reciprocal(m.u1);
+      return m.modReduceNormalised(sum, shift, inv);
+    }
+
     UInt256 mul(final UInt256 a, final UInt256 b) {
       // smaller allocation path: multiply-reduce with UInt256 prod
       if (a.isUInt128() && b.isUInt128()) {
@@ -1805,6 +1839,19 @@ public record UInt256(long u3, long u2, long u1, long u0) {
 
     UInt256 sum(final UInt256 a, final UInt256 b) {
       UInt257 sum = a.adc(b);
+      if (!sum.carry()) {
+        int cmp = compareTo(sum.UInt256Value());
+        if (cmp == 0) return ZERO;
+        if (cmp > 0) return sum.UInt256Value();
+      }
+      int shift = Long.numberOfLeadingZeros(u2);
+      UInt192 m = shiftLeft(shift);
+      long inv = reciprocal(m.u2);
+      return m.modReduceNormalised(sum, shift, inv);
+    }
+
+    UInt256 sumFastPath(final UInt256 a, final UInt256 b) {
+      UInt257 sum = a.adcFastPath(b);
       if (!sum.carry()) {
         int cmp = compareTo(sum.UInt256Value());
         if (cmp == 0) return ZERO;

@@ -14,18 +14,17 @@
  */
 package org.hyperledger.besu.ethereum.vm.operations;
 
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.operation.AddModOperationOptimized;
 import org.hyperledger.besu.evm.operation.Operation;
-
-import java.util.concurrent.ThreadLocalRandom;
-
-import org.apache.tuweni.bytes.Bytes;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
 
-public class AddModOperationBenchmark extends TernaryOperationBenchmark {
+import java.util.concurrent.ThreadLocalRandom;
+
+public class AddModFastPathOperationBenchmark extends TernaryOperationBenchmark {
 
   // Benches for (a + b) % c
 
@@ -179,6 +178,6 @@ public class AddModOperationBenchmark extends TernaryOperationBenchmark {
 
   @Override
   protected Operation.OperationResult invoke(final MessageFrame frame) {
-    return AddModOperationOptimized.staticOperation(frame);
+    return AddModOperationOptimized.staticOperationFastPath(frame);
   }
 }
