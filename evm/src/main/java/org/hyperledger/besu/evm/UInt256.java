@@ -463,6 +463,12 @@ public record UInt256(long u3, long u2, long u1, long u0) {
     return adc(other).UInt256Value();
   }
 
+  public UInt256 addFastPath(final UInt256 other) {
+    if (isZero()) return other;
+    if (other.isZero()) return this;
+    return adcFastPath(other).UInt256Value();
+  }
+
   /**
    * Multiplication
    *
@@ -881,6 +887,30 @@ public record UInt256(long u3, long u2, long u1, long u0) {
   }
 
   private UInt257 adc(final UInt256 other) {
+    long z0 = u0 + other.u0;
+    long carry = Long.compareUnsigned(z0, u0) < 0 ? 1 : 0;
+
+    long z1 = u1 + other.u1 + carry;
+    long overflow1 = Long.compareUnsigned(z1, u1) < 0 ? 1 : 0;
+    long overflow2 = Long.compareUnsigned(z1, u1) == 0 ? 1 : 0;
+    carry = overflow1 | (overflow2 & carry);
+
+    long z2 = u2 + other.u2 + carry;
+    overflow1 = Long.compareUnsigned(z2, u2) < 0 ? 1 : 0;
+    overflow2 = Long.compareUnsigned(z2, u2) == 0 ? 1 : 0;
+    carry = overflow1 | (overflow2 & carry);
+
+    long z3 = u3 + other.u3 + carry;
+    overflow1 = Long.compareUnsigned(z3, u3) < 0 ? 1 : 0;
+    overflow2 = Long.compareUnsigned(z3, u3) == 0 ? 1 : 0;
+    carry = overflow1 | (overflow2 & carry);
+
+    return new UInt257(carry != 0, new UInt256(z3, z2, z1, z0));
+  }
+
+  private UInt257 adcFastPath(final UInt256 other) {
+    if (isZero()) return new UInt257(false, other);
+    if (other.isZero()) return new UInt257(false, this);
     long z0 = u0 + other.u0;
     long carry = Long.compareUnsigned(z0, u0) < 0 ? 1 : 0;
 

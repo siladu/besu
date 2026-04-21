@@ -77,4 +77,27 @@ public class AddOperationV2 extends AbstractFixedCostOperationV2 {
     frame.setTopV2(top - 1);
     return ADD_SUCCESS;
   }
+
+  public static Operation.OperationResult staticOperationFastPath(final MessageFrame frame) {
+    if (!frame.stackHasItems(2)) return UNDERFLOW_RESPONSE;
+    long[] stack = frame.stackDataV2();
+    int top = frame.stackTopV2();
+    final int aOffset = (top - 1) << 2;
+    final int bOffset = (top - 2) << 2;
+
+    final UInt256 valueA =
+            new UInt256(stack[aOffset], stack[aOffset + 1], stack[aOffset + 2], stack[aOffset + 3]);
+    final UInt256 valueB =
+            new UInt256(stack[bOffset], stack[bOffset + 1], stack[bOffset + 2], stack[bOffset + 3]);
+
+    final UInt256 r = valueA.addFastPath(valueB);
+
+    stack[bOffset] = r.u3();
+    stack[bOffset + 1] = r.u2();
+    stack[bOffset + 2] = r.u1();
+    stack[bOffset + 3] = r.u0();
+
+    frame.setTopV2(top - 1);
+    return ADD_SUCCESS;
+  }
 }

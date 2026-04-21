@@ -14,14 +14,43 @@
  */
 package org.hyperledger.besu.ethereum.vm.operations;
 
+import org.apache.tuweni.bytes.Bytes32;
+import org.hyperledger.besu.ethereum.vm.operations.v2.BenchmarkHelperV2;
+import org.hyperledger.besu.evm.UInt256;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.operation.AddOperationOptimized;
 import org.hyperledger.besu.evm.operation.Operation;
+import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.infra.Blackhole;
 
 public class AddOperationBenchmark extends BinaryOperationBenchmark {
 
   @Override
   protected Operation.OperationResult invoke(final MessageFrame frame) {
     return AddOperationOptimized.staticOperation(frame);
+  }
+
+  @Benchmark
+  public void fastPathZeroA(final Blackhole blackhole) {
+    frame.pushStackItem(bPool[index]);
+    frame.pushStackItem(Bytes32.ZERO);
+
+    blackhole.consume(invoke(frame));
+
+    frame.popStackItem();
+
+    index = (index + 1) % SAMPLE_SIZE;
+  }
+
+  @Benchmark
+  public void fastPathZeroB(final Blackhole blackhole) {
+    frame.pushStackItem(Bytes32.ZERO);
+    frame.pushStackItem(aPool[index]);
+
+    blackhole.consume(invoke(frame));
+
+    frame.popStackItem();
+
+    index = (index + 1) % SAMPLE_SIZE;
   }
 }
