@@ -68,8 +68,8 @@ class AddOperationV2Test {
   void addOperation(final String a, final String b, final String expectedResult) {
     final MessageFrame frame =
         new TestMessageFrameBuilderV2()
-            .pushStackItem(Bytes32.fromHexStringLenient(b)) // pushed first → deepest (top-2)
-            .pushStackItem(Bytes32.fromHexStringLenient(a)) // pushed last → top (top-1)
+            .pushStackItem(Bytes32.fromHexString(b)) // pushed first → deepest (top-2)
+            .pushStackItem(Bytes32.fromHexString(a)) // pushed last → top (top-1)
             .build();
     assertThat(frame.stackTopV2()).isEqualTo(2);
 
@@ -80,9 +80,7 @@ class AddOperationV2Test {
     assertThat(frame.stackTopV2()).isEqualTo(1);
 
     final UInt256 expected =
-        expectedResult.equals("0x") || expectedResult.equals("0x0")
-            ? UInt256.ZERO
-            : UInt256.fromBytesBE(Bytes32.fromHexStringLenient(expectedResult).toArrayUnsafe());
+        UInt256.fromBytesBE(Bytes32.fromHexString(expectedResult).toArrayUnsafe());
     assertThat(getV2StackItem(frame, 0)).isEqualTo(expected);
   }
 
@@ -101,7 +99,7 @@ class AddOperationV2Test {
   void addOperationUnderflowOnlyOneItem() {
     final MessageFrame frame =
         new TestMessageFrameBuilderV2()
-            .pushStackItem(Bytes32.fromHexStringLenient("0x1")) // top-2, missing top-1
+            .pushStackItem(Bytes32.fromHexString("0x01")) // top-2, missing top-1
             .build();
     assertThat(frame.stackTopV2()).isEqualTo(1);
 
@@ -120,8 +118,8 @@ class AddOperationV2Test {
     final MessageFrame frame =
         new TestMessageFrameBuilderV2()
             .pushStackItem(untouched) // top-3 (untouched by ADD)
-            .pushStackItem(Bytes32.fromHexStringLenient("0x07")) // top-2 (b)
-            .pushStackItem(Bytes32.fromHexStringLenient("0x05")) // top-1 (a)
+            .pushStackItem(Bytes32.fromHexString("0x07")) // top-2 (b)
+            .pushStackItem(Bytes32.fromHexString("0x05")) // top-1 (a)
             .build();
     assertThat(frame.stackTopV2()).isEqualTo(3);
 
@@ -136,8 +134,8 @@ class AddOperationV2Test {
   void addOperationGasCostIsVeryLowTier() {
     final MessageFrame frame =
         new TestMessageFrameBuilderV2()
-            .pushStackItem(Bytes32.fromHexStringLenient("0x01"))
-            .pushStackItem(Bytes32.fromHexStringLenient("0x02"))
+            .pushStackItem(Bytes32.fromHexString("0x01"))
+            .pushStackItem(Bytes32.fromHexString("0x02"))
             .build();
 
     final Operation.OperationResult result = operation.execute(frame, null);
