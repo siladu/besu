@@ -97,6 +97,7 @@ import java.util.Optional;
 import java.util.function.Function;
 
 import org.apache.tuweni.bytes.Bytes;
+import org.hyperledger.besu.evm.v2.operation.SubOperationV2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -489,6 +490,7 @@ public class EVM {
         result =
             switch (opcode) {
               case 0x01 -> AddOperationV2.staticOperation(frame);
+              case 0x03 -> SubOperationV2.staticOperation(frame);
               case 0x09 -> MulModOperationV2.staticOperation(frame);
               case 0x1b ->
                   enableConstantinople
@@ -502,7 +504,7 @@ public class EVM {
                   enableConstantinople
                       ? SarOperationV2.staticOperation(frame)
                       : InvalidOperation.invalidOperationResult(opcode);
-              // TODO: implement remaining opcodes in v2; until then fall through to v1
+              // TODO EVMv2: implement remaining opcodes in v2; until then fall through to v1
               default -> {
                 frame.setCurrentOperation(currentOperation);
                 yield currentOperation.execute(frame, this);

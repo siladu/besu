@@ -463,6 +463,30 @@ public record UInt256(long u3, long u2, long u1, long u0) {
     return adc(other).UInt256Value();
   }
 
+  public UInt256 addWithIntCarry(final UInt256 other) {
+    return adcInt(other).UInt256Value();
+  }
+
+  public UInt256 addWithBoolCarry(final UInt256 other) {
+    return adcBool(other).UInt256Value();
+  }
+
+  /**
+   * Subtraction
+   *
+   * <p>Compute the wrapping difference of 2 256-bits integers.
+   *
+   * @param other Integer to subtract from this integer.
+   * @return The difference.
+   */
+  public UInt256 sub(final UInt256 other) {
+    return sbb(other).UInt256Value();
+  }
+
+  public UInt256 subWithIntCarry(final UInt256 other) {
+    return sbbInt(other).UInt256Value();
+  }
+
   /**
    * Multiplication
    *
@@ -880,24 +904,114 @@ public record UInt256(long u3, long u2, long u1, long u0) {
     return new UInt256(0, u3, u2, u1);
   }
 
+  // Add with carry
   private UInt257 adc(final UInt256 other) {
+    // Limb 0: no incoming carry, so a plain unsigned-wrap check suffices.
     long z0 = u0 + other.u0;
     long carry = Long.compareUnsigned(z0, u0) < 0 ? 1 : 0;
 
+    // Limbs 1-3 add three values (u_i + other.u_i + carry), so the wrap check
+    // needs a tie-breaker: if the sum equals u_i, other.u_i was 0xFF..FF
+    // and the incoming carry alone pushed us over, which is overflow iff carry=1.
     long z1 = u1 + other.u1 + carry;
-    long overflow1 = Long.compareUnsigned(z1, u1) < 0 ? 1 : 0;
-    long overflow2 = Long.compareUnsigned(z1, u1) == 0 ? 1 : 0;
-    carry = overflow1 | (overflow2 & carry);
+    long overflowed = Long.compareUnsigned(z1, u1) < 0 ? 1 : 0;
+    long overflowIfCarried = Long.compareUnsigned(z1, u1) == 0 ? 1 : 0;
+    carry = overflowed | (overflowIfCarried & carry);
 
     long z2 = u2 + other.u2 + carry;
-    overflow1 = Long.compareUnsigned(z2, u2) < 0 ? 1 : 0;
-    overflow2 = Long.compareUnsigned(z2, u2) == 0 ? 1 : 0;
-    carry = overflow1 | (overflow2 & carry);
+    overflowed = Long.compareUnsigned(z2, u2) < 0 ? 1 : 0;
+    overflowIfCarried = Long.compareUnsigned(z2, u2) == 0 ? 1 : 0;
+    carry = overflowed | (overflowIfCarried & carry);
 
     long z3 = u3 + other.u3 + carry;
-    overflow1 = Long.compareUnsigned(z3, u3) < 0 ? 1 : 0;
-    overflow2 = Long.compareUnsigned(z3, u3) == 0 ? 1 : 0;
-    carry = overflow1 | (overflow2 & carry);
+    overflowed = Long.compareUnsigned(z3, u3) < 0 ? 1 : 0;
+    overflowIfCarried = Long.compareUnsigned(z3, u3) == 0 ? 1 : 0;
+    carry = overflowed | (overflowIfCarried & carry);
+
+    return new UInt257(carry != 0, new UInt256(z3, z2, z1, z0));
+  }
+
+  private UInt257 adcInt(final UInt256 other) {
+    // Limb 0: no incoming carry, so a plain unsigned-wrap check suffices.
+    long z0 = u0 + other.u0;
+    int carry = Long.compareUnsigned(z0, u0) < 0 ? 1 : 0;
+
+    // Limbs 1-3 add three values (u_i + other.u_i + carry), so the wrap check
+    // needs a tie-breaker: if the sum equals u_i, other.u_i was 0xFF..FF
+    // and the incoming carry alone pushed us over, which is overflow iff carry=1.
+    long z1 = u1 + other.u1 + carry;
+    int overflowed = Long.compareUnsigned(z1, u1) < 0 ? 1 : 0;
+    int overflowIfCarried = Long.compareUnsigned(z1, u1) == 0 ? 1 : 0;
+    carry = overflowed | (overflowIfCarried & carry);
+
+    long z2 = u2 + other.u2 + carry;
+    overflowed = Long.compareUnsigned(z2, u2) < 0 ? 1 : 0;
+    overflowIfCarried = Long.compareUnsigned(z2, u2) == 0 ? 1 : 0;
+    carry = overflowed | (overflowIfCarried & carry);
+
+    long z3 = u3 + other.u3 + carry;
+    overflowed = Long.compareUnsigned(z3, u3) < 0 ? 1 : 0;
+    overflowIfCarried = Long.compareUnsigned(z3, u3) == 0 ? 1 : 0;
+    carry = overflowed | (overflowIfCarried & carry);
+
+    return new UInt257(carry != 0, new UInt256(z3, z2, z1, z0));
+  }
+
+  private UInt257 adcBool(final UInt256 other) {
+    // Limb 0: no incoming carry, so a plain unsigned-wrap check suffices.
+    long z0 = u0 + other.u0;
+    boolean carry = Long.compareUnsigned(z0, u0) < 0;
+
+    // Limbs 1-3 add three values (u_i + other.u_i + carry), so the wrap check
+    // needs a tie-breaker: if the sum equals u_i, other.u_i was 0xFF..FF
+    // and the incoming carry alone pushed us over, which is overflow iff carry=1.
+    long z1 = u1 + other.u1 + (carry ? 1 : 0);
+    boolean overflowed = Long.compareUnsigned(z1, u1) < 0;
+    boolean overflowIfCarried = Long.compareUnsigned(z1, u1) == 0;
+    carry = overflowed || (overflowIfCarried && carry);
+
+    long z2 = u2 + other.u2 + (carry ? 1 : 0);;
+    overflowed = Long.compareUnsigned(z2, u2) < 0;
+    overflowIfCarried = Long.compareUnsigned(z2, u2) == 0;
+    carry = overflowed || (overflowIfCarried && carry);
+
+    long z3 = u3 + other.u3 + (carry ? 1 : 0);
+    overflowed = Long.compareUnsigned(z3, u3) < 0;
+    overflowIfCarried = Long.compareUnsigned(z3, u3) == 0;
+    carry = overflowed || (overflowIfCarried && carry);
+
+    return new UInt257(carry, new UInt256(z3, z2, z1, z0));
+  }
+
+  // Sub with borrow
+  private UInt257 sbb(final UInt256 other) {
+    long z0 = u0 - other.u0;
+    long carry = z0 < 0 ? -1 : 0;
+
+    long z1 = u1 - other.u1 + carry;
+    carry = z1 < 0 ? -1 : 0;
+
+    long z2 = u2 - other.u2 + carry;
+    carry = z2 < 0 ? -1 : 0;
+
+    long z3 = u3 - other.u3 + carry;
+    carry = z3 < 0 ? -1 : 0;
+
+    return new UInt257(carry != 0, new UInt256(z3, z2, z1, z0));
+  }
+
+  private UInt257 sbbInt(final UInt256 other) {
+    long z0 = u0 - other.u0;
+    int carry = z0 < 0 ? -1 : 0;
+
+    long z1 = u1 - other.u1 + carry;
+    carry = z1 < 0 ? -1 : 0;
+
+    long z2 = u2 - other.u2 + carry;
+    carry = z2 < 0 ? -1 : 0;
+
+    long z3 = u3 - other.u3 + carry;
+    carry = z3 < 0 ? -1 : 0;
 
     return new UInt257(carry != 0, new UInt256(z3, z2, z1, z0));
   }
