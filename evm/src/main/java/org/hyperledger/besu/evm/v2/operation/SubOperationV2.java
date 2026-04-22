@@ -76,7 +76,7 @@ public class SubOperationV2 extends AbstractFixedCostOperationV2 {
     return SUB_SUCCESS;
   }
 
-  public static OperationResult staticOperationIntCarry(final MessageFrame frame) {
+  public static OperationResult staticOperationIntBorrow(final MessageFrame frame) {
     if (!frame.stackHasItemsV2(2)) return UNDERFLOW_RESPONSE;
     long[] stack = frame.stackDataV2();
     int top = frame.stackTopV2();
@@ -88,7 +88,7 @@ public class SubOperationV2 extends AbstractFixedCostOperationV2 {
     final UInt256 valueB =
             new UInt256(stack[bOffset], stack[bOffset + 1], stack[bOffset + 2], stack[bOffset + 3]);
 
-    final UInt256 r = valueA.subWithIntCarry(valueB);
+    final UInt256 r = valueA.subWithIntBorrow(valueB);
 
     stack[bOffset] = r.u3();
     stack[bOffset + 1] = r.u2();

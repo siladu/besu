@@ -18,10 +18,10 @@ import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.operation.Operation;
 import org.hyperledger.besu.evm.v2.operation.SubOperationV2;
 
-public class SubOperationBenchmarkV2IntCarry extends BinaryOperationBenchmarkV2 {
+public class SubOperationBenchmarkV2IntBorrow extends BinaryOperationBenchmarkV2 {
 
   @Override
   protected Operation.OperationResult invoke(final MessageFrame frame) {
-    return SubOperationV2.staticOperationIntCarry(frame);
+    return SubOperationV2.staticOperationIntBorrow(frame);
   }
 }
