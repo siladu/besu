@@ -152,7 +152,7 @@ dependencies {
     api 'org.hyperledger.besu:besu-native-common:1.5.0'
     api 'org.hyperledger.besu:arithmetic:1.5.0'
     api 'org.hyperledger.besu:blake2bf:1.5.0'
-    api 'org.hyperledger.besu:gnark:BLS12-OPT-SNAPSHOT'
+    api 'org.hyperledger.besu:gnark:BLS12-OPT-GNARK-0.21.0-SNAPSHOT'
     api 'org.hyperledger.besu:ipa-multipoint:1.5.0'
     api 'org.hyperledger.besu:secp256k1:1.5.0'
     api 'org.hyperledger.besu:secp256r1:1.5.0'
