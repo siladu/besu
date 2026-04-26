@@ -14,7 +14,6 @@
  */
 package org.hyperledger.besu.evm.precompile;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hyperledger.besu.evm.precompile.AbstractPrecompiledContract.cacheEventConsumer;
 
 import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
@@ -24,7 +23,6 @@ import org.hyperledger.besu.nativelib.gnark.LibGnarkEIP2537;
 import java.util.Optional;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import com.sun.jna.ptr.IntByReference;
 import jakarta.validation.constraints.NotNull;
 import org.apache.tuweni.bytes.Bytes;
 import org.slf4j.Logger;
@@ -76,6 +74,7 @@ public abstract class AbstractBLS12PrecompiledContract implements PrecompiledCon
   private final String name;
   private final byte operationId;
   private final int inputLimit;
+  private final int outputSize;
 
   /**
    * Instantiates a new Abstract BLS12 precompiled contract.
@@ -83,11 +82,14 @@ public abstract class AbstractBLS12PrecompiledContract implements PrecompiledCon
    * @param name the name
    * @param operationId the operation id
    * @param inputLen the input len
+   * @param outputSize the expected output size in bytes
    */
-  AbstractBLS12PrecompiledContract(final String name, final byte operationId, final int inputLen) {
+  AbstractBLS12PrecompiledContract(
+      final String name, final byte operationId, final int inputLen, final int outputSize) {
     this.name = name;
     this.operationId = operationId;
     this.inputLimit = inputLen + 1;
+    this.outputSize = outputSize;
   }
 
   /**
@@ -147,34 +149,20 @@ public abstract class AbstractBLS12PrecompiledContract implements PrecompiledCon
       }
     }
 
-    final byte[] result = new byte[LibGnarkEIP2537.EIP2537_PREALLOCATE_FOR_RESULT_BYTES];
-    final byte[] error = new byte[LibGnarkEIP2537.EIP2537_PREALLOCATE_FOR_ERROR_BYTES];
-
-    final IntByReference o_len =
-        new IntByReference(LibGnarkEIP2537.EIP2537_PREALLOCATE_FOR_RESULT_BYTES);
-    final IntByReference err_len =
-        new IntByReference(LibGnarkEIP2537.EIP2537_PREALLOCATE_FOR_ERROR_BYTES);
+    final byte[] result = new byte[outputSize];
 
     final int inputSize = Math.min(inputLimit, input.size());
     final int errorNo =
         LibGnarkEIP2537.eip2537_perform_operation(
-            operationId,
-            input.slice(0, inputSize).toArrayUnsafe(),
-            inputSize,
-            result,
-            o_len,
-            error,
-            err_len);
+            operationId, input.slice(0, inputSize).toArrayUnsafe(), inputSize, result);
 
-    if (errorNo == 0) {
+    if (errorNo == LibGnarkEIP2537.EIP2537_ERR_CODE_SUCCESS) {
       res =
           new PrecompileInputResultTuple(
               enableResultCaching ? input.copy() : input,
-              PrecompileContractResult.success(Bytes.wrap(result, 0, o_len.getValue())));
+              PrecompileContractResult.success(Bytes.wrap(result, 0, outputSize)));
     } else {
-      final String errorMessage = new String(error, 0, err_len.getValue(), UTF_8);
-      messageFrame.setRevertReason(Bytes.wrap(error, 0, err_len.getValue()));
-      LOG.trace("Error executing precompiled contract {}: '{}'", name, errorMessage);
+      LOG.trace("Error executing precompiled contract {}: error code {}", name, errorNo);
       res =
           new PrecompileInputResultTuple(
               enableResultCaching ? input.copy() : input,

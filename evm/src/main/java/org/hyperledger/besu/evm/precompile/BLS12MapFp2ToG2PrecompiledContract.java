@@ -32,7 +32,8 @@ public class BLS12MapFp2ToG2PrecompiledContract extends AbstractBLS12Precompiled
     super(
         "BLS12_MAP_FP2_TO_G2",
         LibGnarkEIP2537.BLS12_MAP_FP2_TO_G2_OPERATION_SHIM_VALUE,
-        PARAMETER_LENGTH);
+        PARAMETER_LENGTH,
+        LibGnarkEIP2537.EIP2537_PREALLOCATE_FOR_G2);
   }
 
   @Override

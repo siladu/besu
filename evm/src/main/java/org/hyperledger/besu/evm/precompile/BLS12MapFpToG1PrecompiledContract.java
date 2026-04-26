@@ -32,7 +32,8 @@ public class BLS12MapFpToG1PrecompiledContract extends AbstractBLS12PrecompiledC
     super(
         "BLS12_MAP_FP_TO_G1",
         LibGnarkEIP2537.BLS12_MAP_FP_TO_G1_OPERATION_SHIM_VALUE,
-        PARAMETER_LENGTH);
+        PARAMETER_LENGTH,
+        LibGnarkEIP2537.EIP2537_PREALLOCATE_FOR_G1);
   }
 
   @Override

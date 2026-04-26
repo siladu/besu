@@ -38,7 +38,8 @@ public class BLS12PairingPrecompiledContract extends AbstractBLS12PrecompiledCon
     super(
         "BLS12_PAIRING_CHECK",
         LibGnarkEIP2537.BLS12_PAIR_OPERATION_SHIM_VALUE,
-        Integer.MAX_VALUE / PARAMETER_LENGTH * PARAMETER_LENGTH);
+        Integer.MAX_VALUE / PARAMETER_LENGTH * PARAMETER_LENGTH,
+        LibGnarkEIP2537.EIP2537_PAIR_PREALLOCATE_FOR_RESULT_BYTES);
   }
 
   @Override

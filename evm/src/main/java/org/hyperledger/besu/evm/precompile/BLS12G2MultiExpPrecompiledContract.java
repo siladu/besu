@@ -38,7 +38,8 @@ public class BLS12G2MultiExpPrecompiledContract extends AbstractBLS12Precompiled
     super(
         "BLS12_G2MSM",
         LibGnarkEIP2537.BLS12_G2MULTIEXP_OPERATION_SHIM_VALUE,
-        Integer.MAX_VALUE / PARAMETER_LENGTH * PARAMETER_LENGTH);
+        Integer.MAX_VALUE / PARAMETER_LENGTH * PARAMETER_LENGTH,
+        LibGnarkEIP2537.EIP2537_PREALLOCATE_FOR_G2);
   }
 
   @Override
