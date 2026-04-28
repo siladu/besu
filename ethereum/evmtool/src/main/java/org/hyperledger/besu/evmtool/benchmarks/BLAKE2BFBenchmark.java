@@ -42,11 +42,6 @@ public class BLAKE2BFBenchmark extends BenchmarkExecutor {
 
   @Override
   public void runBenchmark(final Boolean attemptNative, final String fork) {
-    try {
-      Thread.sleep(3000);
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
     EvmSpecVersion forkVersion = EvmSpecVersion.fromName(fork);
 
     if (attemptNative != null && attemptNative) {
