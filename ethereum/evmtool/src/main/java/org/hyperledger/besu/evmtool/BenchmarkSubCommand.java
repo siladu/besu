@@ -21,6 +21,7 @@ import static picocli.CommandLine.ScopeType.LOCAL;
 import org.hyperledger.besu.evm.precompile.AbstractBLS12PrecompiledContract;
 import org.hyperledger.besu.evm.precompile.AbstractPrecompiledContract;
 import org.hyperledger.besu.evmtool.benchmarks.AltBN128Benchmark;
+import org.hyperledger.besu.evmtool.benchmarks.BLAKE2BFBenchmark;
 import org.hyperledger.besu.evmtool.benchmarks.BLS12Benchmark;
 import org.hyperledger.besu.evmtool.benchmarks.BenchmarkConfig;
 import org.hyperledger.besu.evmtool.benchmarks.BenchmarkExecutor;
@@ -67,6 +68,7 @@ public class BenchmarkSubCommand implements Runnable {
   enum Benchmark {
     altBn128(AltBN128Benchmark::new),
     // blake2f
+    BLAKE2BF(BLAKE2BFBenchmark::new),
     EcRecover(ECRecoverBenchmark::new),
     ModExp(ModExpBenchmark::new),
     // bls12
