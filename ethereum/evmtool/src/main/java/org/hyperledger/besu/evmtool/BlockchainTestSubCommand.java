@@ -109,6 +109,11 @@ public class BlockchainTestSubCommand implements Runnable {
       description = "Output file for traces (default: stderr). Requires --json or --trace flag.")
   private String traceOutput = null;
 
+  @Option(
+      names = {"--verbose"},
+      description = "Verbose logs, listing all skipped tests")
+  private final Boolean verbose = false;
+
   @ParentCommand private final EvmToolCommand parentCommand;
 
   // picocli does it magically
@@ -229,10 +234,14 @@ public class BlockchainTestSubCommand implements Runnable {
                 entry -> {
                   final String test = entry.getKey();
                   if (testName != null && !matchesTestName(test)) {
-                    parentCommand.out.println("Skipping test: " + test);
+                    if (verbose) {
+                      parentCommand.out.println("Skipping test: " + test);
+                    }
                     return false;
                   }
-                  parentCommand.out.println("Considering " + test);
+                  if (verbose) {
+                    parentCommand.out.println("Considering " + test);
+                  }
                   return true;
                 })
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
@@ -404,7 +413,9 @@ public class BlockchainTestSubCommand implements Runnable {
           "Chain header mismatch, have %s want %s%n",
           blockchain.getChainHeadHash(), spec.getLastBlockHash());
     } else {
-      parentCommand.out.println("Chain import successful");
+      if (verbose) {
+        parentCommand.out.println("Chain import successful");
+      }
     }
 
     if (parentCommand.showJsonResults) {
