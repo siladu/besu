@@ -120,9 +120,9 @@ public class BlockchainTestSubCommand implements Runnable {
   private final Integer iterations = 1;
 
   @Option(
-      names = {"-q", "--quiet"},
-      description = "Quieter logs, focussed on benchmark results")
-  private final Boolean quiet = false;
+      names = {"--verbose"},
+      description = "Verbose logs, listing all skipped tests")
+  private final Boolean verbose = false;
 
   @ParentCommand private final EvmToolCommand parentCommand;
 
@@ -247,27 +247,25 @@ public class BlockchainTestSubCommand implements Runnable {
                 entry -> {
                   final String test = entry.getKey();
                   if (testName != null && !matchesTestName(test)) {
-                    if (!quiet) {
+                    if (verbose) {
                       parentCommand.out.println("Skipping test: " + test);
                     }
                     return false;
                   }
-                  if (!quiet) {
+                  if (verbose) {
                     parentCommand.out.println("Considering " + test);
                   }
                   return true;
                 })
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    if (quiet) {
-      // collapse individual test printouts into one line
-      parentCommand.out.println(
+    // collapse individual test printouts into one line
+    parentCommand.out.println(
           "Running "
               + filteredTests.size()
               + " / "
               + blockchainTests.size()
               + " filtered tests for "
               + testFileName);
-    }
     int repeatCount = Math.max(0, parentCommand.getRepeatCount());
     int measuredIterationCount = Math.max(1, iterations);
     LinkedHashMap<String, List<Long>> iterationResults = new LinkedHashMap<>();
@@ -467,7 +465,7 @@ public class BlockchainTestSubCommand implements Runnable {
           "Chain header mismatch, have %s want %s%n",
           blockchain.getChainHeadHash(), spec.getLastBlockHash());
     } else {
-      if (!quiet) {
+      if (verbose) {
         parentCommand.out.println("Chain import successful");
       }
     }
