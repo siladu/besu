@@ -15,66 +15,27 @@
 package org.hyperledger.besu.ethereum.mainnet.block.access.list;
 
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.datatypes.StorageSlotKey;
-import org.hyperledger.besu.datatypes.Wei;
 
-import org.apache.tuweni.units.bigints.UInt256;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 class BlockAccessListBuilderEip7928Test {
 
-  private static final Address ADDR_1 =
-      Address.fromHexString("0x1000000000000000000000000000000000000001");
-  private static final Address ADDR_2 =
-      Address.fromHexString("0x2000000000000000000000000000000000000002");
-  private static final StorageSlotKey SLOT_1 = new StorageSlotKey(UInt256.ONE);
-
   @Test
-  void builderEip7928ItemCountMatchesBuiltList() {
+  void buildSortsAccountsByAddressBytes() {
+    final Address addrA = Address.fromHexString("0x1000000000000000000000000000000000000001");
+    final Address addrB = Address.fromHexString("0x2000000000000000000000000000000000000002");
+    final Address addrC = Address.fromHexString("0x3000000000000000000000000000000000000003");
+
     final BlockAccessList.BlockAccessListBuilder builder = BlockAccessList.builder();
-    final BlockAccessList.BlockAccessListBuilder.AccountBuilder ab1 =
-        builder.getOrCreateAccountBuilder(ADDR_1);
-    ab1.addStorageRead(SLOT_1);
-    ab1.addBalanceChange(0, Wei.ONE);
-    builder.getOrCreateAccountBuilder(ADDR_2);
+    builder.getOrCreateAccountBuilder(addrC);
+    builder.getOrCreateAccountBuilder(addrA);
+    builder.getOrCreateAccountBuilder(addrB);
+
     final BlockAccessList built = builder.build();
-    Assertions.assertThat(builder.eip7928ItemCount()).isEqualTo(built.eip7928ItemCount());
-  }
 
-  /**
-   * Tx selection probes the EIP-7928 budget by snapshotting the committed builder ({@code
-   * mergeFrom(build())}) then applying the candidate partial; that path must agree with applying
-   * partials incrementally on one builder, or the probe count (and accept/reject decision) would be
-   * wrong.
-   */
-  @Test
-  void mergeFromReplayMatchesIncrementalApply() {
-    final PartialBlockAccessView p0 = partialWithOneAccountAndStorageWrite(0);
-    final PartialBlockAccessView p1 = partialWithOneAccountAndStorageWrite(1);
-    final BlockAccessList.BlockAccessListBuilder main = BlockAccessList.builder();
-    main.apply(p0);
-    final BlockAccessList snap = main.build();
-
-    final BlockAccessList.BlockAccessListBuilder viaMerge = BlockAccessList.builder();
-    viaMerge.mergeFrom(snap);
-    viaMerge.apply(p1);
-
-    final BlockAccessList.BlockAccessListBuilder direct = BlockAccessList.builder();
-    direct.apply(p0);
-    direct.apply(p1);
-
-    Assertions.assertThat(viaMerge.eip7928ItemCount())
-        .isEqualTo(direct.eip7928ItemCount())
-        .isEqualTo(4L);
-  }
-
-  private static PartialBlockAccessView partialWithOneAccountAndStorageWrite(final int txIndex) {
-    final Address addr = Address.fromHexString(String.format("0x%040x", txIndex + 100L));
-    final PartialBlockAccessView.PartialBlockAccessViewBuilder b =
-        new PartialBlockAccessView.PartialBlockAccessViewBuilder().withTxIndex(txIndex);
-    b.getOrCreateAccountBuilder(addr)
-        .addStorageChange(new StorageSlotKey(UInt256.ONE), UInt256.ZERO);
-    return b.build();
+    Assertions.assertThat(built.accountChanges())
+        .extracting(BlockAccessList.AccountChanges::address)
+        .containsExactly(addrA, addrB, addrC);
   }
 }
