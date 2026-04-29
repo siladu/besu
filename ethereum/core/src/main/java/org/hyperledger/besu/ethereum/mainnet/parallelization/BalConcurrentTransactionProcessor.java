@@ -21,12 +21,16 @@ import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.MutableWorldState;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.mainnet.BalConfiguration;
+import org.hyperledger.besu.ethereum.mainnet.ExecutionStats;
+import org.hyperledger.besu.ethereum.mainnet.ExecutionStatsHolder;
 import org.hyperledger.besu.ethereum.mainnet.MainnetTransactionProcessor;
+import org.hyperledger.besu.ethereum.mainnet.SlowBlockTracer;
 import org.hyperledger.besu.ethereum.mainnet.TransactionValidationParams;
 import org.hyperledger.besu.ethereum.mainnet.block.access.list.AccessLocationTracker;
 import org.hyperledger.besu.ethereum.mainnet.block.access.list.BlockAccessList;
 import org.hyperledger.besu.ethereum.mainnet.block.access.list.BlockAccessList.BlockAccessListBuilder;
 import org.hyperledger.besu.ethereum.mainnet.parallelization.prefetch.BalPrefetcher;
+import org.hyperledger.besu.ethereum.mainnet.systemcall.BlockProcessingContext;
 import org.hyperledger.besu.ethereum.processing.TransactionProcessingResult;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.worldview.BonsaiWorldState;
 import org.hyperledger.besu.ethereum.trie.pathbased.common.worldview.PathBasedWorldState;
@@ -60,11 +64,13 @@ public class BalConcurrentTransactionProcessor extends ParallelBlockTransactionP
   private final BlockAccessList blockAccessList;
   private final Duration balProcessingTimeout;
   private final Optional<BalPrefetcher> maybePrefetcher;
+  private final BlockProcessingContext blockProcessingContext;
 
   public BalConcurrentTransactionProcessor(
       final MainnetTransactionProcessor transactionProcessor,
       final BlockAccessList blockAccessList,
-      final BalConfiguration balConfiguration) {
+      final BalConfiguration balConfiguration,
+      final BlockProcessingContext blockProcessingContext) {
     this.transactionProcessor = transactionProcessor;
     this.blockAccessList = blockAccessList;
     this.balProcessingTimeout = balConfiguration.getBalProcessingTimeout();
@@ -75,6 +81,7 @@ public class BalConcurrentTransactionProcessor extends ParallelBlockTransactionP
                     balConfiguration.isBalPreFetchSortingEnabled(),
                     balConfiguration.getBalPreFetchBatchSize()))
             : Optional.empty();
+    this.blockProcessingContext = blockProcessingContext;
   }
 
   @Override
@@ -137,6 +144,17 @@ public class BalConcurrentTransactionProcessor extends ParallelBlockTransactionP
       return null;
     }
 
+    final ExecutionStats workerStats =
+        (blockProcessingContext != null
+                && BackgroundTracerFactory.hasMetricsTracer(
+                    blockProcessingContext.getOperationTracer()))
+            ? new ExecutionStats()
+            : null;
+    if (workerStats != null) {
+      ExecutionStatsHolder.set(workerStats);
+      ws.setStateMetricsCollector(workerStats);
+    }
+
     try {
       ws.disableCacheMerkleTrieLoader();
       final ParallelizedTransactionContext.Builder ctxBuilder =
@@ -155,13 +173,17 @@ public class BalConcurrentTransactionProcessor extends ParallelBlockTransactionP
                   BlockAccessListBuilder.createTransactionAccessLocationTracker(
                       transactionLocation));
 
+      // Create a background tracer for parallel execution metrics collection
+      final OperationTracer backgroundTracer =
+          BackgroundTracerFactory.createBackgroundTracer(blockProcessingContext);
+
       final TransactionProcessingResult result =
           transactionProcessor.processTransaction(
               txUpdater,
               blockHeader,
               transaction.detachedCopy(),
               miningBeneficiary,
-              OperationTracer.NO_TRACING,
+              backgroundTracer,
               blockHashLookup,
               TransactionValidationParams.processingBlock(),
               blobGasPrice,
@@ -171,10 +193,17 @@ public class BalConcurrentTransactionProcessor extends ParallelBlockTransactionP
       blockUpdater.commit();
 
       // TODO: We should pass transaction accumulator
-      ctxBuilder.transactionAccumulator(blockUpdater).transactionProcessingResult(result);
+      ctxBuilder
+          .transactionAccumulator(blockUpdater)
+          .transactionProcessingResult(result)
+          .backgroundTracer(backgroundTracer)
+          .workerExecutionStats(workerStats);
 
       return ctxBuilder.build();
     } finally {
+      if (workerStats != null) {
+        ExecutionStatsHolder.clear();
+      }
       ws.close();
     }
   }
@@ -210,6 +239,24 @@ public class BalConcurrentTransactionProcessor extends ParallelBlockTransactionP
         final TransactionProcessingResult result = ctx.transactionProcessingResult();
 
         blockAccumulator.importStateChangesFromSource(txAccumulator);
+
+        // Consolidate EVM op metrics from the background tracer
+        ctx.backgroundTracer()
+            .ifPresent(
+                backgroundTracer ->
+                    BackgroundTracerFactory.consolidateTracerResults(
+                        backgroundTracer, blockProcessingContext));
+
+        // Consolidate state-layer metrics (account/storage reads, cache stats) from the worker
+        ctx.workerExecutionStats()
+            .ifPresent(
+                workerStats ->
+                    BackgroundTracerFactory.findSlowBlockTracer(
+                            blockProcessingContext != null
+                                ? blockProcessingContext.getOperationTracer()
+                                : OperationTracer.NO_TRACING)
+                        .map(SlowBlockTracer::getExecutionStats)
+                        .ifPresent(mainStats -> mainStats.mergeStateCountsFrom(workerStats)));
 
         confirmedParallelizedTransactionCounter.ifPresent(Counter::inc);
         result.setIsProcessedInParallel(Optional.of(Boolean.TRUE));

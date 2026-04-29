@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+### Breaking Changes
+### Upcoming Breaking Changes
+### Bug fixes
+### Additions and Improvements
+- Add slow block execution metrics logging (`--slow-block-threshold`). When enabled, blocks whose execution time exceeds the threshold are logged in a structured JSON format covering timing breakdowns, state reads/writes, cache hit rates, and EVM opcode counts, following the cross-client execution metrics specification. Disabled by default; set `--slow-block-threshold=<ms>` to enable (0 logs all blocks). [#9834](https://github.com/hyperledger/besu/pull/9834)
+
+## 26.5.0
 
 ### Breaking Changes
 
