@@ -18,6 +18,7 @@ import static java.util.Arrays.copyOfRange;
 
 import org.hyperledger.besu.nativelib.blake2bf.LibBlake2bf;
 
+import jdk.incubator.vector.ByteVector;
 import jdk.incubator.vector.LongVector;
 import jdk.incubator.vector.VectorOperators;
 import jdk.incubator.vector.VectorShuffle;
@@ -82,6 +83,8 @@ public class Blake2bfMessageDigest extends BCMessageDigest implements Cloneable 
 
     // 4-lane 256-bit vector species for the SIMD compress path
     private static final VectorSpecies<Long> SPECIES = LongVector.SPECIES_256;
+    private static final VectorSpecies<Byte> BYTE_SPECIES = ByteVector.SPECIES_256;
+
     // Lane rotation shuffles for the diagonal step: rotateLeft by 1/2/3 positions
     private static final VectorShuffle<Long> ROT_L1 =
         VectorShuffle.fromArray(SPECIES, new int[] {1, 2, 3, 0}, 0);
@@ -93,6 +96,40 @@ public class Blake2bfMessageDigest extends BCMessageDigest implements Cloneable 
     private static final VectorShuffle<Long> ROT_R1 = ROT_L3;
     private static final VectorShuffle<Long> ROT_R2 = ROT_L2;
     private static final VectorShuffle<Long> ROT_R3 = ROT_L1;
+
+    // Byte-shuffle masks for ROR-by-byte-multiple rotations.
+    // BLAKE2b uses ROR(v, 16) and ROR(v, 24); both are byte-aligned within each 64-bit lane,
+    // so they collapse to a single VPSHUFB instruction (1 op, 1 cycle) instead of
+    // shift-left + shift-right + or (3 ops, 4-cycle dep chain).
+    // Per 8-byte lane, byte i comes from source byte: ROR_16 → (i+2)%8, ROR_24 → (i+3)%8.
+    private static final VectorShuffle<Byte> ROR_16_SHUFFLE =
+        VectorShuffle.fromArray(
+            BYTE_SPECIES,
+            new int[] {
+              2, 3, 4, 5, 6, 7, 0, 1, // lane 0
+              10, 11, 12, 13, 14, 15, 8, 9, // lane 1
+              18, 19, 20, 21, 22, 23, 16, 17, // lane 2
+              26, 27, 28, 29, 30, 31, 24, 25 // lane 3
+            },
+            0);
+    private static final VectorShuffle<Byte> ROR_24_SHUFFLE =
+        VectorShuffle.fromArray(
+            BYTE_SPECIES,
+            new int[] {
+              3, 4, 5, 6, 7, 0, 1, 2, // lane 0
+              11, 12, 13, 14, 15, 8, 9, 10, // lane 1
+              19, 20, 21, 22, 23, 16, 17, 18, // lane 2
+              27, 28, 29, 30, 31, 24, 25, 26 // lane 3
+            },
+            0);
+
+    private static LongVector ror16(final LongVector v) {
+      return v.reinterpretAsBytes().rearrange(ROR_16_SHUFFLE).reinterpretAsLongs();
+    }
+
+    private static LongVector ror24(final LongVector v) {
+      return v.reinterpretAsBytes().rearrange(ROR_24_SHUFFLE).reinterpretAsLongs();
+    }
 
     // buffer which holds serialized input for this compression function
     // [ 4 bytes for rounds ][ 64 bytes for h ][ 128 bytes for m ]
@@ -474,99 +511,64 @@ public class Blake2bfMessageDigest extends BCMessageDigest implements Cloneable 
       LongVector vc = LongVector.fromArray(SPECIES, vl, 8);
       LongVector vd = LongVector.fromArray(SPECIES, vl, 12);
 
-      long[] msg = new long[4];
+      // Hoist message-vector construction out of the round loop.
+      // The PRECOMPUTED schedule is constant and m[] doesn't change during compress(),
+      // so each of the 10 schedule rows yields fixed (mColLo, mColHi, mDiagLo, mDiagHi)
+      // tuples. Build all 40 vectors once; the round loop just indexes them.
+      LongVector[] mColLoSched = new LongVector[10];
+      LongVector[] mColHiSched = new LongVector[10];
+      LongVector[] mDiagLoSched = new LongVector[10];
+      LongVector[] mDiagHiSched = new LongVector[10];
+      long[] tmp = new long[4];
+      for (int r = 0; r < 10; r++) {
+        byte[] s = PRECOMPUTED[r];
+        tmp[0] = m[s[0]]; tmp[1] = m[s[1]]; tmp[2] = m[s[2]]; tmp[3] = m[s[3]];
+        mColLoSched[r] = LongVector.fromArray(SPECIES, tmp, 0);
+        tmp[0] = m[s[4]]; tmp[1] = m[s[5]]; tmp[2] = m[s[6]]; tmp[3] = m[s[7]];
+        mColHiSched[r] = LongVector.fromArray(SPECIES, tmp, 0);
+        tmp[0] = m[s[8]]; tmp[1] = m[s[9]]; tmp[2] = m[s[10]]; tmp[3] = m[s[11]];
+        mDiagLoSched[r] = LongVector.fromArray(SPECIES, tmp, 0);
+        tmp[0] = m[s[12]]; tmp[1] = m[s[13]]; tmp[2] = m[s[14]]; tmp[3] = m[s[15]];
+        mDiagHiSched[r] = LongVector.fromArray(SPECIES, tmp, 0);
+      }
 
       for (long j = 0; j < rounds; j++) {
-        byte[] s = PRECOMPUTED[(int) (j % 10)];
+        int r = (int) (j % 10);
+        LongVector mColLo = mColLoSched[r];
+        LongVector mColHi = mColHiSched[r];
+        LongVector mDiagLo = mDiagLoSched[r];
+        LongVector mDiagHi = mDiagHiSched[r];
 
         // Column step: G() on all 4 columns simultaneously.
-        // mColLo = {m[s[0]], m[s[1]], m[s[2]], m[s[3]]}  (x argument per column)
-        // mColHi = {m[s[4]], m[s[5]], m[s[6]], m[s[7]]}  (y argument per column)
-        msg[0] = m[s[0]];
-        msg[1] = m[s[1]];
-        msg[2] = m[s[2]];
-        msg[3] = m[s[3]];
-        LongVector mColLo = LongVector.fromArray(SPECIES, msg, 0);
-        msg[0] = m[s[4]];
-        msg[1] = m[s[5]];
-        msg[2] = m[s[6]];
-        msg[3] = m[s[7]];
-        LongVector mColHi = LongVector.fromArray(SPECIES, msg, 0);
-
-        // G(va, vb, vc, vd) — all 4 columns at once.
-        // ROR(x,32)=ROL(x,32), ROR(x,24)=ROL(x,40), ROR(x,16)=ROL(x,48), ROR(x,63)=ROL(x,1)
+        // ROR_32 stays as ROL 32 (1-op vpermd/vpshufd); ROR_24/16 use byte-shuffle (1-op
+        // vpshufb) instead of shift-shift-or; ROR_63 stays as ROL 1 (unavoidable shift+or).
         va = va.add(vb).add(mColLo);
         vd = vd.lanewise(VectorOperators.XOR, va).lanewise(VectorOperators.ROL, 32L);
         vc = vc.add(vd);
-        vb = vb.lanewise(VectorOperators.XOR, vc).lanewise(VectorOperators.ROL, 40L);
+        vb = ror24(vb.lanewise(VectorOperators.XOR, vc));
         va = va.add(vb).add(mColHi);
-        vd = vd.lanewise(VectorOperators.XOR, va).lanewise(VectorOperators.ROL, 48L);
+        vd = ror16(vd.lanewise(VectorOperators.XOR, va));
         vc = vc.add(vd);
         vb = vb.lanewise(VectorOperators.XOR, vc).lanewise(VectorOperators.ROL, 1L);
 
-        // Diagonal step: G() on the 4 diagonals (0,5,10,15), (1,6,11,12), (2,7,8,13), (3,4,9,14).
-        // mDiagLo = {m[s[8]],  m[s[9]],  m[s[10]], m[s[11]]}  (x per diagonal)
-        // mDiagHi = {m[s[12]], m[s[13]], m[s[14]], m[s[15]]}  (y per diagonal)
-        msg[0] = m[s[8]];
-        msg[1] = m[s[9]];
-        msg[2] = m[s[10]];
-        msg[3] = m[s[11]];
-        LongVector mDiagLo = LongVector.fromArray(SPECIES, msg, 0);
-        msg[0] = m[s[12]];
-        msg[1] = m[s[13]];
-        msg[2] = m[s[14]];
-        msg[3] = m[s[15]];
-        LongVector mDiagHi = LongVector.fromArray(SPECIES, msg, 0);
-
-        // TODO(human): Implement the diagonal G() step.
-        //
-        // BLAKE2b diagonals: (0,5,10,15), (1,6,11,12), (2,7,8,13), (3,4,9,14).
-        // Rotate vb/vc/vd so each diagonal aligns as a column, apply G(), then un-rotate.
-        //
-        // Step 1 - rotate to align diagonals:
-        //   vbDiag = vb.rearrange(ROT_L1)  // {v[5], v[6], v[7], v[4]}
+        // Diagonal step: rotate b/c/d so each diagonal aligns as a column, apply G(),
+        // then un-rotate. Diagonals: (0,5,10,15), (1,6,11,12), (2,7,8,13), (3,4,9,14).
         LongVector vbDiag = vb.rearrange(ROT_L1);
-        //   vcDiag = vc.rearrange(ROT_L2)  // {v[10], v[11], v[8], v[9]}
         LongVector vcDiag = vc.rearrange(ROT_L2);
-        //   vdDiag = vd.rearrange(ROT_L3)  // {v[15], v[12], v[13], v[14]}
         LongVector vdDiag = vd.rearrange(ROT_L3);
-        //
-        // Step 2 - apply G(va, vbDiag, vcDiag, vdDiag) with mDiagLo/mDiagHi
-        //   (same ROL/XOR/add pattern as the column step above)
-        /*
-       FUNCTION G( v[0..15], a, b, c, d, x, y )
-       |
-       |   v[a] := (v[a] + v[b] + x) mod 2**w
-       |   v[d] := (v[d] ^ v[a]) >>> R1
-       |   v[c] := (v[c] + v[d])     mod 2**w
-       |   v[b] := (v[b] ^ v[c]) >>> R2
-       |   v[a] := (v[a] + v[b] + y) mod 2**w
-       |   v[d] := (v[d] ^ v[a]) >>> R3
-       |   v[c] := (v[c] + v[d])     mod 2**w
-       |   v[b] := (v[b] ^ v[c]) >>> R4
-       |
-       |   RETURN v[0..15]
-       |
-       END FUNCTION.
-         */
 
-        // G(va, vb, vc, vd) — all 4 columns at once.
-        // ROR(x,32)=ROL(x,32), ROR(x,24)=ROL(x,40), ROR(x,16)=ROL(x,48), ROR(x,63)=ROL(x,1)
         va = va.add(vbDiag).add(mDiagLo);
         vdDiag = vdDiag.lanewise(VectorOperators.XOR, va).lanewise(VectorOperators.ROL, 32L);
         vcDiag = vcDiag.add(vdDiag);
-        vbDiag = vbDiag.lanewise(VectorOperators.XOR, vcDiag).lanewise(VectorOperators.ROL, 40L);
+        vbDiag = ror24(vbDiag.lanewise(VectorOperators.XOR, vcDiag));
         va = va.add(vbDiag).add(mDiagHi);
-        vdDiag = vdDiag.lanewise(VectorOperators.XOR, va).lanewise(VectorOperators.ROL, 48L);
+        vdDiag = ror16(vdDiag.lanewise(VectorOperators.XOR, va));
         vcDiag = vcDiag.add(vdDiag);
         vbDiag = vbDiag.lanewise(VectorOperators.XOR, vcDiag).lanewise(VectorOperators.ROL, 1L);
-        //
-        // Step 3 - un-rotate back:
+
         vb = vbDiag.rearrange(ROT_R1);
         vc = vcDiag.rearrange(ROT_R2);
         vd = vdDiag.rearrange(ROT_R3);
-        //
-        // Expected: ~10 lines of vector ops + 3 un-rotate assignments.
       }
 
       va.intoArray(vl, 0);
