@@ -47,14 +47,6 @@ public class BLAKE2BFBenchmark extends BenchmarkExecutor {
   public void runBenchmark(final Boolean attemptNative, final String fork) {
     EvmSpecVersion forkVersion = EvmSpecVersion.fromName(fork);
 
-    if (attemptNative != null
-        && (!attemptNative || !Blake2bfMessageDigest.Blake2bfDigest.maybeEnableNative())) {
-      Blake2bfMessageDigest.Blake2bfDigest.disableNative();
-    }
-
-    output.println(
-        Blake2bfMessageDigest.Blake2bfDigest.isNative() ? "Native BLAKE2BF" : "Java BLAKE2BF");
-
     PrecompiledContract contract =
         EvmSpec.evmSpec(forkVersion)
             .getPrecompileContractRegistry()
@@ -89,7 +81,32 @@ public class BLAKE2BFBenchmark extends BenchmarkExecutor {
       randomSampleCount++;
       testCases.put("Random " + randomSampleCount, Bytes.wrap(dataf));
     }
-    precompile(testCases, contract, forkVersion);
+
+//    boolean runNative = attemptNative == null || attemptNative;
+    boolean runVector = true; //attemptNative == null || !attemptNative;
+//    boolean runScalar = attemptNative == null || !attemptNative;
+
+//    if (runNative && Blake2bfMessageDigest.Blake2bfDigest.maybeEnableNative()) {
+//      output.println("=== NATIVE BLAKE2BF ===");
+//      precompile(testCases, contract, forkVersion);
+//    }
+
+    if (runVector) {
+      Blake2bfMessageDigest.Blake2bfDigest.disableNative();
+      if (Blake2bfMessageDigest.Blake2bfDigest.maybeEnableVector()) {
+        output.println("=== VECTOR BLAKE2BF ===");
+        precompile(testCases, contract, forkVersion);
+      } else {
+        output.println("=== VECTOR BLAKE2BF unavailable on this JVM ===");
+      }
+    }
+
+//    if (runScalar) {
+//      Blake2bfMessageDigest.Blake2bfDigest.disableNative();
+//      Blake2bfMessageDigest.Blake2bfDigest.disableVector();
+//      output.println("=== SCALAR BLAKE2BF ===");
+//      precompile(testCases, contract, forkVersion);
+//    }
   }
 
   @Override

@@ -18,6 +18,10 @@ import static java.util.Arrays.copyOfRange;
 
 import org.hyperledger.besu.nativelib.blake2bf.LibBlake2bf;
 
+import jdk.incubator.vector.LongVector;
+import jdk.incubator.vector.VectorOperators;
+import jdk.incubator.vector.VectorShuffle;
+import jdk.incubator.vector.VectorSpecies;
 import org.bouncycastle.crypto.Digest;
 import org.bouncycastle.jcajce.provider.digest.BCMessageDigest;
 import org.bouncycastle.util.Arrays;
@@ -76,6 +80,20 @@ public class Blake2bfMessageDigest extends BCMessageDigest implements Cloneable 
 
     private static final int DIGEST_LENGTH = 64;
 
+    // 4-lane 256-bit vector species for the SIMD compress path
+    private static final VectorSpecies<Long> SPECIES = LongVector.SPECIES_256;
+    // Lane rotation shuffles for the diagonal step: rotateLeft by 1/2/3 positions
+    private static final VectorShuffle<Long> ROT_L1 =
+        VectorShuffle.fromArray(SPECIES, new int[] {1, 2, 3, 0}, 0);
+    private static final VectorShuffle<Long> ROT_L2 =
+        VectorShuffle.fromArray(SPECIES, new int[] {2, 3, 0, 1}, 0);
+    private static final VectorShuffle<Long> ROT_L3 =
+        VectorShuffle.fromArray(SPECIES, new int[] {3, 0, 1, 2}, 0);
+    // Un-rotate: rotateRight 1/2/3 = rotateLeft 3/2/1
+    private static final VectorShuffle<Long> ROT_R1 = ROT_L3;
+    private static final VectorShuffle<Long> ROT_R2 = ROT_L2;
+    private static final VectorShuffle<Long> ROT_R3 = ROT_L1;
+
     // buffer which holds serialized input for this compression function
     // [ 4 bytes for rounds ][ 64 bytes for h ][ 128 bytes for m ]
     // [ 8 bytes for t_0 ][ 8 bytes for t_1 ][ 1 byte for f ]
@@ -92,15 +110,22 @@ public class Blake2bfMessageDigest extends BCMessageDigest implements Cloneable 
 
     private long[] v;
     private static boolean useNative;
+    private static boolean useVector;
 
     static {
-      maybeEnableNative();
+//      maybeEnableNative();
+//      if (!useNative) {
+        maybeEnableVector();
+//      }
     }
 
     /** Instantiates a new Blake2bf digest. */
     Blake2bfDigest() {
       if (!useNative) {
         LOG.info("Native blake2bf not available");
+        if (!useVector) {
+          LOG.info("Vector blake2bf not available");
+        }
       }
 
       buffer = new byte[MESSAGE_LENGTH_BYTES];
@@ -153,6 +178,35 @@ public class Blake2bfMessageDigest extends BCMessageDigest implements Cloneable 
      */
     public static boolean isNative() {
       return useNative;
+    }
+
+    /**
+     * Attempt to enable the Java Vector API compress path.
+     *
+     * @return true if the vector path was enabled.
+     */
+    public static boolean maybeEnableVector() {
+      try {
+        useVector = SPECIES.length() == 4;
+      } catch (Throwable e) {
+        LOG.info("Vector blake2bf not available: {}", e.getMessage());
+        useVector = false;
+      }
+      return useVector;
+    }
+
+    /** Disable the vector compress path (forces scalar fallback). */
+    public static void disableVector() {
+      useVector = false;
+    }
+
+    /**
+     * Is vector.
+     *
+     * @return true if the vector path is active.
+     */
+    public static boolean isVector() {
+      return useVector;
     }
 
     @Override
@@ -231,7 +285,11 @@ public class Blake2bfMessageDigest extends BCMessageDigest implements Cloneable 
       if (useNative) {
         LibBlake2bf.blake2bf_eip152(out, buffer);
       } else {
-        compress();
+        if (useVector) {
+          compressVector();
+        } else {
+          compress();
+        }
         for (int i = 0; i < h.length; i++) {
           System.arraycopy(Pack.longToLittleEndian(h[i]), 0, out, i * 8, 8);
         }
@@ -308,14 +366,78 @@ public class Blake2bfMessageDigest extends BCMessageDigest implements Cloneable 
       for (long j = 0; j < rounds; ++j) {
         byte[] s = PRECOMPUTED[(int) (j % 10)];
 
-        mix(m[s[0]], m[s[4]], 0, 4, 8, 12);
-        mix(m[s[1]], m[s[5]], 1, 5, 9, 13);
-        mix(m[s[2]], m[s[6]], 2, 6, 10, 14);
-        mix(m[s[3]], m[s[7]], 3, 7, 11, 15);
-        mix(m[s[8]], m[s[12]], 0, 5, 10, 15);
-        mix(m[s[9]], m[s[13]], 1, 6, 11, 12);
-        mix(m[s[10]], m[s[14]], 2, 7, 8, 13);
-        mix(m[s[11]], m[s[15]], 3, 4, 9, 14);
+        v[0] += m[s[0]] + v[4];
+        v[12] = Long.rotateLeft(v[12] ^ v[0], -32);
+        v[8] += v[12];
+        v[4] = Long.rotateLeft(v[4] ^ v[8], -24);
+
+        v[0] += m[s[4]] + v[4];
+        v[12] = Long.rotateLeft(v[12] ^ v[0], -16);
+        v[8] += v[12];
+        v[4] = Long.rotateLeft(v[4] ^ v[8], -63);
+        v[1] += m[s[1]] + v[5];
+        v[13] = Long.rotateLeft(v[13] ^ v[1], -32);
+        v[9] += v[13];
+        v[5] = Long.rotateLeft(v[5] ^ v[9], -24);
+
+        v[1] += m[s[5]] + v[5];
+        v[13] = Long.rotateLeft(v[13] ^ v[1], -16);
+        v[9] += v[13];
+        v[5] = Long.rotateLeft(v[5] ^ v[9], -63);
+        v[2] += m[s[2]] + v[6];
+        v[14] = Long.rotateLeft(v[14] ^ v[2], -32);
+        v[10] += v[14];
+        v[6] = Long.rotateLeft(v[6] ^ v[10], -24);
+
+        v[2] += m[s[6]] + v[6];
+        v[14] = Long.rotateLeft(v[14] ^ v[2], -16);
+        v[10] += v[14];
+        v[6] = Long.rotateLeft(v[6] ^ v[10], -63);
+        v[3] += m[s[3]] + v[7];
+        v[15] = Long.rotateLeft(v[15] ^ v[3], -32);
+        v[11] += v[15];
+        v[7] = Long.rotateLeft(v[7] ^ v[11], -24);
+
+        v[3] += m[s[7]] + v[7];
+        v[15] = Long.rotateLeft(v[15] ^ v[3], -16);
+        v[11] += v[15];
+        v[7] = Long.rotateLeft(v[7] ^ v[11], -63);
+        v[0] += m[s[8]] + v[5];
+        v[15] = Long.rotateLeft(v[15] ^ v[0], -32);
+        v[10] += v[15];
+        v[5] = Long.rotateLeft(v[5] ^ v[10], -24);
+
+        v[0] += m[s[12]] + v[5];
+        v[15] = Long.rotateLeft(v[15] ^ v[0], -16);
+        v[10] += v[15];
+        v[5] = Long.rotateLeft(v[5] ^ v[10], -63);
+        v[1] += m[s[9]] + v[6];
+        v[12] = Long.rotateLeft(v[12] ^ v[1], -32);
+        v[11] += v[12];
+        v[6] = Long.rotateLeft(v[6] ^ v[11], -24);
+
+        v[1] += m[s[13]] + v[6];
+        v[12] = Long.rotateLeft(v[12] ^ v[1], -16);
+        v[11] += v[12];
+        v[6] = Long.rotateLeft(v[6] ^ v[11], -63);
+        v[2] += m[s[10]] + v[7];
+        v[13] = Long.rotateLeft(v[13] ^ v[2], -32);
+        v[8] += v[13];
+        v[7] = Long.rotateLeft(v[7] ^ v[8], -24);
+
+        v[2] += m[s[14]] + v[7];
+        v[13] = Long.rotateLeft(v[13] ^ v[2], -16);
+        v[8] += v[13];
+        v[7] = Long.rotateLeft(v[7] ^ v[8], -63);
+        v[3] += m[s[11]] + v[4];
+        v[14] = Long.rotateLeft(v[14] ^ v[3], -32);
+        v[9] += v[14];
+        v[4] = Long.rotateLeft(v[4] ^ v[9], -24);
+
+        v[3] += m[s[15]] + v[4];
+        v[14] = Long.rotateLeft(v[14] ^ v[3], -16);
+        v[9] += v[14];
+        v[4] = Long.rotateLeft(v[4] ^ v[9], -63);
       }
 
       // update h:
@@ -324,17 +446,137 @@ public class Blake2bfMessageDigest extends BCMessageDigest implements Cloneable 
       }
     }
 
-    private void mix(
-        final long a, final long b, final int i, final int j, final int k, final int l) {
-      v[i] += a + v[j];
-      v[l] = Long.rotateLeft(v[l] ^ v[i], -32);
-      v[k] += v[l];
-      v[j] = Long.rotateLeft(v[j] ^ v[k], -24);
+    /**
+     * SIMD compress using Java Vector API. Packs v[0..15] into four 4-lane 256-bit LongVectors:
+     *
+     * <pre>
+     *   va = {v[0],  v[1],  v[2],  v[3] }   // column a-words
+     *   vb = {v[4],  v[5],  v[6],  v[7] }   // column b-words
+     *   vc = {v[8],  v[9],  v[10], v[11]}   // column c-words
+     *   vd = {v[12], v[13], v[14], v[15]}   // column d-words
+     * </pre>
+     *
+     * Each round applies G() first on the 4 columns (straight vector ops), then on the 4 diagonals
+     * (lane-rotate b/c/d to align diagonals as columns, apply G(), un-rotate).
+     */
+    private void compressVector() {
+      long[] vl = new long[16];
+      System.arraycopy(h, 0, vl, 0, 8);
+      System.arraycopy(IV, 0, vl, 8, 8);
+      vl[12] ^= t[0];
+      vl[13] ^= t[1];
+      if (f) {
+        vl[14] ^= 0xffffffffffffffffL;
+      }
 
-      v[i] += b + v[j];
-      v[l] = Long.rotateLeft(v[l] ^ v[i], -16);
-      v[k] += v[l];
-      v[j] = Long.rotateLeft(v[j] ^ v[k], -63);
+      LongVector va = LongVector.fromArray(SPECIES, vl, 0);
+      LongVector vb = LongVector.fromArray(SPECIES, vl, 4);
+      LongVector vc = LongVector.fromArray(SPECIES, vl, 8);
+      LongVector vd = LongVector.fromArray(SPECIES, vl, 12);
+
+      long[] msg = new long[4];
+
+      for (long j = 0; j < rounds; j++) {
+        byte[] s = PRECOMPUTED[(int) (j % 10)];
+
+        // Column step: G() on all 4 columns simultaneously.
+        // mColLo = {m[s[0]], m[s[1]], m[s[2]], m[s[3]]}  (x argument per column)
+        // mColHi = {m[s[4]], m[s[5]], m[s[6]], m[s[7]]}  (y argument per column)
+        msg[0] = m[s[0]];
+        msg[1] = m[s[1]];
+        msg[2] = m[s[2]];
+        msg[3] = m[s[3]];
+        LongVector mColLo = LongVector.fromArray(SPECIES, msg, 0);
+        msg[0] = m[s[4]];
+        msg[1] = m[s[5]];
+        msg[2] = m[s[6]];
+        msg[3] = m[s[7]];
+        LongVector mColHi = LongVector.fromArray(SPECIES, msg, 0);
+
+        // G(va, vb, vc, vd) — all 4 columns at once.
+        // ROR(x,32)=ROL(x,32), ROR(x,24)=ROL(x,40), ROR(x,16)=ROL(x,48), ROR(x,63)=ROL(x,1)
+        va = va.add(vb).add(mColLo);
+        vd = vd.lanewise(VectorOperators.XOR, va).lanewise(VectorOperators.ROL, 32L);
+        vc = vc.add(vd);
+        vb = vb.lanewise(VectorOperators.XOR, vc).lanewise(VectorOperators.ROL, 40L);
+        va = va.add(vb).add(mColHi);
+        vd = vd.lanewise(VectorOperators.XOR, va).lanewise(VectorOperators.ROL, 48L);
+        vc = vc.add(vd);
+        vb = vb.lanewise(VectorOperators.XOR, vc).lanewise(VectorOperators.ROL, 1L);
+
+        // Diagonal step: G() on the 4 diagonals (0,5,10,15), (1,6,11,12), (2,7,8,13), (3,4,9,14).
+        // mDiagLo = {m[s[8]],  m[s[9]],  m[s[10]], m[s[11]]}  (x per diagonal)
+        // mDiagHi = {m[s[12]], m[s[13]], m[s[14]], m[s[15]]}  (y per diagonal)
+        msg[0] = m[s[8]];
+        msg[1] = m[s[9]];
+        msg[2] = m[s[10]];
+        msg[3] = m[s[11]];
+        LongVector mDiagLo = LongVector.fromArray(SPECIES, msg, 0);
+        msg[0] = m[s[12]];
+        msg[1] = m[s[13]];
+        msg[2] = m[s[14]];
+        msg[3] = m[s[15]];
+        LongVector mDiagHi = LongVector.fromArray(SPECIES, msg, 0);
+
+        // TODO(human): Implement the diagonal G() step.
+        //
+        // BLAKE2b diagonals: (0,5,10,15), (1,6,11,12), (2,7,8,13), (3,4,9,14).
+        // Rotate vb/vc/vd so each diagonal aligns as a column, apply G(), then un-rotate.
+        //
+        // Step 1 - rotate to align diagonals:
+        //   vbDiag = vb.rearrange(ROT_L1)  // {v[5], v[6], v[7], v[4]}
+        LongVector vbDiag = vb.rearrange(ROT_L1);
+        //   vcDiag = vc.rearrange(ROT_L2)  // {v[10], v[11], v[8], v[9]}
+        LongVector vcDiag = vc.rearrange(ROT_L2);
+        //   vdDiag = vd.rearrange(ROT_L3)  // {v[15], v[12], v[13], v[14]}
+        LongVector vdDiag = vd.rearrange(ROT_L3);
+        //
+        // Step 2 - apply G(va, vbDiag, vcDiag, vdDiag) with mDiagLo/mDiagHi
+        //   (same ROL/XOR/add pattern as the column step above)
+        /*
+       FUNCTION G( v[0..15], a, b, c, d, x, y )
+       |
+       |   v[a] := (v[a] + v[b] + x) mod 2**w
+       |   v[d] := (v[d] ^ v[a]) >>> R1
+       |   v[c] := (v[c] + v[d])     mod 2**w
+       |   v[b] := (v[b] ^ v[c]) >>> R2
+       |   v[a] := (v[a] + v[b] + y) mod 2**w
+       |   v[d] := (v[d] ^ v[a]) >>> R3
+       |   v[c] := (v[c] + v[d])     mod 2**w
+       |   v[b] := (v[b] ^ v[c]) >>> R4
+       |
+       |   RETURN v[0..15]
+       |
+       END FUNCTION.
+         */
+
+        // G(va, vb, vc, vd) — all 4 columns at once.
+        // ROR(x,32)=ROL(x,32), ROR(x,24)=ROL(x,40), ROR(x,16)=ROL(x,48), ROR(x,63)=ROL(x,1)
+        va = va.add(vbDiag).add(mDiagLo);
+        vdDiag = vdDiag.lanewise(VectorOperators.XOR, va).lanewise(VectorOperators.ROL, 32L);
+        vcDiag = vcDiag.add(vdDiag);
+        vbDiag = vbDiag.lanewise(VectorOperators.XOR, vcDiag).lanewise(VectorOperators.ROL, 40L);
+        va = va.add(vbDiag).add(mDiagHi);
+        vdDiag = vdDiag.lanewise(VectorOperators.XOR, va).lanewise(VectorOperators.ROL, 48L);
+        vcDiag = vcDiag.add(vdDiag);
+        vbDiag = vbDiag.lanewise(VectorOperators.XOR, vcDiag).lanewise(VectorOperators.ROL, 1L);
+        //
+        // Step 3 - un-rotate back:
+        vb = vbDiag.rearrange(ROT_R1);
+        vc = vcDiag.rearrange(ROT_R2);
+        vd = vdDiag.rearrange(ROT_R3);
+        //
+        // Expected: ~10 lines of vector ops + 3 un-rotate assignments.
+      }
+
+      va.intoArray(vl, 0);
+      vb.intoArray(vl, 4);
+      vc.intoArray(vl, 8);
+      vd.intoArray(vl, 12);
+
+      for (int offset = 0; offset < h.length; offset++) {
+        h[offset] ^= vl[offset] ^ vl[offset + 8];
+      }
     }
   }
 }

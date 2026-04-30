@@ -15,6 +15,17 @@
 
 apply plugin: 'java-library'
 
+tasks.withType(JavaCompile).configureEach {
+  options.compilerArgs += ['--add-modules=jdk.incubator.vector']
+  // The incubating-module warning cannot be suppressed with -Xlint; strip -Werror so it
+  // does not fail the build for this module (jdk.incubator.vector is stable in JDK 21).
+  options.compilerArgs.remove('-Werror')
+}
+
+tasks.withType(Test).configureEach {
+  jvmArgs += ['--add-modules=jdk.incubator.vector', '--enable-native-access=ALL-UNNAMED']
+}
+
 jar {
   archiveBaseName = calculateArtifactId(project)
   manifest {

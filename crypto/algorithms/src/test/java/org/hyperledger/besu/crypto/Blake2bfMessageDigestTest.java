@@ -14,21 +14,27 @@
  */
 package org.hyperledger.besu.crypto;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.bouncycastle.util.Pack;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvFileSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Test vectors adapted from
@@ -182,6 +188,71 @@ public class Blake2bfMessageDigestTest {
     byte[] expected = hexStringToByteArray(hexExpected);
     messageDigest.update(in, 0, 213);
     assertThat(messageDigest.digest()).isEqualTo(expected);
+  }
+
+  enum Impl {
+//    NATIVE,
+    VECTOR,
+//    SCALAR
+  }
+
+  static Stream<Arguments> eip152AllImplsSource() {
+    // Load CSV lines manually so we can cross-product with impls
+    List<String[]> rows = new ArrayList<>();
+    try (var reader =
+        new java.io.BufferedReader(
+            new java.io.InputStreamReader(
+                Blake2bfMessageDigestTest.class.getResourceAsStream("eip152TestCases.csv"),
+                UTF_8))) {
+      reader.readLine(); // skip header
+      String line;
+      while ((line = reader.readLine()) != null) {
+        rows.add(line.split(",", 2));
+      }
+    } catch (java.io.IOException e) {
+      throw new RuntimeException(e);
+    }
+    Stream.Builder<Arguments> args = Stream.builder();
+    for (Impl impl : Impl.values()) {
+      for (String[] row : rows) {
+        args.add(Arguments.of(impl, row[0].trim(), row[1].trim()));
+      }
+    }
+    return args.build();
+  }
+
+  @ParameterizedTest(name = "[{index}] impl={0}")
+  @MethodSource("eip152AllImplsSource")
+  public void eip152TestCasesAllImpls(
+      final Impl impl, final String hexIn, final String hexExpected) {
+    switch (impl) {
+//      case NATIVE -> {
+//        if (!Blake2bfMessageDigest.Blake2bfDigest.maybeEnableNative()) {
+//          return; // native unavailable on this platform; skip silently
+//        }
+//      }
+      case VECTOR -> {
+        Blake2bfMessageDigest.Blake2bfDigest.disableNative();
+        Blake2bfMessageDigest.Blake2bfDigest.maybeEnableVector();
+      }
+//      case SCALAR -> {
+//        Blake2bfMessageDigest.Blake2bfDigest.disableNative();
+//        Blake2bfMessageDigest.Blake2bfDigest.disableVector();
+//      }
+    }
+    try {
+      byte[] in = hexStringToByteArray(hexIn);
+      byte[] expected = hexStringToByteArray(hexExpected);
+      Blake2bfMessageDigest digest = new Blake2bfMessageDigest();
+      digest.update(in, 0, 213);
+      assertThat(digest.digest()).isEqualTo(expected);
+    } finally {
+      // Restore default state for subsequent tests
+      Blake2bfMessageDigest.Blake2bfDigest.maybeEnableNative();
+      if (!Blake2bfMessageDigest.Blake2bfDigest.isNative()) {
+        Blake2bfMessageDigest.Blake2bfDigest.maybeEnableVector();
+      }
+    }
   }
 
   private static byte[] hexStringToByteArray(final String s) {
