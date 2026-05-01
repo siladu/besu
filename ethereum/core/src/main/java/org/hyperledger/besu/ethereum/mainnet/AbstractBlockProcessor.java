@@ -251,11 +251,20 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
         getBlockImportTracer(protocolContext, blockHeader);
     final Optional<SlowBlockTracer> maybeSlowBlockTracer = getSlowBlockTracer(protocolContext);
 
-    // Compose operation-level tracer: base tracer + slow block tracer (if enabled)
-    final OperationTracer operationTracer =
-        maybeSlowBlockTracer
-            .<OperationTracer>map(sbt -> TracerAggregator.of(blockTracer, sbt))
-            .orElse(blockTracer);
+    // Compose operation-level tracer: base tracer + slow block tracer (if enabled).
+    // When no plugin block tracer is registered, blockTracer is
+    // BlockAwareOperationTracer.NO_TRACING
+    // — a different singleton from OperationTracer.NO_TRACING, so TracerAggregator.of cannot filter
+    // it. Skip aggregation in that case so the EVM hot path dispatches directly to the
+    // SlowBlockTracer instead of looping through a TracerAggregator on every operation.
+    final OperationTracer operationTracer;
+    if (maybeSlowBlockTracer.isEmpty()) {
+      operationTracer = blockTracer;
+    } else if (blockTracer == BlockAwareOperationTracer.NO_TRACING) {
+      operationTracer = maybeSlowBlockTracer.get();
+    } else {
+      operationTracer = TracerAggregator.of(blockTracer, maybeSlowBlockTracer.get());
+    }
 
     final Address miningBeneficiary = miningBeneficiaryCalculator.calculateBeneficiary(blockHeader);
 
