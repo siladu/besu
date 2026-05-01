@@ -75,7 +75,7 @@ public class PushOperationV2 extends AbstractFixedCostOperationV2 {
       final byte[] code,
       final int pc,
       final int pushSize) {
-    if (!frame.stackHasSpace(1)) return OVERFLOW_RESPONSE;
+    if (!frame.stackHasSpaceV2(1)) return OVERFLOW_RESPONSE;
     frame.setTopV2(StackArithmetic.pushFromBytes(s, frame.stackTopV2(), code, pc + 1, pushSize));
     frame.setPC(pc + pushSize);
     return PUSH_SUCCESS;

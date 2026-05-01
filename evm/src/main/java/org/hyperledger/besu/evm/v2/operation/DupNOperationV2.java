@@ -80,10 +80,10 @@ public class DupNOperationV2 extends AbstractFixedCostOperationV2 {
 
     final int n = Eip8024Decoder.DECODE_SINGLE[imm];
 
-    if (!frame.stackHasItems(n)) {
+    if (!frame.stackHasItemsV2(n)) {
       return DUPN_UNDERFLOW;
     }
-    if (!frame.stackHasSpace(1)) {
+    if (!frame.stackHasSpaceV2(1)) {
       return DUPN_OVERFLOW;
     }
     frame.setTopV2(StackArithmetic.dup(s, frame.stackTopV2(), n));

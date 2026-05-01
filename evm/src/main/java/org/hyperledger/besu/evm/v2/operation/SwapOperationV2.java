@@ -68,7 +68,7 @@ public class SwapOperationV2 extends AbstractFixedCostOperationV2 {
    */
   public static OperationResult staticOperation(
       final MessageFrame frame, final long[] s, final int index) {
-    if (!frame.stackHasItems(index + 1)) return UNDERFLOW_RESPONSE;
+    if (!frame.stackHasItemsV2(index + 1)) return UNDERFLOW_RESPONSE;
     StackArithmetic.swap(s, frame.stackTopV2(), index);
     return SWAP_SUCCESS;
   }

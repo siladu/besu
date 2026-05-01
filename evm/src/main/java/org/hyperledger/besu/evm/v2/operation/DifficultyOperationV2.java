@@ -50,7 +50,7 @@ public class DifficultyOperationV2 extends AbstractFixedCostOperationV2 {
    * @return the operation result
    */
   public static OperationResult staticOperation(final MessageFrame frame, final long[] stack) {
-    if (!frame.stackHasSpace(1)) return OVERFLOW_RESPONSE;
+    if (!frame.stackHasSpaceV2(1)) return OVERFLOW_RESPONSE;
     final byte[] diffBytes = frame.getBlockValues().getDifficultyBytes().toArrayUnsafe();
     frame.setTopV2(
         StackArithmetic.pushFromBytes(stack, frame.stackTopV2(), diffBytes, 0, diffBytes.length));

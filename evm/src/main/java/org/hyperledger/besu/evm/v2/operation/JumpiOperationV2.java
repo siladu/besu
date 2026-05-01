@@ -51,7 +51,7 @@ public class JumpiOperationV2 extends AbstractFixedCostOperationV2 {
    * @return the operation result
    */
   public static OperationResult staticOperation(final MessageFrame frame, final long[] s) {
-    if (!frame.stackHasItems(2)) return UNDERFLOW_RESPONSE;
+    if (!frame.stackHasItemsV2(2)) return UNDERFLOW_RESPONSE;
     final int top = frame.stackTopV2();
     final int destOff = (top - 1) << 2;
     final int condOff = (top - 2) << 2;

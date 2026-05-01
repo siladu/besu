@@ -48,7 +48,7 @@ public class ReturnDataSizeOperationV2 extends AbstractFixedCostOperationV2 {
    * @return the operation result
    */
   public static OperationResult staticOperation(final MessageFrame frame, final long[] stack) {
-    if (!frame.stackHasSpace(1)) return OVERFLOW_RESPONSE;
+    if (!frame.stackHasSpaceV2(1)) return OVERFLOW_RESPONSE;
     frame.setTopV2(
         StackArithmetic.pushLong(stack, frame.stackTopV2(), frame.getReturnData().size()));
     return returnDataSizeSuccess;

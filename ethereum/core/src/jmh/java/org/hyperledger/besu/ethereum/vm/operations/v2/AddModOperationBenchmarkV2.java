@@ -167,6 +167,6 @@ public class AddModOperationBenchmarkV2 extends TernaryOperationBenchmarkV2 {
 
   @Override
   protected Operation.OperationResult invoke(final MessageFrame frame) {
-    return AddModOperationV2.staticOperation(frame, frame.stackDataV2());
+    return AddModOperationV2.staticOperation(frame);
   }
 }

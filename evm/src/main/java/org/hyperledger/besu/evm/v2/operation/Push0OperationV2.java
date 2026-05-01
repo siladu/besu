@@ -53,7 +53,7 @@ public class Push0OperationV2 extends AbstractFixedCostOperationV2 {
    * @return the operation result
    */
   public static OperationResult staticOperation(final MessageFrame frame, final long[] s) {
-    if (!frame.stackHasSpace(1)) return OVERFLOW_RESPONSE;
+    if (!frame.stackHasSpaceV2(1)) return OVERFLOW_RESPONSE;
     frame.setTopV2(StackArithmetic.pushZero(s, frame.stackTopV2()));
     return PUSH0_SUCCESS;
   }

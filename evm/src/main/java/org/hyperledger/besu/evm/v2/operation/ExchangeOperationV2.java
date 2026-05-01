@@ -80,7 +80,7 @@ public class ExchangeOperationV2 extends AbstractFixedCostOperationV2 {
     final int n = packed & 0xFF;
     final int m = (packed >>> 8) & 0xFF;
 
-    if (!frame.stackHasItems(Math.max(n, m) + 1)) {
+    if (!frame.stackHasItemsV2(Math.max(n, m) + 1)) {
       return EXCHANGE_UNDERFLOW;
     }
     StackArithmetic.exchange(s, frame.stackTopV2(), n, m);

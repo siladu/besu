@@ -37,18 +37,18 @@ public class AddModOperationV2 extends AbstractFixedCostOperationV2 {
   @Override
   public Operation.OperationResult executeFixedCostOperation(
       final MessageFrame frame, final EVM evm) {
-    return staticOperation(frame, frame.stackDataV2());
+    return staticOperation(frame);
   }
 
   /**
    * Performs AddMod operation.
    *
    * @param frame the frame
-   * @param s the stack data array
    * @return the operation result
    */
-  public static OperationResult staticOperation(final MessageFrame frame, final long[] s) {
-    if (!frame.stackHasItems(3)) return UNDERFLOW_RESPONSE;
+  public static OperationResult staticOperation(final MessageFrame frame) {
+    final long[] s = frame.stackDataV2();
+    if (!frame.stackHasItemsV2(3)) return UNDERFLOW_RESPONSE;
     frame.setTopV2(StackArithmetic.addMod(s, frame.stackTopV2()));
     return addModSuccess;
   }

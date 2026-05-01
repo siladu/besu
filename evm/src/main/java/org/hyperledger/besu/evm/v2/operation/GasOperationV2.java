@@ -38,7 +38,7 @@ public class GasOperationV2 extends AbstractFixedCostOperationV2 {
   @Override
   public Operation.OperationResult executeFixedCostOperation(
       final MessageFrame frame, final EVM evm) {
-    if (!frame.stackHasSpace(1)) return OVERFLOW_RESPONSE;
+    if (!frame.stackHasSpaceV2(1)) return OVERFLOW_RESPONSE;
     // Gas remaining after deducting this instruction's cost
     frame.setTopV2(
         StackArithmetic.pushLong(

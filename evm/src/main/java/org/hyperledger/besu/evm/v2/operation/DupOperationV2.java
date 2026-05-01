@@ -68,8 +68,8 @@ public class DupOperationV2 extends AbstractFixedCostOperationV2 {
    */
   public static OperationResult staticOperation(
       final MessageFrame frame, final long[] s, final int index) {
-    if (!frame.stackHasItems(index)) return UNDERFLOW_RESPONSE;
-    if (!frame.stackHasSpace(1)) return OVERFLOW_RESPONSE;
+    if (!frame.stackHasItemsV2(index)) return UNDERFLOW_RESPONSE;
+    if (!frame.stackHasSpaceV2(1)) return OVERFLOW_RESPONSE;
     frame.setTopV2(StackArithmetic.dup(s, frame.stackTopV2(), index));
     return DUP_SUCCESS;
   }

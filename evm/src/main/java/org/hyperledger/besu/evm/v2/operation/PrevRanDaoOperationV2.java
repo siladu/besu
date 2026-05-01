@@ -24,6 +24,8 @@ import org.hyperledger.besu.evm.operation.Operation;
 /** The Prev randao operation. */
 public class PrevRanDaoOperationV2 extends AbstractFixedCostOperationV2 {
 
+  private static final OperationResult successResponse = new OperationResult(2, null);
+
   /**
    * Instantiates a new Prev randao operation.
    *
@@ -35,7 +37,17 @@ public class PrevRanDaoOperationV2 extends AbstractFixedCostOperationV2 {
 
   @Override
   public Operation.OperationResult executeFixedCostOperation(
-          final MessageFrame frame, final EVM evm) {
+      final MessageFrame frame, final EVM evm) {
+    return staticOperation(frame);
+  }
+
+  /**
+   * Performs PREVRANDAO operation.
+   *
+   * @param frame the frame
+   * @return the operation result
+   */
+  public static Operation.OperationResult staticOperation(final MessageFrame frame) {
     if (!frame.stackHasSpaceV2(1)) return OVERFLOW_RESPONSE;
     final long[] stack = frame.stackDataV2();
     final int top = frame.stackTopV2();

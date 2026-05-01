@@ -49,7 +49,7 @@ public class AndOperationV2 extends AbstractFixedCostOperationV2 {
    * @return the operation result
    */
   public static OperationResult staticOperation(final MessageFrame frame, final long[] stack) {
-    if (!frame.stackHasItems(2)) return UNDERFLOW_RESPONSE;
+    if (!frame.stackHasItemsV2(2)) return UNDERFLOW_RESPONSE;
     frame.setTopV2(StackArithmetic.and(stack, frame.stackTopV2()));
     return andSuccess;
   }

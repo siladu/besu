@@ -57,7 +57,7 @@ public class TStoreOperationV2 extends AbstractFixedCostOperationV2 {
    * @return the operation result
    */
   public static OperationResult staticOperation(final MessageFrame frame, final long[] s) {
-    if (!frame.stackHasItems(2)) {
+    if (!frame.stackHasItemsV2(2)) {
       return UNDERFLOW_RESPONSE;
     }
 

@@ -19,9 +19,12 @@ import static org.hyperledger.besu.evm.v2.operation.StackUtil.pushWei;
 import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
+import org.hyperledger.besu.evm.operation.Operation;
 
 /** The Blob Base fee operation. */
 public class BlobBaseFeeOperationV2 extends AbstractFixedCostOperationV2 {
+
+  private static final OperationResult successResponse = new OperationResult(2, null);
 
   /**
    * Instantiates a new Blob Base fee operation.
@@ -33,7 +36,18 @@ public class BlobBaseFeeOperationV2 extends AbstractFixedCostOperationV2 {
   }
 
   @Override
-  public OperationResult executeFixedCostOperation(final MessageFrame frame, final EVM evm) {
+  public Operation.OperationResult executeFixedCostOperation(
+      final MessageFrame frame, final EVM evm) {
+    return staticOperation(frame);
+  }
+
+  /**
+   * Performs BLOBBASEFEE operation.
+   *
+   * @param frame the frame
+   * @return the operation result
+   */
+  public static Operation.OperationResult staticOperation(final MessageFrame frame) {
     if (!frame.stackHasSpaceV2(1)) return OVERFLOW_RESPONSE;
     final long[] stack = frame.stackDataV2();
     final int top = frame.stackTopV2();

@@ -191,7 +191,7 @@ public abstract class AbstractCallOperationV2 extends AbstractOperationV2 {
 
   @Override
   public OperationResult execute(final MessageFrame frame, final EVM evm) {
-    if (!frame.stackHasItems(getStackItemsConsumed())) {
+    if (!frame.stackHasItemsV2(getStackItemsConsumed())) {
       return UNDERFLOW_RESPONSE;
     }
 

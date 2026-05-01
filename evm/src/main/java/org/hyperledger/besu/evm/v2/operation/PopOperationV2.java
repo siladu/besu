@@ -50,7 +50,7 @@ public class PopOperationV2 extends AbstractFixedCostOperationV2 {
    * @return the operation result
    */
   public static OperationResult staticOperation(final MessageFrame frame) {
-    if (!frame.stackHasItems(1)) return UNDERFLOW_RESPONSE;
+    if (!frame.stackHasItemsV2(1)) return UNDERFLOW_RESPONSE;
     frame.setTopV2(frame.stackTopV2() - 1);
     return POP_SUCCESS;
   }
