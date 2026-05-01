@@ -46,7 +46,7 @@ import org.slf4j.LoggerFactory;
  * <p>The tracer uses a dedicated "SlowBlock" logger, allowing operators to route slow block output
  * to a separate file/sink via logback configuration.
  */
-public class SlowBlockTracer implements OperationTracer {
+public final class SlowBlockTracer implements OperationTracer {
 
   private static final Logger SLOW_BLOCK_LOG = LoggerFactory.getLogger("SlowBlock");
   private static final ObjectMapper JSON_MAPPER = new ObjectMapper();

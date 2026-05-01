@@ -45,7 +45,7 @@ import org.apache.tuweni.units.bigints.UInt256;
  * <p>The metrics collected by this tracer can be aggregated across parallel transaction executions
  * and provide detailed insights into block execution performance.
  */
-public class EVMExecutionMetricsTracer implements OperationTracer {
+public final class EVMExecutionMetricsTracer implements OperationTracer {
 
   /**
    * Container for EVM operation metrics.
