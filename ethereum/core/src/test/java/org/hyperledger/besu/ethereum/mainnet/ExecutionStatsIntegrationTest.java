@@ -34,6 +34,7 @@ import org.hyperledger.besu.ethereum.processing.TransactionProcessingResult;
 import org.hyperledger.besu.ethereum.trie.pathbased.common.worldview.PathBasedWorldState;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 import org.hyperledger.besu.evm.blockhash.BlockHashLookup;
+import org.hyperledger.besu.evm.tracing.ExecutionStats;
 import org.hyperledger.besu.plugin.services.storage.DataStorageFormat;
 
 import java.math.BigInteger;
@@ -128,7 +129,7 @@ class ExecutionStatsIntegrationTest {
     // Initialize stats tracking before each test
     stats = new ExecutionStats();
     stats.startExecution();
-    ExecutionStatsHolder.set(stats);
+    org.hyperledger.besu.evm.tracing.ExecutionStatsHolder.set(stats);
     evmMetricsTracer = new org.hyperledger.besu.evm.tracing.EVMExecutionMetricsTracer();
 
     // Set the collector on the world state so state-layer metrics flow through
@@ -139,7 +140,7 @@ class ExecutionStatsIntegrationTest {
 
   @AfterEach
   void tearDown() {
-    ExecutionStatsHolder.clear();
+    org.hyperledger.besu.evm.tracing.ExecutionStatsHolder.clear();
   }
 
   // ========================================================================

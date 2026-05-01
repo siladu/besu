@@ -23,7 +23,6 @@ import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.StorageSlotKey;
 import org.hyperledger.besu.ethereum.core.MutableWorldState;
-import org.hyperledger.besu.ethereum.mainnet.ExecutionStatsHolder;
 import org.hyperledger.besu.ethereum.mainnet.staterootcommitter.StateRootCommitter;
 import org.hyperledger.besu.ethereum.trie.common.StateRootMismatchException;
 import org.hyperledger.besu.ethereum.trie.pathbased.common.StorageSubscriber;
@@ -35,6 +34,7 @@ import org.hyperledger.besu.ethereum.trie.pathbased.common.trielog.TrieLogManage
 import org.hyperledger.besu.ethereum.trie.pathbased.common.worldview.accumulator.PathBasedWorldStateUpdateAccumulator;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateKeyValueStorage;
 import org.hyperledger.besu.evm.account.Account;
+import org.hyperledger.besu.evm.tracing.ExecutionStatsHolder;
 import org.hyperledger.besu.plugin.data.BlockHeader;
 import org.hyperledger.besu.plugin.services.exception.StorageException;
 import org.hyperledger.besu.plugin.services.storage.KeyValueStorageTransaction;
@@ -67,7 +67,8 @@ public abstract class PathBasedWorldState
   // configuration parameters for the world state.
   protected WorldStateConfig worldStateConfig;
 
-  private StateMetricsCollector stateMetricsCollector = StateMetricsCollector.NOOP;
+  private org.hyperledger.besu.evm.tracing.StateMetricsCollector stateMetricsCollector =
+      org.hyperledger.besu.evm.tracing.StateMetricsCollector.NOOP;
 
   /*
    * Indicates whether the world state is in "frozen" mode.
@@ -113,12 +114,14 @@ public abstract class PathBasedWorldState
    *
    * @param collector the collector instance
    */
-  public void setStateMetricsCollector(final StateMetricsCollector collector) {
-    this.stateMetricsCollector = collector != null ? collector : StateMetricsCollector.NOOP;
+  public void setStateMetricsCollector(
+      final org.hyperledger.besu.evm.tracing.StateMetricsCollector collector) {
+    this.stateMetricsCollector =
+        collector != null ? collector : org.hyperledger.besu.evm.tracing.StateMetricsCollector.NOOP;
   }
 
   @Override
-  public StateMetricsCollector getStateMetricsCollector() {
+  public org.hyperledger.besu.evm.tracing.StateMetricsCollector getStateMetricsCollector() {
     return stateMetricsCollector;
   }
 

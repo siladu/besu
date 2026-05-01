@@ -67,9 +67,10 @@ public interface PathBasedWorldView extends WorldView {
   /**
    * Returns the metrics collector for state-layer operations.
    *
-   * @return the {@link StateMetricsCollector}, defaulting to {@link StateMetricsCollector#NOOP}
+   * @return the {@link org.hyperledger.besu.evm.tracing.StateMetricsCollector}, defaulting to
+   *     {@link org.hyperledger.besu.evm.tracing.StateMetricsCollector#NOOP}
    */
-  default StateMetricsCollector getStateMetricsCollector() {
-    return StateMetricsCollector.NOOP;
+  default org.hyperledger.besu.evm.tracing.StateMetricsCollector getStateMetricsCollector() {
+    return org.hyperledger.besu.evm.tracing.StateMetricsCollector.NOOP;
   }
 }

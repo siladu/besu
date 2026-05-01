@@ -14,10 +14,10 @@
  */
 package org.hyperledger.besu.ethereum.mainnet.parallelization;
 
-import org.hyperledger.besu.ethereum.mainnet.SlowBlockTracer;
 import org.hyperledger.besu.ethereum.mainnet.systemcall.BlockProcessingContext;
 import org.hyperledger.besu.evm.tracing.EVMExecutionMetricsTracer;
 import org.hyperledger.besu.evm.tracing.OperationTracer;
+import org.hyperledger.besu.evm.tracing.SlowBlockTracer;
 import org.hyperledger.besu.evm.tracing.TracerAggregator;
 
 import java.util.ArrayList;

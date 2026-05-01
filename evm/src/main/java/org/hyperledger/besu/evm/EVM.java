@@ -83,6 +83,7 @@ import org.hyperledger.besu.evm.operation.VirtualOperation;
 import org.hyperledger.besu.evm.operation.XorOperation;
 import org.hyperledger.besu.evm.operation.XorOperationOptimized;
 import org.hyperledger.besu.evm.tracing.OperationTracer;
+import org.hyperledger.besu.evm.tracing.SlowBlockTracer;
 
 import java.util.Optional;
 import java.util.function.Function;
@@ -232,7 +233,11 @@ public class EVM {
       }
       frame.setCurrentOperation(currentOperation);
       if (operationTracer != null) {
-        operationTracer.tracePreExecution(frame);
+        if (operationTracer instanceof SlowBlockTracer) {
+          ((SlowBlockTracer) operationTracer).tracePreExecution(frame);
+        } else {
+          operationTracer.tracePreExecution(frame);
+        }
       }
 
       OperationResult result;

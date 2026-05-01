@@ -12,7 +12,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package org.hyperledger.besu.ethereum.trie.pathbased.common.worldview;
+package org.hyperledger.besu.evm.tracing;
 
 /**
  * Interface for collecting state-layer metrics during block execution.

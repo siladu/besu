@@ -18,12 +18,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.ethereum.core.BlockHeader;
-import org.hyperledger.besu.ethereum.mainnet.SlowBlockTracer;
 import org.hyperledger.besu.ethereum.mainnet.systemcall.BlockProcessingContext;
 import org.hyperledger.besu.evm.tracing.EVMExecutionMetricsTracer;
 import org.hyperledger.besu.evm.tracing.OperationTracer;
+import org.hyperledger.besu.evm.tracing.SlowBlockTracer;
 import org.hyperledger.besu.evm.tracing.TracerAggregator;
 
 import java.util.Optional;
@@ -135,9 +133,8 @@ class BackgroundTracerFactoryTest {
   @Test
   void findEVMExecutionMetricsTracer_insideSlowBlockTracer() {
     final SlowBlockTracer sbt = new SlowBlockTracer(0);
-    final BlockHeader blockHeader = mock(BlockHeader.class);
     // Initialize internal state so metricsTracer is non-null
-    sbt.traceStartBlock(null, blockHeader, null, Address.ZERO);
+    sbt.traceStartBlock();
 
     final Optional<EVMExecutionMetricsTracer> found =
         BackgroundTracerFactory.findEVMExecutionMetricsTracer(sbt);
@@ -148,8 +145,7 @@ class BackgroundTracerFactoryTest {
   @Test
   void findEVMExecutionMetricsTracer_insideSlowBlockTracerInAggregator() {
     final SlowBlockTracer sbt = new SlowBlockTracer(0);
-    final BlockHeader blockHeader = mock(BlockHeader.class);
-    sbt.traceStartBlock(null, blockHeader, null, Address.ZERO);
+    sbt.traceStartBlock();
 
     final OperationTracer aggregator = TracerAggregator.of(sbt, mock(OperationTracer.class));
 
@@ -180,8 +176,7 @@ class BackgroundTracerFactoryTest {
   @Test
   void consolidateTracerResults_mergesMetricsAndIncrementsTxCount() {
     final SlowBlockTracer slowBlockTracer = new SlowBlockTracer(0);
-    final BlockHeader blockHeader = mock(BlockHeader.class);
-    slowBlockTracer.traceStartBlock(null, blockHeader, null, Address.ZERO);
+    slowBlockTracer.traceStartBlock();
 
     final BlockProcessingContext bpc = mock(BlockProcessingContext.class);
     when(bpc.getOperationTracer()).thenReturn(slowBlockTracer);

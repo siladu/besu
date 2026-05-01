@@ -12,22 +12,17 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package org.hyperledger.besu.ethereum.mainnet;
+package org.hyperledger.besu.evm.tracing;
 
 import org.hyperledger.besu.datatypes.Address;
+import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.Log;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.Wei;
-import org.hyperledger.besu.ethereum.trie.pathbased.common.worldview.PathBasedWorldState;
 import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.operation.Operation.OperationResult;
-import org.hyperledger.besu.evm.tracing.EVMExecutionMetricsTracer;
 import org.hyperledger.besu.evm.worldstate.WorldView;
-import org.hyperledger.besu.plugin.data.BlockBody;
-import org.hyperledger.besu.plugin.data.BlockHeader;
-import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
-import org.hyperledger.besu.plugin.services.tracer.BlockAwareOperationTracer;
 
 import java.util.List;
 import java.util.Optional;
@@ -51,7 +46,7 @@ import org.slf4j.LoggerFactory;
  * <p>The tracer uses a dedicated "SlowBlock" logger, allowing operators to route slow block output
  * to a separate file/sink via logback configuration.
  */
-public class SlowBlockTracer implements BlockAwareOperationTracer {
+public class SlowBlockTracer implements OperationTracer {
 
   private static final Logger SLOW_BLOCK_LOG = LoggerFactory.getLogger("SlowBlock");
   private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
@@ -71,40 +66,15 @@ public class SlowBlockTracer implements BlockAwareOperationTracer {
     this.slowBlockThresholdMs = slowBlockThresholdMs;
   }
 
-  @Override
-  public void traceStartBlock(
-      final WorldView worldView,
-      final BlockHeader blockHeader,
-      final BlockBody blockBody,
-      final Address miningBeneficiary) {
+  /**
+   * Initializes per-block state. The caller is responsible for wiring the returned {@link
+   * StateMetricsCollector} (via {@link #getExecutionStats()}) onto the world state before any state
+   * operations occur in the block.
+   */
+  public void traceStartBlock() {
     executionStats = new ExecutionStats();
     executionStats.startExecution();
     ExecutionStatsHolder.set(executionStats);
-
-    // Set StateMetricsCollector on world state for state-layer metrics
-    if (worldView instanceof PathBasedWorldState pws) {
-      pws.setStateMetricsCollector(executionStats);
-    }
-
-    // Create EVMExecutionMetricsTracer for this block
-    metricsTracer = new EVMExecutionMetricsTracer();
-  }
-
-  @Override
-  public void traceStartBlock(
-      final WorldView worldView,
-      final ProcessableBlockHeader processableBlockHeader,
-      final Address miningBeneficiary) {
-    executionStats = new ExecutionStats();
-    executionStats.startExecution();
-    ExecutionStatsHolder.set(executionStats);
-
-    // Set StateMetricsCollector on world state for state-layer metrics
-    if (worldView instanceof PathBasedWorldState pws) {
-      pws.setStateMetricsCollector(executionStats);
-    }
-
-    // Create EVMExecutionMetricsTracer for this block
     metricsTracer = new EVMExecutionMetricsTracer();
   }
 
@@ -122,22 +92,24 @@ public class SlowBlockTracer implements BlockAwareOperationTracer {
     executionStats.addGasUsed(gasUsed);
   }
 
-  @Override
-  public void traceEndBlock(final BlockHeader blockHeader, final BlockBody blockBody) {
+  /**
+   * Finalizes per-block state, collecting metrics from the per-block tracer and logging if the
+   * block exceeded the slow-block threshold.
+   *
+   * @param blockNumber the block number
+   * @param blockHash the block hash
+   * @param gasUsed the post-refund gas used by the block
+   */
+  public void traceEndBlock(final long blockNumber, final Hash blockHash, final long gasUsed) {
     try {
-      // Collect EVM operation counters from EVMExecutionMetricsTracer
       executionStats.collectMetricsFromTracer(metricsTracer);
-      // Use block header's gas_used (post-refund) instead of accumulated pre-refund gas
-      executionStats.setGasUsed(blockHeader.getGasUsed());
-      // End execution timing
+      executionStats.setGasUsed(gasUsed);
       executionStats.endExecution();
 
-      // Log if slow
       if (executionStats.isSlowBlock(slowBlockThresholdMs)) {
-        logSlowBlock(blockHeader, executionStats);
+        logSlowBlock(blockNumber, blockHash, executionStats);
       }
     } finally {
-      // Clean up thread-local state
       ExecutionStatsHolder.clear();
       executionStats = null;
       metricsTracer = null;
@@ -224,18 +196,20 @@ public class SlowBlockTracer implements BlockAwareOperationTracer {
    * Logs slow block execution statistics in JSON format for performance monitoring. Follows the
    * cross-client execution metrics specification.
    *
-   * @param blockHeader the block header
+   * @param blockNumber the block number
+   * @param blockHash the block hash
    * @param stats the execution statistics
    */
-  private void logSlowBlock(final BlockHeader blockHeader, final ExecutionStats stats) {
+  private void logSlowBlock(
+      final long blockNumber, final Hash blockHash, final ExecutionStats stats) {
     try {
       final ObjectNode json = JSON_MAPPER.createObjectNode();
       json.put("level", "warn");
       json.put("msg", "Slow block");
 
       final ObjectNode blockNode = json.putObject("block");
-      blockNode.put("number", blockHeader.getNumber());
-      blockNode.put("hash", blockHeader.getBlockHash().toHexString());
+      blockNode.put("number", blockNumber);
+      blockNode.put("hash", blockHash.toHexString());
       blockNode.put("gas_used", stats.getGasUsed());
       blockNode.put("tx_count", stats.getTransactionCount());
 
@@ -299,8 +273,8 @@ public class SlowBlockTracer implements BlockAwareOperationTracer {
       // Fallback to simple log
       SLOW_BLOCK_LOG.warn(
           "Slow block number={} hash={} exec={}ms gas={} mgas/s={:.2f} txs={}",
-          blockHeader.getNumber(),
-          blockHeader.getBlockHash().toHexString(),
+          blockNumber,
+          blockHash.toHexString(),
           stats.getExecutionTimeMs(),
           stats.getGasUsed(),
           stats.getMgasPerSecond(),

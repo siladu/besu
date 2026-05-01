@@ -29,7 +29,6 @@ import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.mainnet.MainnetTransactionProcessor;
-import org.hyperledger.besu.ethereum.mainnet.SlowBlockTracer;
 import org.hyperledger.besu.ethereum.mainnet.ValidationResult;
 import org.hyperledger.besu.ethereum.mainnet.systemcall.BlockProcessingContext;
 import org.hyperledger.besu.ethereum.processing.TransactionProcessingResult;
@@ -47,6 +46,7 @@ import org.hyperledger.besu.evm.internal.EvmConfiguration;
 import org.hyperledger.besu.evm.operation.Operation;
 import org.hyperledger.besu.evm.tracing.EVMExecutionMetricsTracer;
 import org.hyperledger.besu.evm.tracing.OperationTracer;
+import org.hyperledger.besu.evm.tracing.SlowBlockTracer;
 import org.hyperledger.besu.evm.tracing.TracerAggregator;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
 
@@ -288,7 +288,7 @@ class ParallelizedConcurrentTransactionProcessorTracerTest {
   @Test
   void consolidateTracerResults_mergesMetricsIntoSlowBlockTracer() {
     final SlowBlockTracer slowBlockTracer = new SlowBlockTracer(0);
-    slowBlockTracer.traceStartBlock(null, blockHeader, null, MINING_BENEFICIARY);
+    slowBlockTracer.traceStartBlock();
 
     final BlockProcessingContext bpc = mock(BlockProcessingContext.class);
     when(bpc.getOperationTracer()).thenReturn(slowBlockTracer);
@@ -321,7 +321,7 @@ class ParallelizedConcurrentTransactionProcessorTracerTest {
   @Test
   void consolidateTracerResults_incrementsTxCountForMultipleConfirmedTxs() {
     final SlowBlockTracer slowBlockTracer = new SlowBlockTracer(0);
-    slowBlockTracer.traceStartBlock(null, blockHeader, null, MINING_BENEFICIARY);
+    slowBlockTracer.traceStartBlock();
 
     final BlockProcessingContext bpc = mock(BlockProcessingContext.class);
     when(bpc.getOperationTracer()).thenReturn(slowBlockTracer);
@@ -358,7 +358,7 @@ class ParallelizedConcurrentTransactionProcessorTracerTest {
   @Test
   void consolidateTracerResults_doesNotIncrementTxCountForFailedTx() {
     final SlowBlockTracer slowBlockTracer = new SlowBlockTracer(0);
-    slowBlockTracer.traceStartBlock(null, blockHeader, null, MINING_BENEFICIARY);
+    slowBlockTracer.traceStartBlock();
 
     final BlockProcessingContext bpc = mock(BlockProcessingContext.class);
     when(bpc.getOperationTracer()).thenReturn(slowBlockTracer);
@@ -403,7 +403,7 @@ class ParallelizedConcurrentTransactionProcessorTracerTest {
   @Test
   void consolidateTracerResults_mergesMetricsIntoSlowBlockTracerInsideAggregator() {
     final SlowBlockTracer slowBlockTracer = new SlowBlockTracer(0);
-    slowBlockTracer.traceStartBlock(null, blockHeader, null, MINING_BENEFICIARY);
+    slowBlockTracer.traceStartBlock();
 
     final OperationTracer otherTracer = mock(OperationTracer.class);
     final OperationTracer aggregator = TracerAggregator.of(slowBlockTracer, otherTracer);
@@ -440,7 +440,7 @@ class ParallelizedConcurrentTransactionProcessorTracerTest {
     // Verify that EVM opcode metrics captured on separate threads are correctly merged
     // into the main SlowBlockTracer after conflict-free parallel execution
     final SlowBlockTracer slowBlockTracer = new SlowBlockTracer(0);
-    slowBlockTracer.traceStartBlock(null, blockHeader, null, MINING_BENEFICIARY);
+    slowBlockTracer.traceStartBlock();
 
     final BlockProcessingContext bpc = mock(BlockProcessingContext.class);
     when(bpc.getOperationTracer()).thenReturn(slowBlockTracer);

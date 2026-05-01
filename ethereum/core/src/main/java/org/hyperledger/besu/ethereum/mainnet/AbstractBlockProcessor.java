@@ -46,8 +46,10 @@ import org.hyperledger.besu.ethereum.trie.MerkleTrieException;
 import org.hyperledger.besu.ethereum.trie.common.StateRootMismatchException;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.worldview.BonsaiWorldState;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.worldview.BonsaiWorldStateUpdateAccumulator;
+import org.hyperledger.besu.ethereum.trie.pathbased.common.worldview.PathBasedWorldState;
 import org.hyperledger.besu.evm.blockhash.BlockHashLookup;
 import org.hyperledger.besu.evm.tracing.OperationTracer;
+import org.hyperledger.besu.evm.tracing.SlowBlockTracer;
 import org.hyperledger.besu.evm.tracing.TracerAggregator;
 import org.hyperledger.besu.evm.worldstate.StackedUpdater;
 import org.hyperledger.besu.evm.worldstate.WorldState;
@@ -263,7 +265,12 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
         blockTracer.getClass().getSimpleName());
     blockTracer.traceStartBlock(worldState, blockHeader, miningBeneficiary);
     maybeSlowBlockTracer.ifPresent(
-        sbt -> sbt.traceStartBlock(worldState, blockHeader, miningBeneficiary));
+        sbt -> {
+          sbt.traceStartBlock();
+          if (worldState instanceof PathBasedWorldState pws) {
+            pws.setStateMetricsCollector(sbt.getExecutionStats());
+          }
+        });
 
     final StateRootCommitter stateRootCommitter =
         blockProcessingMetrics.wrapStateRootCommitter(
@@ -570,7 +577,10 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
 
       LOG.trace("traceEndBlock for {}", blockHeader.getNumber());
       // Call SlowBlockTracer first so it can collect metrics before state cleanup
-      maybeSlowBlockTracer.ifPresent(sbt -> sbt.traceEndBlock(blockHeader, blockBody));
+      maybeSlowBlockTracer.ifPresent(
+          sbt ->
+              sbt.traceEndBlock(
+                  blockHeader.getNumber(), blockHeader.getBlockHash(), blockHeader.getGasUsed()));
       blockTracer.traceEndBlock(blockHeader, blockBody);
 
       return new BlockProcessingResult(

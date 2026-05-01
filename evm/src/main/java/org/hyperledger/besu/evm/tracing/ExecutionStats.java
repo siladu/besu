@@ -12,11 +12,9 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package org.hyperledger.besu.ethereum.mainnet;
+package org.hyperledger.besu.evm.tracing;
 
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.ethereum.trie.pathbased.common.worldview.StateMetricsCollector;
-import org.hyperledger.besu.evm.tracing.EVMExecutionMetricsTracer;
 
 import java.util.HashSet;
 import java.util.Set;
