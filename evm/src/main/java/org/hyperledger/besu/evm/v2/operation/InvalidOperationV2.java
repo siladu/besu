@@ -35,11 +35,21 @@ public class InvalidOperationV2 extends AbstractOperationV2 {
    * @param gasCalculator the gas calculator
    */
   public InvalidOperationV2(final GasCalculator gasCalculator) {
-    super(OPCODE, "INVALID", -1, -1, gasCalculator);
+    this(OPCODE, gasCalculator);
+  }
+
+  /**
+   * Instantiates a new Invalid operation for the given opcode.
+   *
+   * @param opcode the opcode
+   * @param gasCalculator the gas calculator
+   */
+  public InvalidOperationV2(final int opcode, final GasCalculator gasCalculator) {
+    super(opcode, "INVALID", -1, -1, gasCalculator);
   }
 
   @Override
   public OperationResult execute(final MessageFrame frame, final EVM evm) {
-    return INVALID_RESULT;
+    return new OperationResult(0, ExceptionalHaltReason.newInvalidOperation(getOpcode()));
   }
 }

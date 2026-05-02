@@ -23,7 +23,6 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.nio.ByteOrder;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.tuweni.bytes.Bytes32;
 
 /** The Chain id operation. */
@@ -64,8 +63,7 @@ public class ChainIdOperationV2 extends AbstractFixedCostOperationV2 {
    *
    * @return the chain id
    */
-  @VisibleForTesting
-  Bytes32 getChainId() {
+  public Bytes32 getChainId() {
     return chainId;
   }
 
