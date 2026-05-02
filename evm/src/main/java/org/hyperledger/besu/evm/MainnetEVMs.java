@@ -31,112 +31,98 @@ import org.hyperledger.besu.evm.gascalculator.SpuriousDragonGasCalculator;
 import org.hyperledger.besu.evm.gascalculator.TangerineWhistleGasCalculator;
 import org.hyperledger.besu.evm.internal.EvmConfiguration;
 import org.hyperledger.besu.evm.log.EIP7708TransferLogEmitter;
-import org.hyperledger.besu.evm.operation.AddModOperation;
-import org.hyperledger.besu.evm.operation.AddModOperationOptimized;
-import org.hyperledger.besu.evm.operation.AddOperation;
-import org.hyperledger.besu.evm.operation.AddOperationOptimized;
-import org.hyperledger.besu.evm.operation.AddressOperation;
-import org.hyperledger.besu.evm.operation.AndOperation;
-import org.hyperledger.besu.evm.operation.AndOperationOptimized;
-import org.hyperledger.besu.evm.operation.BalanceOperation;
-import org.hyperledger.besu.evm.operation.BaseFeeOperation;
-import org.hyperledger.besu.evm.operation.BlobBaseFeeOperation;
-import org.hyperledger.besu.evm.operation.BlobHashOperation;
-import org.hyperledger.besu.evm.operation.BlockHashOperation;
-import org.hyperledger.besu.evm.operation.ByteOperation;
-import org.hyperledger.besu.evm.operation.CallCodeOperation;
-import org.hyperledger.besu.evm.operation.CallDataCopyOperation;
-import org.hyperledger.besu.evm.operation.CallDataLoadOperation;
-import org.hyperledger.besu.evm.operation.CallDataSizeOperation;
-import org.hyperledger.besu.evm.operation.CallOperation;
-import org.hyperledger.besu.evm.operation.CallValueOperation;
-import org.hyperledger.besu.evm.operation.CallerOperation;
-import org.hyperledger.besu.evm.operation.ChainIdOperation;
-import org.hyperledger.besu.evm.operation.CodeCopyOperation;
-import org.hyperledger.besu.evm.operation.CodeSizeOperation;
-import org.hyperledger.besu.evm.operation.CoinbaseOperation;
-import org.hyperledger.besu.evm.operation.CountLeadingZerosOperation;
-import org.hyperledger.besu.evm.operation.Create2Operation;
-import org.hyperledger.besu.evm.operation.CreateOperation;
-import org.hyperledger.besu.evm.operation.DelegateCallOperation;
-import org.hyperledger.besu.evm.operation.DifficultyOperation;
-import org.hyperledger.besu.evm.operation.DivOperation;
-import org.hyperledger.besu.evm.operation.DivOperationOptimized;
-import org.hyperledger.besu.evm.operation.DupNOperation;
-import org.hyperledger.besu.evm.operation.DupOperation;
-import org.hyperledger.besu.evm.operation.EqOperation;
-import org.hyperledger.besu.evm.operation.ExchangeOperation;
-import org.hyperledger.besu.evm.operation.ExpOperation;
-import org.hyperledger.besu.evm.operation.ExtCodeCopyOperation;
-import org.hyperledger.besu.evm.operation.ExtCodeHashOperation;
-import org.hyperledger.besu.evm.operation.ExtCodeSizeOperation;
-import org.hyperledger.besu.evm.operation.GasLimitOperation;
-import org.hyperledger.besu.evm.operation.GasOperation;
-import org.hyperledger.besu.evm.operation.GasPriceOperation;
-import org.hyperledger.besu.evm.operation.GtOperation;
-import org.hyperledger.besu.evm.operation.InvalidOperation;
-import org.hyperledger.besu.evm.operation.IsZeroOperation;
-import org.hyperledger.besu.evm.operation.JumpDestOperation;
-import org.hyperledger.besu.evm.operation.JumpOperation;
-import org.hyperledger.besu.evm.operation.JumpiOperation;
-import org.hyperledger.besu.evm.operation.Keccak256Operation;
-import org.hyperledger.besu.evm.operation.LogOperation;
-import org.hyperledger.besu.evm.operation.LtOperation;
-import org.hyperledger.besu.evm.operation.MCopyOperation;
-import org.hyperledger.besu.evm.operation.MLoadOperation;
-import org.hyperledger.besu.evm.operation.MSizeOperation;
-import org.hyperledger.besu.evm.operation.MStore8Operation;
-import org.hyperledger.besu.evm.operation.MStoreOperation;
-import org.hyperledger.besu.evm.operation.ModOperation;
-import org.hyperledger.besu.evm.operation.ModOperationOptimized;
-import org.hyperledger.besu.evm.operation.MulModOperation;
-import org.hyperledger.besu.evm.operation.MulModOperationOptimized;
-import org.hyperledger.besu.evm.operation.MulOperation;
-import org.hyperledger.besu.evm.operation.NotOperation;
-import org.hyperledger.besu.evm.operation.NotOperationOptimized;
-import org.hyperledger.besu.evm.operation.NumberOperation;
 import org.hyperledger.besu.evm.operation.OperationRegistry;
-import org.hyperledger.besu.evm.operation.OrOperation;
-import org.hyperledger.besu.evm.operation.OrOperationOptimized;
-import org.hyperledger.besu.evm.operation.OriginOperation;
-import org.hyperledger.besu.evm.operation.PCOperation;
-import org.hyperledger.besu.evm.operation.PayOperation;
-import org.hyperledger.besu.evm.operation.PopOperation;
-import org.hyperledger.besu.evm.operation.PrevRanDaoOperation;
-import org.hyperledger.besu.evm.operation.Push0Operation;
-import org.hyperledger.besu.evm.operation.PushOperation;
-import org.hyperledger.besu.evm.operation.ReturnDataCopyOperation;
-import org.hyperledger.besu.evm.operation.ReturnDataSizeOperation;
-import org.hyperledger.besu.evm.operation.ReturnOperation;
-import org.hyperledger.besu.evm.operation.RevertOperation;
-import org.hyperledger.besu.evm.operation.SDivOperation;
-import org.hyperledger.besu.evm.operation.SDivOperationOptimized;
-import org.hyperledger.besu.evm.operation.SGtOperation;
-import org.hyperledger.besu.evm.operation.SLoadOperation;
-import org.hyperledger.besu.evm.operation.SLtOperation;
-import org.hyperledger.besu.evm.operation.SModOperation;
-import org.hyperledger.besu.evm.operation.SModOperationOptimized;
-import org.hyperledger.besu.evm.operation.SStoreOperation;
-import org.hyperledger.besu.evm.operation.SarOperation;
-import org.hyperledger.besu.evm.operation.SarOperationOptimized;
-import org.hyperledger.besu.evm.operation.SelfBalanceOperation;
-import org.hyperledger.besu.evm.operation.SelfDestructOperation;
-import org.hyperledger.besu.evm.operation.ShlOperation;
-import org.hyperledger.besu.evm.operation.ShlOperationOptimized;
-import org.hyperledger.besu.evm.operation.ShrOperation;
-import org.hyperledger.besu.evm.operation.ShrOperationOptimized;
-import org.hyperledger.besu.evm.operation.SignExtendOperation;
-import org.hyperledger.besu.evm.operation.SlotNumOperation;
-import org.hyperledger.besu.evm.operation.StaticCallOperation;
-import org.hyperledger.besu.evm.operation.StopOperation;
-import org.hyperledger.besu.evm.operation.SubOperation;
-import org.hyperledger.besu.evm.operation.SwapNOperation;
-import org.hyperledger.besu.evm.operation.SwapOperation;
-import org.hyperledger.besu.evm.operation.TLoadOperation;
-import org.hyperledger.besu.evm.operation.TStoreOperation;
-import org.hyperledger.besu.evm.operation.TimestampOperation;
-import org.hyperledger.besu.evm.operation.XorOperation;
-import org.hyperledger.besu.evm.operation.XorOperationOptimized;
+import org.hyperledger.besu.evm.v2.operation.AddModOperationV2;
+import org.hyperledger.besu.evm.v2.operation.AddOperationV2;
+import org.hyperledger.besu.evm.v2.operation.AddressOperationV2;
+import org.hyperledger.besu.evm.v2.operation.AndOperationV2;
+import org.hyperledger.besu.evm.v2.operation.BalanceOperationV2;
+import org.hyperledger.besu.evm.v2.operation.BaseFeeOperationV2;
+import org.hyperledger.besu.evm.v2.operation.BlobBaseFeeOperationV2;
+import org.hyperledger.besu.evm.v2.operation.BlobHashOperationV2;
+import org.hyperledger.besu.evm.v2.operation.BlockHashOperationV2;
+import org.hyperledger.besu.evm.v2.operation.ByteOperationV2;
+import org.hyperledger.besu.evm.v2.operation.CallCodeOperationV2;
+import org.hyperledger.besu.evm.v2.operation.CallDataCopyOperationV2;
+import org.hyperledger.besu.evm.v2.operation.CallDataLoadOperationV2;
+import org.hyperledger.besu.evm.v2.operation.CallDataSizeOperationV2;
+import org.hyperledger.besu.evm.v2.operation.CallOperationV2;
+import org.hyperledger.besu.evm.v2.operation.CallValueOperationV2;
+import org.hyperledger.besu.evm.v2.operation.CallerOperationV2;
+import org.hyperledger.besu.evm.v2.operation.ChainIdOperationV2;
+import org.hyperledger.besu.evm.v2.operation.ClzOperationV2;
+import org.hyperledger.besu.evm.v2.operation.CodeCopyOperationV2;
+import org.hyperledger.besu.evm.v2.operation.CodeSizeOperationV2;
+import org.hyperledger.besu.evm.v2.operation.CoinbaseOperationV2;
+import org.hyperledger.besu.evm.v2.operation.Create2OperationV2;
+import org.hyperledger.besu.evm.v2.operation.CreateOperationV2;
+import org.hyperledger.besu.evm.v2.operation.DelegateCallOperationV2;
+import org.hyperledger.besu.evm.v2.operation.DifficultyOperationV2;
+import org.hyperledger.besu.evm.v2.operation.DivOperationV2;
+import org.hyperledger.besu.evm.v2.operation.DupNOperationV2;
+import org.hyperledger.besu.evm.v2.operation.DupOperationV2;
+import org.hyperledger.besu.evm.v2.operation.EqOperationV2;
+import org.hyperledger.besu.evm.v2.operation.ExchangeOperationV2;
+import org.hyperledger.besu.evm.v2.operation.ExpOperationV2;
+import org.hyperledger.besu.evm.v2.operation.ExtCodeCopyOperationV2;
+import org.hyperledger.besu.evm.v2.operation.ExtCodeHashOperationV2;
+import org.hyperledger.besu.evm.v2.operation.ExtCodeSizeOperationV2;
+import org.hyperledger.besu.evm.v2.operation.GasLimitOperationV2;
+import org.hyperledger.besu.evm.v2.operation.GasOperationV2;
+import org.hyperledger.besu.evm.v2.operation.GasPriceOperationV2;
+import org.hyperledger.besu.evm.v2.operation.GtOperationV2;
+import org.hyperledger.besu.evm.v2.operation.InvalidOperationV2;
+import org.hyperledger.besu.evm.v2.operation.IsZeroOperationV2;
+import org.hyperledger.besu.evm.v2.operation.JumpDestOperationV2;
+import org.hyperledger.besu.evm.v2.operation.JumpOperationV2;
+import org.hyperledger.besu.evm.v2.operation.JumpiOperationV2;
+import org.hyperledger.besu.evm.v2.operation.Keccak256OperationV2;
+import org.hyperledger.besu.evm.v2.operation.LogOperationV2;
+import org.hyperledger.besu.evm.v2.operation.LtOperationV2;
+import org.hyperledger.besu.evm.v2.operation.MCopyOperationV2;
+import org.hyperledger.besu.evm.v2.operation.MSizeOperationV2;
+import org.hyperledger.besu.evm.v2.operation.MloadOperationV2;
+import org.hyperledger.besu.evm.v2.operation.ModOperationV2;
+import org.hyperledger.besu.evm.v2.operation.Mstore8OperationV2;
+import org.hyperledger.besu.evm.v2.operation.MstoreOperationV2;
+import org.hyperledger.besu.evm.v2.operation.MulModOperationV2;
+import org.hyperledger.besu.evm.v2.operation.MulOperationV2;
+import org.hyperledger.besu.evm.v2.operation.NotOperationV2;
+import org.hyperledger.besu.evm.v2.operation.NumberOperationV2;
+import org.hyperledger.besu.evm.v2.operation.OrOperationV2;
+import org.hyperledger.besu.evm.v2.operation.OriginOperationV2;
+import org.hyperledger.besu.evm.v2.operation.PayOperationV2;
+import org.hyperledger.besu.evm.v2.operation.PcOperationV2;
+import org.hyperledger.besu.evm.v2.operation.PopOperationV2;
+import org.hyperledger.besu.evm.v2.operation.PrevRanDaoOperationV2;
+import org.hyperledger.besu.evm.v2.operation.Push0OperationV2;
+import org.hyperledger.besu.evm.v2.operation.PushOperationV2;
+import org.hyperledger.besu.evm.v2.operation.ReturnDataCopyOperationV2;
+import org.hyperledger.besu.evm.v2.operation.ReturnDataSizeOperationV2;
+import org.hyperledger.besu.evm.v2.operation.ReturnOperationV2;
+import org.hyperledger.besu.evm.v2.operation.RevertOperationV2;
+import org.hyperledger.besu.evm.v2.operation.SDivOperationV2;
+import org.hyperledger.besu.evm.v2.operation.SLoadOperationV2;
+import org.hyperledger.besu.evm.v2.operation.SModOperationV2;
+import org.hyperledger.besu.evm.v2.operation.SStoreOperationV2;
+import org.hyperledger.besu.evm.v2.operation.SarOperationV2;
+import org.hyperledger.besu.evm.v2.operation.SelfBalanceOperationV2;
+import org.hyperledger.besu.evm.v2.operation.SelfDestructOperationV2;
+import org.hyperledger.besu.evm.v2.operation.SgtOperationV2;
+import org.hyperledger.besu.evm.v2.operation.ShlOperationV2;
+import org.hyperledger.besu.evm.v2.operation.ShrOperationV2;
+import org.hyperledger.besu.evm.v2.operation.SignExtendOperationV2;
+import org.hyperledger.besu.evm.v2.operation.SlotNumOperationV2;
+import org.hyperledger.besu.evm.v2.operation.SltOperationV2;
+import org.hyperledger.besu.evm.v2.operation.StaticCallOperationV2;
+import org.hyperledger.besu.evm.v2.operation.StopOperationV2;
+import org.hyperledger.besu.evm.v2.operation.SubOperationV2;
+import org.hyperledger.besu.evm.v2.operation.SwapNOperationV2;
+import org.hyperledger.besu.evm.v2.operation.SwapOperationV2;
+import org.hyperledger.besu.evm.v2.operation.TLoadOperationV2;
+import org.hyperledger.besu.evm.v2.operation.TStoreOperationV2;
+import org.hyperledger.besu.evm.v2.operation.TimestampOperationV2;
+import org.hyperledger.besu.evm.v2.operation.XorOperationV2;
 
 import java.math.BigInteger;
 
@@ -198,107 +184,94 @@ public class MainnetEVMs {
    * @param registry the registry
    * @param gasCalculator the gas calculator
    */
+  @SuppressWarnings("UnusedVariable")
   private static void registerFrontierOperations(
       final OperationRegistry registry,
       final GasCalculator gasCalculator,
       final EvmConfiguration evmConfiguration) {
     for (int i = 0; i < 255; i++) {
-      registry.put(new InvalidOperation(i, gasCalculator));
+      registry.put(new InvalidOperationV2(i, gasCalculator));
     }
-    registry.put(new MulOperation(gasCalculator));
-    registry.put(new SubOperation(gasCalculator));
-    if (evmConfiguration.enableOptimizedOpcodes()) {
-      registry.put(new AddOperationOptimized(gasCalculator));
-      registry.put(new ModOperationOptimized(gasCalculator));
-      registry.put(new SModOperationOptimized(gasCalculator));
-      registry.put(new AddModOperationOptimized(gasCalculator));
-      registry.put(new MulModOperationOptimized(gasCalculator));
-      registry.put(new AndOperationOptimized(gasCalculator));
-      registry.put(new XorOperationOptimized(gasCalculator));
-      registry.put(new OrOperationOptimized(gasCalculator));
-      registry.put(new NotOperationOptimized(gasCalculator));
-      registry.put(new DivOperationOptimized(gasCalculator));
-      registry.put(new SDivOperationOptimized(gasCalculator));
-    } else {
-      registry.put(new AddOperation(gasCalculator));
-      registry.put(new ModOperation(gasCalculator));
-      registry.put(new SModOperation(gasCalculator));
-      registry.put(new AddModOperation(gasCalculator));
-      registry.put(new MulModOperation(gasCalculator));
-      registry.put(new AndOperation(gasCalculator));
-      registry.put(new XorOperation(gasCalculator));
-      registry.put(new OrOperation(gasCalculator));
-      registry.put(new NotOperation(gasCalculator));
-      registry.put(new DivOperation(gasCalculator));
-      registry.put(new SDivOperation(gasCalculator));
-    }
-    registry.put(new ExpOperation(gasCalculator));
-    registry.put(new SignExtendOperation(gasCalculator));
-    registry.put(new LtOperation(gasCalculator));
-    registry.put(new GtOperation(gasCalculator));
-    registry.put(new SLtOperation(gasCalculator));
-    registry.put(new SGtOperation(gasCalculator));
-    registry.put(new EqOperation(gasCalculator));
-    registry.put(new IsZeroOperation(gasCalculator));
-    registry.put(new ByteOperation(gasCalculator));
-    registry.put(new Keccak256Operation(gasCalculator));
-    registry.put(new AddressOperation(gasCalculator));
-    registry.put(new BalanceOperation(gasCalculator));
-    registry.put(new OriginOperation(gasCalculator));
-    registry.put(new CallerOperation(gasCalculator));
-    registry.put(new CallValueOperation(gasCalculator));
-    registry.put(new CallDataLoadOperation(gasCalculator));
-    registry.put(new CallDataSizeOperation(gasCalculator));
-    registry.put(new CallDataCopyOperation(gasCalculator));
-    registry.put(new CodeSizeOperation(gasCalculator));
-    registry.put(new CodeCopyOperation(gasCalculator));
-    registry.put(new GasPriceOperation(gasCalculator));
-    registry.put(new ExtCodeCopyOperation(gasCalculator));
-    registry.put(new ExtCodeSizeOperation(gasCalculator));
-    registry.put(new BlockHashOperation(gasCalculator));
-    registry.put(new CoinbaseOperation(gasCalculator));
-    registry.put(new TimestampOperation(gasCalculator));
-    registry.put(new NumberOperation(gasCalculator));
-    registry.put(new DifficultyOperation(gasCalculator));
-    registry.put(new GasLimitOperation(gasCalculator));
-    registry.put(new PopOperation(gasCalculator));
-    registry.put(new MLoadOperation(gasCalculator));
-    registry.put(new MStoreOperation(gasCalculator));
-    registry.put(new MStore8Operation(gasCalculator));
-    registry.put(new SLoadOperation(gasCalculator));
-    registry.put(new SStoreOperation(gasCalculator, SStoreOperation.FRONTIER_MINIMUM));
-    registry.put(new JumpOperation(gasCalculator));
-    registry.put(new JumpiOperation(gasCalculator));
-    registry.put(new PCOperation(gasCalculator));
-    registry.put(new MSizeOperation(gasCalculator));
-    registry.put(new GasOperation(gasCalculator));
-    registry.put(new JumpDestOperation(gasCalculator));
-    registry.put(new ReturnOperation(gasCalculator));
-    registry.put(new InvalidOperation(gasCalculator));
-    registry.put(new StopOperation(gasCalculator));
-    registry.put(new SelfDestructOperation(gasCalculator));
-    registry.put(new CreateOperation(gasCalculator));
-    registry.put(new CallOperation(gasCalculator));
-    registry.put(new CallCodeOperation(gasCalculator));
+    registry.put(new MulOperationV2(gasCalculator));
+    registry.put(new SubOperationV2(gasCalculator));
+    registry.put(new AddOperationV2(gasCalculator));
+    registry.put(new ModOperationV2(gasCalculator));
+    registry.put(new SModOperationV2(gasCalculator));
+    registry.put(new AddModOperationV2(gasCalculator));
+    registry.put(new MulModOperationV2(gasCalculator));
+    registry.put(new AndOperationV2(gasCalculator));
+    registry.put(new XorOperationV2(gasCalculator));
+    registry.put(new OrOperationV2(gasCalculator));
+    registry.put(new NotOperationV2(gasCalculator));
+    registry.put(new DivOperationV2(gasCalculator));
+    registry.put(new SDivOperationV2(gasCalculator));
+    registry.put(new ExpOperationV2(gasCalculator));
+    registry.put(new SignExtendOperationV2(gasCalculator));
+    registry.put(new LtOperationV2(gasCalculator));
+    registry.put(new GtOperationV2(gasCalculator));
+    registry.put(new SltOperationV2(gasCalculator));
+    registry.put(new SgtOperationV2(gasCalculator));
+    registry.put(new EqOperationV2(gasCalculator));
+    registry.put(new IsZeroOperationV2(gasCalculator));
+    registry.put(new ByteOperationV2(gasCalculator));
+    registry.put(new Keccak256OperationV2(gasCalculator));
+    registry.put(new AddressOperationV2(gasCalculator));
+    registry.put(new BalanceOperationV2(gasCalculator));
+    registry.put(new OriginOperationV2(gasCalculator));
+    registry.put(new CallerOperationV2(gasCalculator));
+    registry.put(new CallValueOperationV2(gasCalculator));
+    registry.put(new CallDataLoadOperationV2(gasCalculator));
+    registry.put(new CallDataSizeOperationV2(gasCalculator));
+    registry.put(new CallDataCopyOperationV2(gasCalculator));
+    registry.put(new CodeSizeOperationV2(gasCalculator));
+    registry.put(new CodeCopyOperationV2(gasCalculator));
+    registry.put(new GasPriceOperationV2(gasCalculator));
+    registry.put(new ExtCodeCopyOperationV2(gasCalculator));
+    registry.put(new ExtCodeSizeOperationV2(gasCalculator));
+    registry.put(new BlockHashOperationV2(gasCalculator));
+    registry.put(new CoinbaseOperationV2(gasCalculator));
+    registry.put(new TimestampOperationV2(gasCalculator));
+    registry.put(new NumberOperationV2(gasCalculator));
+    registry.put(new DifficultyOperationV2(gasCalculator));
+    registry.put(new GasLimitOperationV2(gasCalculator));
+    registry.put(new PopOperationV2(gasCalculator));
+    registry.put(new MloadOperationV2(gasCalculator));
+    registry.put(new MstoreOperationV2(gasCalculator));
+    registry.put(new Mstore8OperationV2(gasCalculator));
+    registry.put(new SLoadOperationV2(gasCalculator));
+    registry.put(new SStoreOperationV2(gasCalculator, SStoreOperationV2.FRONTIER_MINIMUM));
+    registry.put(new JumpOperationV2(gasCalculator));
+    registry.put(new JumpiOperationV2(gasCalculator));
+    registry.put(new PcOperationV2(gasCalculator));
+    registry.put(new MSizeOperationV2(gasCalculator));
+    registry.put(new GasOperationV2(gasCalculator));
+    registry.put(new JumpDestOperationV2(gasCalculator));
+    registry.put(new ReturnOperationV2(gasCalculator));
+    registry.put(new InvalidOperationV2(gasCalculator));
+    registry.put(new StopOperationV2(gasCalculator));
+    registry.put(new SelfDestructOperationV2(gasCalculator));
+    registry.put(new CreateOperationV2(gasCalculator));
+    registry.put(new CallOperationV2(gasCalculator));
+    registry.put(new CallCodeOperationV2(gasCalculator));
 
     // Register the PUSH1, PUSH2, ..., PUSH32 operations.
     for (int i = 1; i <= 32; ++i) {
-      registry.put(new PushOperation(i, gasCalculator));
+      registry.put(new PushOperationV2(i, gasCalculator));
     }
 
     // Register the DUP1, DUP2, ..., DUP16 operations.
     for (int i = 1; i <= 16; ++i) {
-      registry.put(new DupOperation(i, gasCalculator));
+      registry.put(new DupOperationV2(i, gasCalculator));
     }
 
     // Register the SWAP1, SWAP2, ..., SWAP16 operations.
     for (int i = 1; i <= 16; ++i) {
-      registry.put(new SwapOperation(i, gasCalculator));
+      registry.put(new SwapOperationV2(i, gasCalculator));
     }
 
     // Register the LOG0, LOG1, ..., LOG4 operations.
     for (int i = 0; i < 5; ++i) {
-      registry.put(new LogOperation(i, gasCalculator));
+      registry.put(new LogOperationV2(i, gasCalculator));
     }
   }
 
@@ -352,7 +325,7 @@ public class MainnetEVMs {
       final GasCalculator gasCalculator,
       final EvmConfiguration evmConfiguration) {
     registerFrontierOperations(registry, gasCalculator, evmConfiguration);
-    registry.put(new DelegateCallOperation(gasCalculator));
+    registry.put(new DelegateCallOperationV2(gasCalculator));
   }
 
   /**
@@ -435,10 +408,10 @@ public class MainnetEVMs {
       final GasCalculator gasCalculator,
       final EvmConfiguration evmConfiguration) {
     registerHomesteadOperations(registry, gasCalculator, evmConfiguration);
-    registry.put(new ReturnDataCopyOperation(gasCalculator));
-    registry.put(new ReturnDataSizeOperation(gasCalculator));
-    registry.put(new RevertOperation(gasCalculator));
-    registry.put(new StaticCallOperation(gasCalculator));
+    registry.put(new ReturnDataCopyOperationV2(gasCalculator));
+    registry.put(new ReturnDataSizeOperationV2(gasCalculator));
+    registry.put(new RevertOperationV2(gasCalculator));
+    registry.put(new StaticCallOperationV2(gasCalculator));
   }
 
   /**
@@ -499,17 +472,11 @@ public class MainnetEVMs {
       final GasCalculator gasCalculator,
       final EvmConfiguration evmConfiguration) {
     registerByzantiumOperations(registry, gasCalculator, evmConfiguration);
-    registry.put(new Create2Operation(gasCalculator));
-    if (evmConfiguration.enableOptimizedOpcodes()) {
-      registry.put(new ShlOperationOptimized(gasCalculator));
-      registry.put(new ShrOperationOptimized(gasCalculator));
-      registry.put(new SarOperationOptimized(gasCalculator));
-    } else {
-      registry.put(new ShlOperation(gasCalculator));
-      registry.put(new ShrOperation(gasCalculator));
-      registry.put(new SarOperation(gasCalculator));
-    }
-    registry.put(new ExtCodeHashOperation(gasCalculator));
+    registry.put(new Create2OperationV2(gasCalculator));
+    registry.put(new ShlOperationV2(gasCalculator));
+    registry.put(new ShrOperationV2(gasCalculator));
+    registry.put(new SarOperationV2(gasCalculator));
+    registry.put(new ExtCodeHashOperationV2(gasCalculator));
   }
 
   /**
@@ -593,9 +560,9 @@ public class MainnetEVMs {
       final EvmConfiguration evmConfiguration) {
     registerConstantinopleOperations(registry, gasCalculator, evmConfiguration);
     registry.put(
-        new ChainIdOperation(gasCalculator, Bytes32.leftPad(Bytes.of(chainId.toByteArray()))));
-    registry.put(new SelfBalanceOperation(gasCalculator));
-    registry.put(new SStoreOperation(gasCalculator, SStoreOperation.EIP_1706_MINIMUM));
+        new ChainIdOperationV2(gasCalculator, Bytes32.leftPad(Bytes.of(chainId.toByteArray()))));
+    registry.put(new SelfBalanceOperationV2(gasCalculator));
+    registry.put(new SStoreOperationV2(gasCalculator, SStoreOperationV2.EIP_1706_MINIMUM));
   }
 
   /**
@@ -707,7 +674,7 @@ public class MainnetEVMs {
       final BigInteger chainId,
       final EvmConfiguration evmConfiguration) {
     registerIstanbulOperations(registry, gasCalculator, chainId, evmConfiguration);
-    registry.put(new BaseFeeOperation(gasCalculator));
+    registry.put(new BaseFeeOperationV2(gasCalculator));
   }
 
   /**
@@ -779,7 +746,7 @@ public class MainnetEVMs {
       final BigInteger chainID,
       final EvmConfiguration evmConfiguration) {
     registerLondonOperations(registry, gasCalculator, chainID, evmConfiguration);
-    registry.put(new PrevRanDaoOperation(gasCalculator));
+    registry.put(new PrevRanDaoOperationV2(gasCalculator));
   }
 
   /**
@@ -851,7 +818,7 @@ public class MainnetEVMs {
       final BigInteger chainID,
       final EvmConfiguration evmConfiguration) {
     registerParisOperations(registry, gasCalculator, chainID, evmConfiguration);
-    registry.put(new Push0Operation(gasCalculator));
+    registry.put(new Push0OperationV2(gasCalculator));
   }
 
   /**
@@ -925,20 +892,20 @@ public class MainnetEVMs {
     registerShanghaiOperations(registry, gasCalculator, chainID, evmConfiguration);
 
     // EIP-1153 TSTORE/TLOAD
-    registry.put(new TStoreOperation(gasCalculator));
-    registry.put(new TLoadOperation(gasCalculator));
+    registry.put(new TStoreOperationV2(gasCalculator));
+    registry.put(new TLoadOperationV2(gasCalculator));
 
     // EIP-4844 BLOBHASH
-    registry.put(new BlobHashOperation(gasCalculator));
+    registry.put(new BlobHashOperationV2(gasCalculator));
 
     // EIP-5656 MCOPY
-    registry.put(new MCopyOperation(gasCalculator));
+    registry.put(new MCopyOperationV2(gasCalculator));
 
     // EIP-6780 nerf self destruct
-    registry.put(new SelfDestructOperation(gasCalculator, true));
+    registry.put(new SelfDestructOperationV2(gasCalculator, true));
 
     // EIP-7516 BLOBBASEFEE
-    registry.put(new BlobBaseFeeOperation(gasCalculator));
+    registry.put(new BlobBaseFeeOperationV2(gasCalculator));
   }
 
   /**
@@ -1073,7 +1040,7 @@ public class MainnetEVMs {
     registerPragueOperations(registry, gasCalculator, chainID, evmConfiguration);
 
     // EIP-7939: CLZ opcode
-    registry.put(new CountLeadingZerosOperation(gasCalculator));
+    registry.put(new ClzOperationV2(gasCalculator));
   }
 
   /**
@@ -1148,15 +1115,15 @@ public class MainnetEVMs {
 
     // EIP-7708: SelfDestruct with transfer log emission
     registry.put(
-        new SelfDestructOperation(gasCalculator, true, EIP7708TransferLogEmitter.INSTANCE));
+        new SelfDestructOperationV2(gasCalculator, true, EIP7708TransferLogEmitter.INSTANCE));
 
     // EIP-7843 SLOTNUM opcode
-    registry.put(new SlotNumOperation(gasCalculator));
+    registry.put(new SlotNumOperationV2(gasCalculator));
 
     // EIP-8024: DUPN, SWAPN, EXCHANGE
-    registry.put(new DupNOperation(gasCalculator));
-    registry.put(new SwapNOperation(gasCalculator));
-    registry.put(new ExchangeOperation(gasCalculator));
+    registry.put(new DupNOperationV2(gasCalculator));
+    registry.put(new SwapNOperationV2(gasCalculator));
+    registry.put(new ExchangeOperationV2(gasCalculator));
   }
 
   /**
@@ -1443,7 +1410,7 @@ public class MainnetEVMs {
     registerBogotaOperations(registry, gasCalculator, chainID, evmConfiguration);
 
     // EIP-5920 PAY opcode
-    registry.put(new PayOperation(gasCalculator));
+    registry.put(new PayOperationV2(gasCalculator));
   }
 
   /**
