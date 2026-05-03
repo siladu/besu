@@ -31,10 +31,8 @@ import org.hyperledger.besu.ethereum.trie.pathbased.common.worldview.PathBasedWo
 import org.hyperledger.besu.ethereum.trie.pathbased.common.worldview.accumulator.PathBasedWorldStateUpdateAccumulator;
 import org.hyperledger.besu.evm.account.MutableAccount;
 import org.hyperledger.besu.evm.blockhash.BlockHashLookup;
-import org.hyperledger.besu.evm.tracing.OperationTracer;
-import org.hyperledger.besu.evm.tracing.TracerAggregator;
+import org.hyperledger.besu.evm.tracing.EVMExecutionMetricsTracer;
 import org.hyperledger.besu.evm.worldstate.WorldUpdater;
-import org.hyperledger.besu.evm.worldstate.WorldView;
 import org.hyperledger.besu.plugin.services.metrics.Counter;
 
 import java.util.Optional;
@@ -120,38 +118,28 @@ public class ParallelizedConcurrentTransactionProcessor extends ParallelBlockTra
                   BlockAccessListBuilder.createTransactionAccessLocationTracker(
                       transactionLocation));
 
-      // Create the mining beneficiary tracer for parallel execution collision detection
-      final OperationTracer miningBeneficiaryTracer =
-          new OperationTracer() {
-            @Override
-            public void traceBeforeRewardTransaction(
-                final WorldView worldView,
-                final org.hyperledger.besu.datatypes.Transaction tx,
-                final Wei miningReward) {
-              /*
-               * This part checks if the mining beneficiary's account was accessed before increasing its balance for rewards.
-               * Indeed, if the transaction has interacted with the address to read or modify it,
-               * it means that the value is necessary for the proper execution of the transaction and will therefore be considered in collision detection.
-               * If this is not the case, we can ignore this address during conflict detection.
-               */
-              if (transactionCollisionDetector
-                  .getAddressesTouchedByTransaction(
-                      transaction, Optional.of(roundWorldStateUpdater))
-                  .contains(miningBeneficiary)) {
-                contextBuilder.isMiningBeneficiaryTouchedPreRewardByTransaction(true);
-              }
-              contextBuilder.miningBeneficiaryReward(miningReward);
-            }
-          };
-
-      // Create separate background tracer for parallel execution
-      // This includes a copy of EVMExecutionMetricsTracer if present in the block tracer
-      final OperationTracer backgroundBlockTracer =
-          BackgroundTracerFactory.createBackgroundTracer(blockProcessingContext);
-
-      // Compose the background tracer with the mining beneficiary tracer
-      final OperationTracer composedTracer =
-          TracerAggregator.combining(backgroundBlockTracer, miningBeneficiaryTracer);
+      // Build a single concrete tracer for the parallel thread:
+      //   - tracks EVM execution metrics (consolidated back into the main tracer if confirmed),
+      //   - carries the mining-beneficiary collision check via the BeforeRewardHook.
+      // Avoid TracerAggregator here so the EVM hot loop's `instanceof EVMExecutionMetricsTracer`
+      // fast path stays monomorphic.
+      final EVMExecutionMetricsTracer composedTracer =
+          new EVMExecutionMetricsTracer(
+              (worldView, tx, miningReward) -> {
+                /*
+                 * This part checks if the mining beneficiary's account was accessed before increasing its balance for rewards.
+                 * Indeed, if the transaction has interacted with the address to read or modify it,
+                 * it means that the value is necessary for the proper execution of the transaction and will therefore be considered in collision detection.
+                 * If this is not the case, we can ignore this address during conflict detection.
+                 */
+                if (transactionCollisionDetector
+                    .getAddressesTouchedByTransaction(
+                        transaction, Optional.of(roundWorldStateUpdater))
+                    .contains(miningBeneficiary)) {
+                  contextBuilder.isMiningBeneficiaryTouchedPreRewardByTransaction(true);
+                }
+                contextBuilder.miningBeneficiaryReward(miningReward);
+              });
 
       final TransactionProcessingResult result =
           transactionProcessor.processTransaction(
@@ -172,7 +160,7 @@ public class ParallelizedConcurrentTransactionProcessor extends ParallelBlockTra
       contextBuilder
           .transactionAccumulator(ws.getAccumulator())
           .transactionProcessingResult(result)
-          .backgroundTracer(backgroundBlockTracer);
+          .backgroundTracer(composedTracer);
 
       final ParallelizedTransactionContext parallelizedTransactionContext = contextBuilder.build();
       if (!parallelizedTransactionContext.isMiningBeneficiaryTouchedPreRewardByTransaction()) {

@@ -15,9 +15,12 @@
 package org.hyperledger.besu.evm.tracing;
 
 import org.hyperledger.besu.datatypes.Address;
+import org.hyperledger.besu.datatypes.Transaction;
+import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.operation.Operation.OperationResult;
+import org.hyperledger.besu.evm.worldstate.WorldView;
 
 import java.util.HashSet;
 import java.util.Optional;
@@ -169,11 +172,39 @@ public final class EVMExecutionMetricsTracer implements OperationTracer {
     }
   }
 
+  /**
+   * Optional hook invoked from {@link #traceBeforeRewardTransaction}. Lets callers (e.g. the
+   * parallel transaction processor) attach a per-tx callback without wrapping this tracer in a
+   * {@code TracerAggregator}, which would push the EVM hot loop into megamorphic dispatch.
+   */
+  @FunctionalInterface
+  public interface BeforeRewardHook {
+    /**
+     * Invoked before the mining beneficiary reward is applied.
+     *
+     * @param worldView the world view at the moment before reward
+     * @param transaction the transaction that just finished executing
+     * @param miningReward the reward about to be credited to the mining beneficiary
+     */
+    void onBeforeReward(WorldView worldView, Transaction transaction, Wei miningReward);
+  }
+
   private final ExecutionMetrics metrics = new ExecutionMetrics();
+  private final BeforeRewardHook beforeRewardHook;
 
   /** Create a new EVMExecutionMetricsTracer that tracks all available metrics. */
   public EVMExecutionMetricsTracer() {
-    // This tracer tracks all available execution metrics when instantiated
+    this(null);
+  }
+
+  /**
+   * Create a new EVMExecutionMetricsTracer with an optional before-reward hook.
+   *
+   * @param beforeRewardHook callback invoked from {@link #traceBeforeRewardTransaction}, or {@code
+   *     null} to no-op (matches the {@link OperationTracer} default).
+   */
+  public EVMExecutionMetricsTracer(final BeforeRewardHook beforeRewardHook) {
+    this.beforeRewardHook = beforeRewardHook;
   }
 
   @Override
@@ -246,6 +277,14 @@ public final class EVMExecutionMetricsTracer implements OperationTracer {
       final MessageFrame frame, final long gasRequirement, final Bytes output) {
     // Precompile calls can be considered as special CALL operations
     // But we may want to track them separately if needed
+  }
+
+  @Override
+  public void traceBeforeRewardTransaction(
+      final WorldView worldView, final Transaction transaction, final Wei miningReward) {
+    if (beforeRewardHook != null) {
+      beforeRewardHook.onBeforeReward(worldView, transaction, miningReward);
+    }
   }
 
   /**
