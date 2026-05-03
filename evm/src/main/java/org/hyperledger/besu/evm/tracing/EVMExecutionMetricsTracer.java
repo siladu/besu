@@ -220,49 +220,50 @@ public final class EVMExecutionMetricsTracer implements OperationTracer {
     }
   }
 
+  // EVM opcodes we care about, copied as int constants so the hot-path switch/branch operates
+  // on primitives (avoids the megamorphic Operation.getName()/getOpcode() interface call).
+  private static final int OP_SLOAD = 0x54;
+  private static final int OP_SSTORE = 0x55;
+  private static final int OP_CREATE = 0xF0;
+  private static final int OP_CALL = 0xF1;
+  private static final int OP_CALLCODE = 0xF2;
+  private static final int OP_DELEGATECALL = 0xF4;
+  private static final int OP_CREATE2 = 0xF5;
+  private static final int OP_STATICCALL = 0xFA;
+
   @Override
-  public void tracePreExecution(final MessageFrame frame) {
-    final var operation = frame.getCurrentOperation();
-    if (operation != null) {
-      final String name = operation.getName();
-      if ("SLOAD".equals(name) || "SSTORE".equals(name)) {
-        final Address storageAddress = frame.getRecipientAddress();
-        final UInt256 slotKey = UInt256.fromBytes(frame.getStackItem(0));
-        metrics.uniqueStorageSlots.add(
-            new ExecutionMetrics.StorageSlotKey(storageAddress, slotKey));
-        metrics.uniqueAccountsTouched.add(storageAddress);
-      }
+  public void tracePreExecution(final MessageFrame frame, final int opcode) {
+    if (opcode == OP_SLOAD || opcode == OP_SSTORE) {
+      final Address storageAddress = frame.getRecipientAddress();
+      final UInt256 slotKey = UInt256.fromBytes(frame.getStackItem(0));
+      metrics.uniqueStorageSlots.add(new ExecutionMetrics.StorageSlotKey(storageAddress, slotKey));
+      metrics.uniqueAccountsTouched.add(storageAddress);
     }
   }
 
   @Override
-  public void tracePostExecution(final MessageFrame frame, final OperationResult operationResult) {
-    // Track EVM operation based on the operation being executed
-    final var operation = frame.getCurrentOperation();
-    if (operation != null) {
-      final String opcodeName = operation.getName();
-
-      switch (opcodeName) {
-        case "SLOAD":
-          metrics.sloadCount++;
-          break;
-        case "SSTORE":
-          metrics.sstoreCount++;
-          break;
-        case "CALL":
-        case "CALLCODE":
-        case "DELEGATECALL":
-        case "STATICCALL":
-          metrics.callCount++;
-          break;
-        case "CREATE":
-        case "CREATE2":
-          metrics.createCount++;
-          break;
-        default:
-          // No tracking needed for other operations
-          break;
-      }
+  public void tracePostExecution(
+      final MessageFrame frame, final OperationResult operationResult, final int opcode) {
+    switch (opcode) {
+      case OP_SLOAD:
+        metrics.sloadCount++;
+        break;
+      case OP_SSTORE:
+        metrics.sstoreCount++;
+        break;
+      case OP_CALL:
+      case OP_CALLCODE:
+      case OP_DELEGATECALL:
+      case OP_STATICCALL:
+        metrics.callCount++;
+        break;
+      case OP_CREATE:
+      case OP_CREATE2:
+        metrics.createCount++;
+        break;
+      default:
+        // No tracking needed for other operations
+        break;
     }
   }
 

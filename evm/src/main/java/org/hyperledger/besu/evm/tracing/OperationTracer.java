@@ -43,6 +43,21 @@ public interface OperationTracer {
   default void tracePreExecution(final MessageFrame frame) {}
 
   /**
+   * Trace pre execution, given the opcode int already known by the EVM. Lets hot-path tracers
+   * branch on a primitive int instead of {@code frame.getCurrentOperation().getName()}, which is a
+   * megamorphic call (Operation is an interface with dozens of implementations).
+   *
+   * <p>Default implementation delegates to {@link #tracePreExecution(MessageFrame)} for backward
+   * compatibility.
+   *
+   * @param frame the frame
+   * @param opcode the opcode (0-255) about to execute
+   */
+  default void tracePreExecution(final MessageFrame frame, final int opcode) {
+    tracePreExecution(frame);
+  }
+
+  /**
    * Trace post execution.
    *
    * @param frame the frame
@@ -50,6 +65,19 @@ public interface OperationTracer {
    */
   default void tracePostExecution(
       final MessageFrame frame, final OperationResult operationResult) {}
+
+  /**
+   * Trace post execution, given the opcode int already known by the EVM. Default delegates to
+   * {@link #tracePostExecution(MessageFrame, OperationResult)} for backward compatibility.
+   *
+   * @param frame the frame
+   * @param operationResult the operation result
+   * @param opcode the opcode (0-255) that just executed
+   */
+  default void tracePostExecution(
+      final MessageFrame frame, final OperationResult operationResult, final int opcode) {
+    tracePostExecution(frame, operationResult);
+  }
 
   /**
    * Trace precompile call.

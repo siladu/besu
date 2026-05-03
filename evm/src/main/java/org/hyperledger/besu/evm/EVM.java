@@ -235,11 +235,11 @@ public class EVM {
       frame.setCurrentOperation(currentOperation);
       if (operationTracer != null) {
         if (operationTracer instanceof SlowBlockTracer sbt) {
-          sbt.tracePreExecution(frame);
+          sbt.tracePreExecution(frame, opcode);
         } else if (operationTracer instanceof EVMExecutionMetricsTracer met) {
-          met.tracePreExecution(frame);
+          met.tracePreExecution(frame, opcode);
         } else {
-          operationTracer.tracePreExecution(frame);
+          operationTracer.tracePreExecution(frame, opcode);
         }
       }
 
@@ -435,11 +435,11 @@ public class EVM {
       }
       if (operationTracer != null) {
         if (operationTracer instanceof SlowBlockTracer sbt) {
-          sbt.tracePostExecution(frame, result);
+          sbt.tracePostExecution(frame, result, opcode);
         } else if (operationTracer instanceof EVMExecutionMetricsTracer met) {
-          met.tracePostExecution(frame, result);
+          met.tracePostExecution(frame, result, opcode);
         } else {
-          operationTracer.tracePostExecution(frame, result);
+          operationTracer.tracePostExecution(frame, result, opcode);
         }
       }
     }

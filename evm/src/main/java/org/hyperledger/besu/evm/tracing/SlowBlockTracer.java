@@ -135,13 +135,14 @@ public final class SlowBlockTracer implements OperationTracer {
   }
 
   @Override
-  public void tracePreExecution(final MessageFrame frame) {
-    metricsTracer.tracePreExecution(frame);
+  public void tracePreExecution(final MessageFrame frame, final int opcode) {
+    metricsTracer.tracePreExecution(frame, opcode);
   }
 
   @Override
-  public void tracePostExecution(final MessageFrame frame, final OperationResult operationResult) {
-    metricsTracer.tracePostExecution(frame, operationResult);
+  public void tracePostExecution(
+      final MessageFrame frame, final OperationResult operationResult, final int opcode) {
+    metricsTracer.tracePostExecution(frame, operationResult, opcode);
   }
 
   @Override

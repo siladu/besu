@@ -110,9 +110,24 @@ public class TracerAggregator implements OperationTracer {
   }
 
   @Override
+  public void tracePreExecution(final MessageFrame frame, final int opcode) {
+    for (final OperationTracer tracer : tracers) {
+      tracer.tracePreExecution(frame, opcode);
+    }
+  }
+
+  @Override
   public void tracePostExecution(final MessageFrame frame, final OperationResult operationResult) {
     for (final OperationTracer tracer : tracers) {
       tracer.tracePostExecution(frame, operationResult);
+    }
+  }
+
+  @Override
+  public void tracePostExecution(
+      final MessageFrame frame, final OperationResult operationResult, final int opcode) {
+    for (final OperationTracer tracer : tracers) {
+      tracer.tracePostExecution(frame, operationResult, opcode);
     }
   }
 

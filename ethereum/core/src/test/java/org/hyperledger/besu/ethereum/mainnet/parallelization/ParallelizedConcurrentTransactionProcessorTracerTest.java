@@ -463,10 +463,10 @@ class ParallelizedConcurrentTransactionProcessorTracerTest {
               assertThat(metricsTracer).isPresent();
 
               // Simulate 2 SLOAD operations per transaction
-              simulateOpcode(metricsTracer.get(), "SLOAD");
-              simulateOpcode(metricsTracer.get(), "SLOAD");
+              simulateOpcode(metricsTracer.get(), 0x54);
+              simulateOpcode(metricsTracer.get(), 0x54);
               // Simulate 1 CALL per transaction
-              simulateOpcode(metricsTracer.get(), "CALL");
+              simulateOpcode(metricsTracer.get(), 0xF1);
 
               return TransactionProcessingResult.successful(
                   Collections.emptyList(),
@@ -535,12 +535,8 @@ class ParallelizedConcurrentTransactionProcessorTracerTest {
   }
 
   /** Simulates an EVM opcode by calling tracePostExecution with a mocked MessageFrame. */
-  private static void simulateOpcode(
-      final EVMExecutionMetricsTracer tracer, final String opcodeName) {
+  private static void simulateOpcode(final EVMExecutionMetricsTracer tracer, final int opcode) {
     final MessageFrame frame = mock(MessageFrame.class);
-    final Operation operation = mock(Operation.class);
-    when(frame.getCurrentOperation()).thenReturn(operation);
-    when(operation.getName()).thenReturn(opcodeName);
-    tracer.tracePostExecution(frame, mock(Operation.OperationResult.class));
+    tracer.tracePostExecution(frame, mock(Operation.OperationResult.class), opcode);
   }
 }
