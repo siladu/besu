@@ -14,6 +14,7 @@
  */
 package org.hyperledger.besu.evm.processor;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -22,6 +23,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.hyperledger.besu.datatypes.Address;
+import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.precompile.PrecompileContractRegistry;
@@ -29,6 +31,7 @@ import org.hyperledger.besu.evm.precompile.PrecompiledContract;
 import org.hyperledger.besu.evm.testutils.TestMessageFrameBuilder;
 import org.hyperledger.besu.evm.toy.ToyWorld;
 
+import org.apache.tuweni.units.bigints.UInt256;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -98,5 +101,32 @@ class MessageCallProcessorTest extends AbstractMessageProcessorTest<MessageCallP
     getAbstractMessageProcessor().process(messageFrame, operationTracer);
 
     verify(operationTracer, times(1)).tracePrecompileCall(eq(messageFrame), anyLong(), any());
+  }
+
+  @Test
+  public void shouldWrapRecipientBalanceOnOverflow() {
+    // Recipient has 2^256 - 2 wei; sending 2 more should wrap to 0 (not throw).
+    // Confirmed behaviour of geth, nethermind, erigon, reth.
+    Address sender = Address.fromHexString("0x1");
+    Address recipient = Address.fromHexString("0x2");
+
+    ToyWorld toyWorld = new ToyWorld();
+    toyWorld.createAccount(sender, 0, Wei.of(10));
+    toyWorld.createAccount(recipient, 0, Wei.of(UInt256.MAX_VALUE.subtract(1)));
+
+    final MessageFrame messageFrame =
+        new TestMessageFrameBuilder()
+            .worldUpdater(toyWorld)
+            .sender(sender)
+            .address(recipient)
+            .value(Wei.of(2))
+            .initialGas(21_000L)
+            .build();
+
+    when(precompileContractRegistry.get(any())).thenReturn(null);
+
+    getAbstractMessageProcessor().start(messageFrame, operationTracer);
+
+    assertThat(toyWorld.get(recipient).getBalance()).isEqualTo(Wei.ZERO);
   }
 }
