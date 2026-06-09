@@ -353,11 +353,16 @@ public abstract class PathBasedWorldStateUpdateAccumulator<ACCOUNT extends PathB
           final PathBasedWorldStateUpdateAccumulator<ACCOUNT> worldStateUpdateAccumulator =
               (PathBasedWorldStateUpdateAccumulator<ACCOUNT>) wrappedWorldView();
           account = worldStateUpdateAccumulator.loadAccount(address, accountFunction);
-          // Delegate to the wrapped accumulator so account reads are counted at the layer that serves them.
+          // Delegate to the wrapped accumulator so account reads are counted at the layer that
+          // serves them.
         } else {
+          long startReadNs = System.nanoTime();
           account = wrappedWorldView().get(address);
           // cache miss: not found in this accumulator, fetched from world state
-          if (stateAccessTracer != null) stateAccessTracer.traceAccountRead(false);
+          if (stateAccessTracer != null) {
+            stateAccessTracer.addStateReadTime(System.nanoTime() - startReadNs);
+            stateAccessTracer.traceAccountRead(false);
+          }
         }
         if (account instanceof PathBasedAccount pathBasedAccount) {
           ACCOUNT mutableAccount = copyAccount((ACCOUNT) pathBasedAccount, this, true);
@@ -593,12 +598,16 @@ public abstract class PathBasedWorldStateUpdateAccumulator<ACCOUNT extends PathB
       }
     }
     try {
+      long startReadNs = System.nanoTime();
       final Optional<UInt256> valueUInt =
           (wrappedWorldView() instanceof PathBasedWorldState worldState)
               ? worldState.getStorageValueByStorageSlotKey(address, storageSlotKey)
               : wrappedWorldView().getStorageValueByStorageSlotKey(address, storageSlotKey);
       // cache miss: slot not in accumulator, fetched from world state
-      if (stateAccessTracer != null) stateAccessTracer.traceStorageRead(false);
+      if (stateAccessTracer != null) {
+        stateAccessTracer.addStateReadTime(System.nanoTime() - startReadNs);
+        stateAccessTracer.traceStorageRead(false);
+      }
       storageToUpdate
           .computeIfAbsent(
               address,
