@@ -262,7 +262,9 @@ public abstract class PathBasedWorldState
               writeCounts.accounts(),
               writeCounts.storageSlots(),
               writeCounts.code(),
-              writeCounts.codeBytes());
+              writeCounts.codeBytes(),
+              writeCounts.accountDeletes(),
+              writeCounts.storageDeletes());
         }
 
         accumulator.reset();
