@@ -571,7 +571,7 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
           "Threshold in milliseconds for slow-block execution-metrics logging: -1 disables "
               + "(default), 0 logs every block, a positive value logs only blocks whose total "
               + "processing time meets or exceeds it (default: ${DEFAULT-VALUE})")
-  private final Long slowBlockThreshold = -1L;
+  private final Long slowBlockThreshold = 0L;
 
   // Permission Option Group
   @CommandLine.ArgGroup(validate = false, heading = "@|bold Permissions Options|@%n")
