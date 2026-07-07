@@ -67,6 +67,10 @@ Native-image analysis takes ~70 s per binary on an M4 Max (16 threads).
 
 ## Regenerating the agent metadata
 
+> Full runbook — including how to diagnose and fix runtime
+> `MissingReflectionRegistrationError`s on new/untested scenarios — lives in
+> [`docs/graalvm-native-image.md`](docs/graalvm-native-image.md).
+
 The bulk of the reflection/JNI/resource metadata is recorded by running the
 JVM dist under the tracing agent (GraalVM's `java` required):
 

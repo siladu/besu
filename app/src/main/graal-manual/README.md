@@ -13,3 +13,6 @@ Entries the agent cannot observe belong here instead, e.g.:
 Both directories are passed to native-image via
 `graalvmNative.binaries.main.configurationFileDirectories` in the root
 `build.gradle`.
+
+Runbook for fixing native-binary runtime errors and re-recording metadata:
+`docs/graalvm-native-image.md`.
