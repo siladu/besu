@@ -40,6 +40,12 @@
         {
           "name": "recyclerPool",
           "parameterTypes": []
+        },
+        {
+          "name": "recyclerPool",
+          "parameterTypes": [
+            "com.fasterxml.jackson.core.util.RecyclerPool"
+          ]
         }
       ]
     },
@@ -1935,6 +1941,18 @@
     },
     {
       "type": "java.time.ZonedDateTime"
+    },
+    {
+      "type": "java.util.List",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "add",
+          "parameterTypes": [
+            "java.lang.Object"
+          ]
+        }
+      ]
     },
     {
       "type": "java.util.Map"
@@ -5945,6 +5963,12 @@
       "type": "org.hyperledger.besu.ethereum.api.query.cache.LogBloomCacheMetadata",
       "methods": [
         {
+          "name": "<init>",
+          "parameterTypes": [
+            "int"
+          ]
+        },
+        {
           "name": "getVersion",
           "parameterTypes": []
         }
@@ -5953,6 +5977,12 @@
     {
       "type": "org.hyperledger.besu.ethereum.core.VersionMetadata",
       "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
         {
           "name": "getBesuVersion",
           "parameterTypes": []
@@ -6069,6 +6099,13 @@
       "type": "org.hyperledger.besu.plugin.services.storage.rocksdb.configuration.DatabaseMetadata$MetadataV2",
       "methods": [
         {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.hyperledger.besu.plugin.services.storage.DataStorageFormat",
+            "int"
+          ]
+        },
+        {
           "name": "format",
           "parameterTypes": []
         },
@@ -6079,8 +6116,25 @@
       ]
     },
     {
+      "type": "org.hyperledger.besu.plugin.services.storage.rocksdb.configuration.DatabaseMetadata$V1",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "int"
+          ]
+        }
+      ]
+    },
+    {
       "type": "org.hyperledger.besu.plugin.services.storage.rocksdb.configuration.DatabaseMetadata$V2",
       "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.hyperledger.besu.plugin.services.storage.rocksdb.configuration.DatabaseMetadata$MetadataV2"
+          ]
+        },
         {
           "name": "v2",
           "parameterTypes": []
@@ -6132,6 +6186,69 @@
     },
     {
       "type": "org.osgi.framework.FrameworkUtil"
+    },
+    {
+      "type": "org.rocksdb.BlockBasedTableConfig",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "boolean",
+            "boolean",
+            "boolean",
+            "boolean",
+            "byte",
+            "byte",
+            "double",
+            "byte",
+            "boolean",
+            "long",
+            "int",
+            "int",
+            "int",
+            "long",
+            "boolean",
+            "boolean",
+            "boolean",
+            "boolean",
+            "boolean",
+            "int",
+            "int",
+            "boolean",
+            "boolean",
+            "byte",
+            "byte",
+            "long",
+            "double"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.rocksdb.ColumnFamilyDescriptor",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "byte[]",
+            "org.rocksdb.ColumnFamilyOptions"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.rocksdb.ColumnFamilyOptions",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "long"
+          ]
+        }
+      ]
     },
     {
       "type": "org.rocksdb.RocksDBException",

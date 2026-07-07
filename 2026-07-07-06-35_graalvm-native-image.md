@@ -84,10 +84,16 @@ JAVA_OPTS=$A build/install/besu/bin/besu --network=mainnet --data-path=/tmp/d2 -
 evmtool into `ethereum/evmtool/src/main/graal`, exercising
 `benchmark sha256 EcRecover kzgPointEval`.)
 
+**Important: boot each network twice over the same data dir.** A restart
+exercises the Jackson *read* paths for `version-metadata.json`
+(`VersionMetadata`) and the database metadata — a fresh boot only records the
+write paths, and the native binary then fails with
+`MissingReflectionRegistrationError` on any pre-existing data directory.
+
 More coverage = more agent runs: any code path not exercised under the agent
 and not statically analyzable may throw `MissingReflectionRegistrationError`
-etc. at runtime in the native binary. Exercised so far: dev + mainnet boot,
-the RPCs listed above, and the benchmark suite.
+etc. at runtime in the native binary. Exercised so far: dev + mainnet boot
+(fresh and restart), the RPCs listed above, and the benchmark suite.
 
 ## Known limitations / caveats
 
