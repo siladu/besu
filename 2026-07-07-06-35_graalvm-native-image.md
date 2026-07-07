@@ -82,7 +82,11 @@ JAVA_OPTS=$A build/install/besu/bin/besu --network=mainnet --data-path=/tmp/d2 -
 
 (Use `config-output-dir` for the first run to start fresh. Same pattern for
 evmtool into `ethereum/evmtool/src/main/graal`, exercising
-`benchmark sha256 EcRecover kzgPointEval`.)
+`benchmark sha256 EcRecover kzgPointEval` and `block-test` over an EEST
+fixture — the fixture file is deserialized in full even with a non-matching
+`--test-name`, so one executed test plus parse-only runs of other fixture
+families captures the whole `BlockchainReferenceTestCaseSpec` Jackson
+surface cheaply.)
 
 **Important: boot each network twice over the same data dir.** A restart
 exercises the Jackson *read* paths for `version-metadata.json`
@@ -116,11 +120,15 @@ etc. at runtime in the native binary. Exercised so far: dev + mainnet boot
    interaction with Dagger-generated types). Not needed — the agent capture
    of `--help` covers the full CLI model — but worth an upstream picocli
    issue.
-5. **Serial GC** — native-image on macOS only has serial GC; G1 is available
-   on Linux (`--gc=G1`). Long-running node throughput will not match JVM C2 +
-   G1/generational-ZGC. Native image is a startup-latency play (benchmarks,
-   CLI tools, ephemeral/cloud instances), not a peak-throughput play. PGO
-   (Oracle GraalVM) could close some of the gap.
+5. **Serial GC / no JIT** — native-image on macOS only has serial GC; G1 is
+   available on Linux (`--gc=G1`). Peak throughput does not match JVM C2:
+   on EEST 100M-gas benchmark blocks (`block-test`), native imports run
+   ~1.3–2× slower per block than warmed-up JVM (e.g. ADD 845 ms vs 451 ms),
+   with identical block hashes. Native image is a startup-latency play
+   (13 ms vs 530 ms evmtool startup): it wins for many short invocations,
+   t8n server mode, and CLI usage — not for giant single blocks. To close
+   the gap: `-O3`/`-march=native` buildArgs, or Oracle GraalVM with PGO
+   (profile a `block-test` run, rebuild with the profile).
 6. The dev/mainnet data dirs used during agent capture are throwaway
    (`tmp/`); the recorded metadata does not reference them.
 

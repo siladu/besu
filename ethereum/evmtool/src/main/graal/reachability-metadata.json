@@ -25,6 +25,9 @@
       "type": "com.fasterxml.jackson.databind.ObjectMapper"
     },
     {
+      "type": "com.fasterxml.jackson.databind.deser.Deserializers[]"
+    },
+    {
       "type": "com.fasterxml.jackson.databind.ext.Java7SupportImpl",
       "methods": [
         {
@@ -32,6 +35,9 @@
           "parameterTypes": []
         }
       ]
+    },
+    {
+      "type": "com.fasterxml.jackson.databind.ser.Serializers[]"
     },
     {
       "type": "com.fasterxml.jackson.dataformat.yaml.YAMLFactory"
@@ -158,6 +164,20 @@
         },
         {
           "name": "expiresAfterWriteNanos"
+        }
+      ]
+    },
+    {
+      "type": "com.github.benmanes.caffeine.cache.SSSMW",
+      "fields": [
+        {
+          "name": "FACTORY"
+        },
+        {
+          "name": "maximum"
+        },
+        {
+          "name": "weightedSize"
         }
       ]
     },
@@ -699,8 +719,19 @@
         {
           "name": "getComponentType",
           "parameterTypes": []
+        },
+        {
+          "name": "getRecordComponents",
+          "parameterTypes": []
+        },
+        {
+          "name": "isRecord",
+          "parameterTypes": []
         }
       ]
+    },
+    {
+      "type": "java.lang.Comparable"
     },
     {
       "type": "java.lang.Double",
@@ -791,6 +822,9 @@
           "parameterTypes": []
         }
       ]
+    },
+    {
+      "type": "java.lang.Record"
     },
     {
       "type": "java.lang.Short",
@@ -916,6 +950,19 @@
       ]
     },
     {
+      "type": "java.lang.reflect.RecordComponent",
+      "methods": [
+        {
+          "name": "getName",
+          "parameterTypes": []
+        },
+        {
+          "name": "getType",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "java.nio.Buffer",
       "jniAccessible": true,
       "methods": [
@@ -1027,7 +1074,16 @@
       "type": "java.nio.file.Path"
     },
     {
-      "type": "java.nio.file.Paths"
+      "type": "java.nio.file.Paths",
+      "methods": [
+        {
+          "name": "get",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.lang.String[]"
+          ]
+        }
+      ]
     },
     {
       "type": "java.security.MessageDigestSpi"
@@ -1111,6 +1167,9 @@
           ]
         }
       ]
+    },
+    {
+      "type": "java.util.function.Supplier"
     },
     {
       "type": "javax.servlet.Servlet"
@@ -3292,6 +3351,129 @@
       ]
     },
     {
+      "type": "org.hyperledger.besu.datatypes.BytesHolder"
+    },
+    {
+      "type": "org.hyperledger.besu.datatypes.Hash"
+    },
+    {
+      "type": "org.hyperledger.besu.datatypes.LogsBloomFilter"
+    },
+    {
+      "type": "org.hyperledger.besu.ethereum.core.BlockHeader"
+    },
+    {
+      "type": "org.hyperledger.besu.ethereum.core.ProcessableBlockHeader"
+    },
+    {
+      "type": "org.hyperledger.besu.ethereum.core.SealableBlockHeader"
+    },
+    {
+      "type": "org.hyperledger.besu.ethereum.referencetests.BlockAccessListDeserializer",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.hyperledger.besu.ethereum.referencetests.BlockchainReferenceTestCaseSpec",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String",
+            "org.hyperledger.besu.ethereum.referencetests.BlockchainReferenceTestCaseSpec$CandidateBlock[]",
+            "org.hyperledger.besu.ethereum.referencetests.BlockchainReferenceTestCaseSpec$ReferenceTestBlockHeader",
+            "java.lang.String",
+            "java.util.Map",
+            "java.lang.String",
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.hyperledger.besu.ethereum.referencetests.BlockchainReferenceTestCaseSpec$CandidateBlock",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.lang.Object",
+            "java.lang.Object",
+            "java.lang.Object",
+            "java.lang.Object",
+            "java.lang.Object",
+            "java.lang.Object",
+            "java.lang.Object",
+            "java.util.List",
+            "org.hyperledger.besu.ethereum.mainnet.block.access.list.BlockAccessList",
+            "java.lang.String",
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.hyperledger.besu.ethereum.referencetests.BlockchainReferenceTestCaseSpec$CandidateBlock[]"
+    },
+    {
+      "type": "org.hyperledger.besu.ethereum.referencetests.BlockchainReferenceTestCaseSpec$ReferenceTestBlockHeader",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.hyperledger.besu.ethereum.referencetests.ReferenceTestWorldState$AccountMock",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.lang.String",
+            "java.util.Map",
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.hyperledger.besu.ethereum.referencetests.TransactionSequence"
+    },
+    {
+      "type": "org.hyperledger.besu.evm.frame.BlockValues"
+    },
+    {
       "type": "org.hyperledger.besu.evmtool.B11rSubCommand",
       "fields": [
         {
@@ -3362,7 +3544,22 @@
       "type": "org.hyperledger.besu.evmtool.BlockchainTestSubCommand",
       "fields": [
         {
+          "name": "blockchainTestFiles"
+        },
+        {
+          "name": "enablePrecompileCache"
+        },
+        {
           "name": "parentCommand"
+        },
+        {
+          "name": "testName"
+        },
+        {
+          "name": "traceOutput"
+        },
+        {
+          "name": "verbose"
         }
       ],
       "methods": [
@@ -3548,6 +3745,22 @@
       "type": "org.hyperledger.besu.nativelib.secp256k1.LibSecp256k1"
     },
     {
+      "type": "org.hyperledger.besu.nativelib.secp256k1.LibSecp256k1$secp256k1_ecdsa_recoverable_signature",
+      "fields": [
+        {
+          "name": "data"
+        }
+      ]
+    },
+    {
+      "type": "org.hyperledger.besu.nativelib.secp256k1.LibSecp256k1$secp256k1_pubkey",
+      "fields": [
+        {
+          "name": "data"
+        }
+      ]
+    },
+    {
       "type": "org.hyperledger.besu.nativelib.secp256r1.besuNativeEC.BesuNativeEC"
     },
     {
@@ -3615,6 +3828,12 @@
           "parameterTypes": []
         }
       ]
+    },
+    {
+      "type": "org.hyperledger.besu.plugin.data.BlockHeader"
+    },
+    {
+      "type": "org.hyperledger.besu.plugin.data.ProcessableBlockHeader"
     },
     {
       "type": "org.hyperledger.besu.util.log4j.plugin.BesuLogMessageConverter",
