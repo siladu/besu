@@ -1,0 +1,34 @@
+{
+  "reflection": [
+    {
+      "type": "org.hyperledger.besu.services.PluginVerifier$ArtifactCatalog",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "type": "org.hyperledger.besu.services.PluginVerifier$ArtifactDependency",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    }
+  ],
+  "resources": [
+    {"glob": "META-INF/besu-artifacts-catalog.json"},
+    {"glob": "dev.json"},
+    {"glob": "ephemery.json"},
+    {"glob": "experimental.json"},
+    {"glob": "future.json"},
+    {"glob": "hoodi.json"},
+    {"glob": "linea-mainnet.json"},
+    {"glob": "linea-sepolia.json"},
+    {"glob": "lukso.json"},
+    {"glob": "mainnet.json"},
+    {"glob": "sepolia.json"},
+    {"glob": "profiles/*.toml"},
+    {"glob": "kzg-trusted-setups/*.txt"},
+    {"glob": "schema.graphqls"},
+    {"glob": "org/hyperledger/besu/cli/launcher.json"},
+    {"glob": "log4j2.xml"}
+  ]
+}

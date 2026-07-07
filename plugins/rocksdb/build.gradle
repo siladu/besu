@@ -44,6 +44,8 @@ dependencies {
   implementation 'org.rocksdb:rocksdbjni'
   implementation project(path: ':ethereum:core')
 
+  annotationProcessor 'info.picocli:picocli-codegen'
+
   testImplementation project(':testutil')
 
   testImplementation 'org.mockito:mockito-core'

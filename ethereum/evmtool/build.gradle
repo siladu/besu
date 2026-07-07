@@ -15,7 +15,7 @@
  */
 
 plugins {
-  id 'org.graalvm.buildtools.native' version '0.10.6'
+  id 'org.graalvm.buildtools.native'
 }
 
 apply plugin: 'java-library'
@@ -73,6 +73,19 @@ dependencies {
 
 application {
   mainClass = 'org.hyperledger.besu.evmtool.EvmTool'
+}
+
+graalvmNative {
+  binaries {
+    main {
+      imageName = 'evmtool'
+      mainClass = 'org.hyperledger.besu.evmtool.EvmTool'
+      // java-library plugin would otherwise switch the image to a shared library
+      sharedLibrary = false
+      configurationFileDirectories.from(file('src/main/graal'), file('src/main/graal-manual'))
+      buildArgs.add('--no-fallback')
+    }
+  }
 }
 
 
