@@ -18,15 +18,8 @@ import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.Log;
 import org.hyperledger.besu.datatypes.Transaction;
-import org.hyperledger.besu.evm.frame.MessageFrame;
-import org.hyperledger.besu.evm.operation.AbstractCallOperation;
-import org.hyperledger.besu.evm.operation.AbstractCreateOperation;
-import org.hyperledger.besu.evm.operation.Operation;
-import org.hyperledger.besu.evm.operation.SLoadOperation;
-import org.hyperledger.besu.evm.operation.SStoreOperation;
 import org.hyperledger.besu.evm.worldstate.WorldView;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -72,15 +65,6 @@ public class SlowBlockTracer implements OperationTracer, StateAccessTracer {
   private long commitTimeNanos;
   private long totalStartNanos;
   private long totalTimeNanos;
-  // EVM operation counters
-  private int sloadCount;
-  private int sstoreCount;
-  private int callCount;
-  private int createCount;
-  // Unique tracking
-  private final Set<Address> uniqueAccountsTouched = new HashSet<>();
-  private final Set<StorageSlotKey> uniqueStorageSlots = new HashSet<>();
-  private final Set<Address> uniqueContractsExecuted = new HashSet<>();
   // State read cache counters (accumulator in-block cache for accounts/storage; CodeCache for code)
   private int accountCacheHits;
   private int accountCacheMisses;
@@ -133,48 +117,6 @@ public class SlowBlockTracer implements OperationTracer, StateAccessTracer {
       final Set<Address> selfDestructs,
       final long timeNs) {
     transactionCount++;
-  }
-
-  @Override
-  public void tracePreExecution(final MessageFrame frame) {
-    final var op = frame.getCurrentOperation();
-    if (op instanceof SLoadOperation || op instanceof SStoreOperation) { // TODO SLD EVMv2 support
-      final Address storageAddress = frame.getRecipientAddress();
-      // TODO SLD EVMv2 needs to read from v2 stack
-      // TODO SLD convert to UInt256 or can leave as Bytes? (Note: Bytes32 errors for some reason)
-      final Bytes slotKey = frame.getStackItem(0);
-      uniqueStorageSlots.add(new StorageSlotKey(storageAddress, slotKey));
-      uniqueAccountsTouched.add(storageAddress);
-    }
-  }
-
-  private record StorageSlotKey(Address address, Bytes slotKey) {}
-
-  @Override
-  public void tracePostExecution(
-      final MessageFrame frame, final Operation.OperationResult operationResult) {
-    switch (frame.getCurrentOperation()) {
-      // TODO SLD EVMv2 support
-      case SLoadOperation _ -> sloadCount++;
-      case SStoreOperation _ -> sstoreCount++;
-      case AbstractCallOperation _ -> callCount++; // CALL, CALLCODE, DELEGATECALL, STATICCALL
-      case AbstractCreateOperation _ -> createCount++; // CREATE, CREATE2
-      default -> {} // No tracking needed for other operations
-    }
-  }
-
-  @Override
-  public void traceContextEnter(final MessageFrame frame) {
-    final Address recipient = frame.getRecipientAddress();
-    if (recipient != null) {
-      uniqueContractsExecuted.add(recipient);
-      uniqueAccountsTouched.add(recipient);
-    }
-
-    final Address sender = frame.getSenderAddress();
-    if (sender != null) {
-      uniqueAccountsTouched.add(sender);
-    }
   }
 
   /**
@@ -281,17 +223,6 @@ public class SlowBlockTracer implements OperationTracer, StateAccessTracer {
 
       final ObjectNode throughputNode = json.putObject("throughput");
       throughputNode.put("mgas_per_sec", formattedMGasPerSecond);
-
-      final ObjectNode uniqueNode = json.putObject("unique");
-      uniqueNode.put("accounts", uniqueAccountsTouched.size());
-      uniqueNode.put("storage_slots", uniqueStorageSlots.size());
-      uniqueNode.put("contracts", uniqueContractsExecuted.size());
-
-      final ObjectNode evmNode = json.putObject("evm");
-      evmNode.put("sload", sloadCount);
-      evmNode.put("sstore", sstoreCount);
-      evmNode.put("calls", callCount);
-      evmNode.put("creates", createCount);
 
       final ObjectNode stateReadsNode = json.putObject("state_reads");
       stateReadsNode.put("accounts", accountCacheHits + accountCacheMisses);

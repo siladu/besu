@@ -164,17 +164,6 @@ public class SlowBlockTracerAcceptanceTest extends AcceptanceTestBase {
      *   "throughput": {
      *     "mgas_per_sec": "61.78"
      *   },
-     *   "unique": {
-     *     "accounts": 4,
-     *     "storage_slots": 2,
-     *     "contracts": 3
-     *   },
-     *   "evm": {
-     *     "sload": 1,
-     *     "sstore": 2,
-     *     "calls": 1,
-     *     "creates": 1
-     *   },
      *   "state_reads": {
      *     "accounts": 18,
      *     "storage_slots": 26,
@@ -236,19 +225,6 @@ public class SlowBlockTracerAcceptanceTest extends AcceptanceTestBase {
     // throughput — stored as string
     assertThat(Double.parseDouble(json.get("throughput").get("mgas_per_sec").asText()))
         .isGreaterThan(0);
-
-    // unique — exercise contract + created contract + called empty account, sender too for accounts
-    final JsonNode unique = json.get("unique");
-    assertThat(unique.get("storage_slots").asInt()).isEqualTo(2); // slot0 + slot1
-    assertThat(unique.get("contracts").asInt()).isEqualTo(3); // exercise, created, called
-    assertThat(unique.get("accounts").asInt()).isEqualTo(4); // + sender
-
-    // evm operation counts
-    final JsonNode evm = json.get("evm");
-    assertThat(evm.get("sload").asInt()).isEqualTo(1);
-    assertThat(evm.get("sstore").asInt()).isEqualTo(2);
-    assertThat(evm.get("calls").asInt()).isEqualTo(1);
-    assertThat(evm.get("creates").asInt()).isEqualTo(1);
 
     // state_reads
     final JsonNode stateReads = json.get("state_reads");
