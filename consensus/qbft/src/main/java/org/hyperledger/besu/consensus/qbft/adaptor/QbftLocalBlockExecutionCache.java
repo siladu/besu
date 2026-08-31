@@ -31,6 +31,9 @@ import org.slf4j.LoggerFactory;
  */
 public class QbftLocalBlockExecutionCache {
 
+  /** default constructor */
+  public QbftLocalBlockExecutionCache() {}
+
   private static final Logger LOG = LoggerFactory.getLogger(QbftLocalBlockExecutionCache.class);
 
   private final AtomicReference<CachedExecution> pending = new AtomicReference<>();
