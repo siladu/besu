@@ -108,6 +108,7 @@ public interface TransactionPoolConfiguration {
   Wei DEFAULT_TX_POOL_MIN_GAS_PRICE = Wei.of(1000);
   byte DEFAULT_TX_POOL_MIN_SCORE = -128;
   boolean DEFAULT_TX_POOL_ENABLE_BALANCE_CHECK = true;
+  boolean DEFAULT_POOL_BYPASS_ENABLED = false;
 
   TransactionPoolConfiguration DEFAULT = ImmutableTransactionPoolConfiguration.builder().build();
 
@@ -214,6 +215,11 @@ public interface TransactionPoolConfiguration {
   @Value.Default
   default boolean getEnableBalanceCheck() {
     return DEFAULT_TX_POOL_ENABLE_BALANCE_CHECK;
+  }
+
+  @Value.Default
+  default Boolean getPoolBypassEnabled() {
+    return DEFAULT_POOL_BYPASS_ENABLED;
   }
 
   @Value.Default

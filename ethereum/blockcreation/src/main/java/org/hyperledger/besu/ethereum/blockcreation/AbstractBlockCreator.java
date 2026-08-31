@@ -85,7 +85,7 @@ public abstract class AbstractBlockCreator implements AsyncBlockCreator {
 
   private final MiningBeneficiaryCalculator miningBeneficiaryCalculator;
   private final ExtraDataCalculator extraDataCalculator;
-  private final TransactionPool transactionPool;
+  protected final TransactionPool transactionPool;
   protected final MiningConfiguration miningConfiguration;
   protected final ProtocolContext protocolContext;
   protected final ProtocolSchedule protocolSchedule;

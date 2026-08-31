@@ -120,6 +120,7 @@ public class TransactionPool implements BlockAddedObserver {
   private volatile OptionalLong subscribeConnectId = OptionalLong.empty();
   private final SaveRestoreManager saveRestoreManager = new SaveRestoreManager();
   private final Set<Address> localSenders = ConcurrentHashMap.newKeySet();
+  private final Optional<SelectionFeed> selectionFeed;
   private final EthScheduler.OrderedProcessor<BlockAddedEvent> blockAddedEventOrderedProcessor;
   private final ListMultimap<VersionedHash, BlobProofBundle> mapOfBlobsInTransactionPool =
       Multimaps.synchronizedListMultimap(
@@ -142,6 +143,8 @@ public class TransactionPool implements BlockAddedObserver {
     this.transactionBroadcaster = transactionBroadcaster;
     this.metrics = metrics;
     this.configuration = configuration;
+    this.selectionFeed =
+        configuration.getPoolBypassEnabled() ? Optional.of(new SelectionFeed()) : Optional.empty();
     this.blockAddedEventOrderedProcessor =
         ethContext.getScheduler().createOrderedProcessor(this::processBlockAddedEvent);
     this.cacheForBlobsOfTransactionsAddedToABlock = blobCache;
@@ -156,6 +159,16 @@ public class TransactionPool implements BlockAddedObserver {
   void handleConnect(final EthPeer peer) {
     transactionBroadcaster.relayTransactionPoolTo(
         peer, pendingTransactions.getPendingTransactions());
+  }
+
+  /**
+   * The lock-free intake-to-block-building queue, present only when the pool bypass is enabled
+   * ({@code --Xtx-pool-bypass}).
+   *
+   * @return the selection feed, if the pool bypass is enabled
+   */
+  public Optional<SelectionFeed> getSelectionFeed() {
+    return selectionFeed;
   }
 
   public ValidationResult<TransactionInvalidReason> addTransactionViaApi(

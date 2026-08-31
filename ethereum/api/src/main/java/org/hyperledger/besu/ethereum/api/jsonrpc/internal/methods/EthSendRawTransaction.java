@@ -34,6 +34,7 @@ import org.hyperledger.besu.ethereum.mainnet.ValidationResult;
 import org.hyperledger.besu.ethereum.rlp.RLPException;
 import org.hyperledger.besu.ethereum.transaction.TransactionInvalidReason;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -103,6 +104,14 @@ public class EthSendRawTransaction implements JsonRpcMethod {
       LOG.debug("IllegalArgumentException: {} caused by {}", ill.getMessage(), ill.getCause());
       return new JsonRpcErrorResponse(
           requestContext.getRequest().getId(), RpcErrorType.INVALID_PARAMS);
+    }
+
+    final var maybeFeed = transactionPool.get().getSelectionFeed();
+    if (maybeFeed.isPresent()) {
+      // pool bypass: hand the transaction straight to the block builder's feed
+      maybeFeed.get().offerAll(List.of(transaction));
+      return new JsonRpcSuccessResponse(
+          requestContext.getRequest().getId(), transaction.getHash().toString());
     }
 
     final ValidationResult<TransactionInvalidReason> validationResult =

@@ -58,6 +58,7 @@ public class TransactionPoolOptions implements CLIOptions<TransactionPoolConfigu
       "--strict-tx-replay-protection-enabled";
   private static final String TX_POOL_PRIORITY_SENDERS = "--tx-pool-priority-senders";
   private static final String TX_POOL_MIN_GAS_PRICE = "--tx-pool-min-gas-price";
+  private static final String TX_POOL_BYPASS = "--Xtx-pool-bypass";
 
   private TransactionPoolValidatorService transactionPoolValidatorService;
 
@@ -146,6 +147,16 @@ public class TransactionPoolOptions implements CLIOptions<TransactionPoolConfigu
           "Transactions with gas price (in Wei) lower than this minimum will not be accepted into the txpool"
               + "(not to be confused with min-gas-price, that is applied on block creation) (default: ${DEFAULT-VALUE})")
   private Wei minGasPrice = TransactionPoolConfiguration.DEFAULT_TX_POOL_MIN_GAS_PRICE;
+
+  @CommandLine.Option(
+      names = {TX_POOL_BYPASS},
+      paramLabel = "<Boolean>",
+      hidden = true,
+      description =
+          "Bypass the transaction pool: transactions submitted via RPC are handed to the block builder through a lock-free queue, skipping pool validation and bookkeeping. Single-validator benchmark use only (default: ${DEFAULT-VALUE})",
+      fallbackValue = "true",
+      arity = "0..1")
+  private Boolean poolBypassEnabled = TransactionPoolConfiguration.DEFAULT_POOL_BYPASS_ENABLED;
 
   @CommandLine.ArgGroup(
       validate = false,
@@ -363,6 +374,7 @@ public class TransactionPoolOptions implements CLIOptions<TransactionPoolConfigu
     options.strictTxReplayProtectionEnabled = config.getStrictTransactionReplayProtectionEnabled();
     options.prioritySenders = config.getPrioritySenders();
     options.minGasPrice = config.getMinGasPrice();
+    options.poolBypassEnabled = config.getPoolBypassEnabled();
     options.layeredOptions.txPoolLayerMaxCapacity =
         config.getPendingTransactionsLayerMaxCapacityBytes();
     options.layeredOptions.txPoolMaxPrioritized = config.getMaxPrioritizedTransactions();
@@ -431,6 +443,7 @@ public class TransactionPoolOptions implements CLIOptions<TransactionPoolConfigu
         .strictTransactionReplayProtectionEnabled(strictTxReplayProtectionEnabled)
         .prioritySenders(prioritySenders)
         .minGasPrice(minGasPrice)
+        .poolBypassEnabled(poolBypassEnabled)
         .pendingTransactionsLayerMaxCapacityBytes(layeredOptions.txPoolLayerMaxCapacity)
         .maxPrioritizedTransactions(layeredOptions.txPoolMaxPrioritized)
         .maxPrioritizedTransactionsByType(layeredOptions.txPoolMaxPrioritizedByType)

@@ -27,12 +27,15 @@ import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.BlockHeaderBuilder;
 import org.hyperledger.besu.ethereum.core.MiningConfiguration;
 import org.hyperledger.besu.ethereum.core.SealableBlockHeader;
+import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.eth.manager.EthScheduler;
+import org.hyperledger.besu.ethereum.eth.transactions.SelectionFeed;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import org.apache.tuweni.bytes.Bytes32;
@@ -83,8 +86,15 @@ public class BftBlockCreator extends AbstractBlockCreator {
     ProtocolSpec protocolSpec =
         ((BftProtocolSchedule) protocolSchedule)
             .getByBlockNumberOrTimestamp(parentHeader.getNumber() + 1, timestamp);
+    final boolean emptyWithdrawals = protocolSpec.getWithdrawalsProcessor().isPresent();
 
-    if (protocolSpec.getWithdrawalsProcessor().isPresent()) {
+    final Optional<SelectionFeed> maybeFeed = transactionPool.getSelectionFeed();
+    if (maybeFeed.isPresent()) {
+      return createBlockFromSelectionFeed(
+          maybeFeed.get(), emptyWithdrawals, timestamp, parentHeader);
+    }
+
+    if (emptyWithdrawals) {
       return createEmptyWithdrawalsBlock(timestamp, parentHeader);
     } else {
       return createBlock(
@@ -99,6 +109,46 @@ public class BftBlockCreator extends AbstractBlockCreator {
           true,
           parentHeader);
     }
+  }
+
+  /**
+   * Pool-bypass path: drains the selection feed up to the block gas budget instead of selecting
+   * from the transaction pool. Transactions the selector leaves out but does not discard (block
+   * full) are re-offered to the feed; discarded ones (failed execution, e.g. duplicates or nonce
+   * replays) are dropped.
+   */
+  private BlockCreationResult createBlockFromSelectionFeed(
+      final SelectionFeed feed,
+      final boolean emptyWithdrawals,
+      final long timestamp,
+      final BlockHeader parentHeader) {
+    final List<Transaction> drained = feed.drain(parentHeader.getGasLimit());
+    final BlockCreationResult result =
+        createBlock(
+            Optional.of(drained),
+            Optional.empty(),
+            emptyWithdrawals ? Optional.of(Collections.emptyList()) : Optional.empty(),
+            Optional.of(Bytes32.wrap(BftHelpers.EXPECTED_MIX_HASH.getBytes())),
+            Optional.empty(),
+            Optional.empty(),
+            Optional.empty(),
+            timestamp,
+            true,
+            parentHeader);
+
+    final var notSelected = result.getTransactionSelectionResults().getNotSelectedTransactions();
+    if (!notSelected.isEmpty()) {
+      final List<Transaction> reoffer =
+          drained.stream()
+              .filter(
+                  tx -> {
+                    final var selectionResult = notSelected.get(tx);
+                    return selectionResult != null && !selectionResult.discard();
+                  })
+              .toList();
+      feed.reoffer(reoffer);
+    }
+    return result;
   }
 
   /**
