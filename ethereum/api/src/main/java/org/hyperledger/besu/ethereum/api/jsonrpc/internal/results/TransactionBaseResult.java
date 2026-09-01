@@ -125,6 +125,11 @@ public class TransactionBaseResult implements TransactionResult {
       this.type = Quantity.create(0);
       this.yParity = null;
       this.v = Quantity.create(transaction.getV());
+    } else if (transactionType.supportsFrames()) {
+      // EIP-8141 frame transactions have no outer signature.
+      this.type = Quantity.create(transactionType.getSerializedType());
+      this.yParity = null;
+      this.v = null;
     } else {
       this.type = Quantity.create(transactionType.getSerializedType());
       this.yParity = Quantity.create(transaction.getYParity());
@@ -137,8 +142,8 @@ public class TransactionBaseResult implements TransactionResult {
               : null;
     }
     this.value = Quantity.create(transaction.getValue());
-    this.r = Quantity.create(transaction.getR());
-    this.s = Quantity.create(transaction.getS());
+    this.r = transaction.getR() == null ? null : Quantity.create(transaction.getR());
+    this.s = transaction.getS() == null ? null : Quantity.create(transaction.getS());
     this.versionedHashes =
         transaction
             .getVersionedHashes()

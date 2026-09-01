@@ -342,6 +342,23 @@ public class MainnetProtocolSpecFactory {
   }
 
   /**
+   * The Bogota fork (the fork after Amsterdam), currently carrying EIP-8141 frame transactions.
+   *
+   * @return a protocol spec for the Bogota fork.
+   */
+  public ProtocolSpecBuilder bogotaDefinition() {
+    return MainnetProtocolSpecs.bogotaDefinition(
+        chainId,
+        isRevertReasonEnabled,
+        genesisConfigOptions,
+        evmConfiguration,
+        miningConfiguration,
+        isParallelTxProcessingEnabled,
+        balConfiguration,
+        metricsSystem);
+  }
+
+  /**
    * The "future" fork consists of EIPs that have been approved for Ethereum Mainnet but not
    * scheduled for a fork. This is also known as "Eligible For Inclusion" (EFI) or "Considered for
    * Inclusion" (CFI).
